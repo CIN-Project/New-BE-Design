@@ -136,6 +136,7 @@ Fonts can also be set via `config` instead of `theme` — see `fontFamily`/`font
 | `sessionTimeoutMs` | Member login session | Default `30 * 60 * 1000` (30 minutes) |
 | `fontFamily` | Visual only | Sets both `--be-font-serif` and `--be-font-sans` to this one value — for a consumer with a single brand font. No default (package fonts render untouched). |
 | `fontSerif` / `fontSans` | Visual only | Override either role individually; wins over `fontFamily` for that slot. No default. |
+| `fontOverrides` | Visual only | `{ [className]: fontFamily }` — targets one specific element by the class name this package already renders on it (e.g. `{ "be-room-row-desc": "Georgia, serif" }`), instead of the whole package like `fontFamily`/`fontSerif`/`fontSans` above. No default (nothing renders unless set). |
 | `primaryColor` / `primaryHoverColor` / `primaryLightColor` | Visual only | Set `--be-color-primary` / `-hover` / `-light` — every button background, price, link, and active-state color in the package reads from these three. No default (package's built-in gold palette renders untouched). |
 | `debug` | All API calls | Default `false` — logs request/response detail when `true` |
 

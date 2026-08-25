@@ -41,14 +41,17 @@
 }
 
 .be-cart-left-col::-webkit-scrollbar {
-  width: 5px;
+  /* Wider + rounder than the previous 5px/2px — matched to a reference
+     design's own thin-but-visible gold scrollbar, which read as a real
+     design element rather than the barely-there sliver this was before. */
+  width: 8px;
 }
 .be-cart-left-col::-webkit-scrollbar-track {
   background: transparent;
 }
 .be-cart-left-col::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #e2e0d7);
-  border-radius: 2px;
+  background: var(--be-color-primary-light, #c7a36a);
+  border-radius: 4px;
 }
 
 .be-cart-left-col::-webkit-scrollbar-thumb:hover {

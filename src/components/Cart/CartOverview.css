@@ -23,7 +23,10 @@
 }
 
 .cart-body-scroll::-webkit-scrollbar {
-  width: 5px;
+  /* Matches .be-cart-left-col's own scrollbar (Wizard.css) — both sides of
+     the split-pane guest-details/cart layout should feel like one
+     consistent design, not two different scrollbar treatments. */
+  width: 8px;
 }
 
 .cart-body-scroll::-webkit-scrollbar-track {
@@ -31,8 +34,8 @@
 }
 
 .cart-body-scroll::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #e2e0d7);
-  border-radius: 2px;
+  background: var(--be-color-primary-light, #c7a36a);
+  border-radius: 4px;
 }
 
 .cart-body-scroll::-webkit-scrollbar-thumb:hover {

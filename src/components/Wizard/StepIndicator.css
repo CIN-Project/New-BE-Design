@@ -49,7 +49,7 @@
 
 .be-step-item--active {
   color: var(--be-color-primary-hover, #bfa15f);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .be-step-item--completed {

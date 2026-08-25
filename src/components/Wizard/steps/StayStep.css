@@ -71,6 +71,7 @@
   height: 100%;
   box-sizing: border-box;
   min-width: 0;
+  background: white;
 }
 
 .be-room-row-header {
@@ -81,7 +82,7 @@
 }
 
 .be-room-row-name {
-  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif) !important;
   font-size: 1.35rem;
   color: var(--be-color-primary, #846836);
   margin: 0;
@@ -129,6 +130,7 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: underline !important;
 }
 
 .be-room-read-more:hover {

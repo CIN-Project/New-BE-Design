@@ -379,7 +379,7 @@
 }
 .be-btn-done:hover {
   background: transparent;
-  color: var(--be-color-primary-light, #c7a36a);
+  color: var(--be-color-primary-light, #c7a36a) !important;
 }
 
 /* Search submit — glowing golden orbit */
@@ -564,6 +564,15 @@
 
   .be-booking-widget-wrap--compact::before {
     border-radius: 100px;
+    /* Extends this shield's white fill left to cover the externally-placed
+       arrow's own footprint too (calc(-2.2rem - 12px) below matches the
+       arrow's own `left` exactly) — without this, the shield only covered
+       the bar's own box (left:0 from the base rule), leaving the strip of
+       space where the arrow floats with nothing opaque behind it except the
+       arrow's own small circle. Scrolling content behind that gap showed
+       through as a visible dark sliver next to the arrow once the bar went
+       sticky. */
+    left: calc(-2.2rem - 12px);
   }
 
   .be-booking-widget-wrap--compact .be-search-back-btn {

@@ -34,8 +34,31 @@ export function BookingEngineProvider({ config = {}, children }) {
   if (value.primaryHoverColor) colorVars["--be-color-primary-hover"] = value.primaryHoverColor;
   if (value.primaryLightColor) colorVars["--be-color-primary-light"] = value.primaryLightColor;
 
+  // Per-element font override via config, for a single specific piece of
+  // text/class rather than the whole package (fontFamily/fontSerif/fontSans
+  // above cover that broader case). `fontOverrides` maps a class name this
+  // package already renders (e.g. "be-room-row-desc", "be-rate-card-title")
+  // to a font-family string; each entry becomes its own CSS rule scoped
+  // under [data-be-root], which is strictly more specific than every plain
+  // single-class selector this package's own CSS files use for the same
+  // class — so it wins the cascade without needing `!important`, and without
+  // needing to know or match this package's internal CSS load order. Empty/
+  // absent by default, same as every other font key here — nothing renders
+  // unless a consumer actually sets it.
+  const fontOverrideEntries = Object.entries(value.fontOverrides || {});
+
   return (
     <ConfigContext.Provider value={value}>
+      {fontOverrideEntries.length > 0 && (
+        <style>
+          {fontOverrideEntries
+            .map(
+              ([className, fontFamily]) =>
+                `[data-be-root] .${className} { font-family: ${fontFamily}; }`,
+            )
+            .join("\n")}
+        </style>
+      )}
       {/* display:contents keeps this invisible to layout (no extra flex/grid
           item) while still letting the CSS custom properties above cascade
           down to every descendant, overriding ThemeProvider's defaults for
