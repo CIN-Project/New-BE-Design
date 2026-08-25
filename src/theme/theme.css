@@ -1,0 +1,44 @@
+[data-be-root] {
+  --be-color-primary: #846836;
+  --be-color-primary-hover: #bfa15f;
+  --be-color-primary-light: #c7a36a;
+  --be-color-on-primary: #ffffff;
+  --be-color-surface: #f8f5ef;
+  --be-color-surface-alt: #e8e6e2;
+  --be-color-text: #1d1d1d;
+  --be-color-text-muted: rgba(29, 29, 29, 0.65);
+  --be-color-accent: #30453a;
+  --be-color-border: #e8e6e2;
+  --be-color-success: #2e7d32;
+  --be-color-error: #c62828;
+  --be-font-serif: "Cormorant Garamond", Georgia, serif;
+  --be-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --be-radius-sm: 2px;
+  --be-radius-md: 4px;
+  --be-radius-pill: 999px;
+  --be-space-xs: 4px;
+  --be-space-sm: 8px;
+  --be-space-md: 16px;
+  --be-space-lg: 32px;
+  --be-space-xl: 64px;
+  --be-transition-smooth: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  --be-transition-fast: all 0.3s ease;
+  --be-transition-slow: all 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+
+  font-family: var(--be-font-sans);
+  color: var(--be-color-text);
+}
+
+[data-be-root] *,
+[data-be-root] *::before,
+[data-be-root] *::after {
+  box-sizing: border-box;
+}
+
+[data-be-root] button,
+[data-be-root] input,
+[data-be-root] select,
+[data-be-root] textarea {
+  font-family: inherit;
+  color: inherit;
+}

@@ -1,0 +1,183 @@
+/* Guest details form (wizard step 2) — ported 1:1 from bawa-hotels-next. */
+
+.be-form-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.8rem;
+}
+
+.be-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.5rem;
+}
+
+.be-form-grid .be-full-width {
+  grid-column: 1 / -1;
+}
+
+.be-detail-form-group {
+  display: flex;
+  /* column, not row: each group's only siblings are its field and its
+     (optional) error <span> — row direction was placing the error text
+     beside the field instead of below it, and on the 2-column .be-form-grid
+     that made it visually bleed toward the next field over. */
+  flex-direction: column;
+}
+
+.be-detail-form-group label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--be-color-primary-light, #c7a36a);
+  margin-bottom: 0.3rem;
+}
+
+.be-detail-form-group input,
+.be-detail-form-group textarea {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  outline: none;
+  background: #ffffff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1a1a1a;
+  height: 34px;
+  font-family: inherit;
+}
+
+.be-detail-form-group textarea {
+  height: auto;
+  padding: 0.5rem 0.65rem;
+}
+
+.be-detail-form-group input:focus,
+.be-detail-form-group textarea:focus {
+  border-color: #1a1a1a;
+  background: white;
+}
+
+.be-detail-form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.be-detail-form-group select {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  outline: none;
+  background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1a1a1a;
+  height: 34px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.be-detail-form-group select:focus {
+  border-color: #1a1a1a;
+}
+
+.be-privacy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.85rem;
+}
+
+.be-privacy-row a{
+  color: var(--be-color-primary, #846836);
+}
+
+.be-privacy-checkbox {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #cccccc;
+  border-radius: 3px;
+  cursor: pointer;
+  accent-color: var(--be-color-primary, #846836);
+}
+
+.be-trust-badges-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e5e7eb;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.be-trust-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Full-screen submit-in-progress overlay, shown while GuestDetailsForm's
+   combined guest-details+payment submit is in flight (DetailStep.jsx). */
+
+.be-processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: white;
+}
+
+.be-loading-dial {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(191, 161, 95, 0.2);
+  border-top: 4px solid var(--be-color-primary-hover, #bfa15f);
+  border-radius: 50%;
+  animation: be-spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes be-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 560px) {
+  .be-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .be-trust-badges-row {
+    justify-content: flex-start;
+  }
+}

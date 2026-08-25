@@ -1,0 +1,83 @@
+.be-img-slider {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-color: #eee;
+  overflow: hidden;
+}
+
+/* Gradient-ring look — see SearchBar.css's .be-search-back-btn comment for
+   why this same treatment is repeated on every nav-arrow button. Sits over
+   photos rather than a plain background like the others, so a drop shadow
+   is added for grounding/contrast that the others don't need. */
+.be-img-slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  border: 1.5px solid transparent;
+  color: #333 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+.be-img-slider:hover .be-img-slider-arrow {
+  opacity: 1;
+}
+
+.be-img-slider-arrow:hover {
+  transform: translateY(-50%) scale(1.08);
+}
+
+.be-img-slider-prev {
+  left: 8px;
+}
+
+.be-img-slider-next {
+  right: 8px;
+}
+
+.be-img-slider-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  z-index: 2;
+}
+
+.be-img-slider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.be-img-slider-dot.be-active {
+  width: 16px;
+  background: #ffffff;
+}
+
+/* :hover to reveal arrows never fires on touch — without this, mobile/
+   tablet users have no way to see (or tap) the prev/next controls at all. */
+@media (max-width: 1024px) {
+  .be-img-slider-arrow {
+    opacity: 1;
+  }
+}

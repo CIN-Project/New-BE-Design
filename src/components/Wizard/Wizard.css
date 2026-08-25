@@ -1,0 +1,70 @@
+.be-wizard {
+  max-width: 1280px;
+  margin: 0 auto;
+  /* padding: 0 0 3rem; */
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  color: var(--be-color-text, #2b2b2b);
+}
+
+.be-cart-details-layout {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.be-cart-left-col {
+  flex: 2;
+  min-width: 0;
+  /* Scrolls independently within its own pane, matching the cart sidebar's
+     own sticky+internal-scroll behavior (CartOverview.css's .cart-sidebar/
+     .cart-body-scroll) instead of growing the whole page taller — same thin
+     scrollbar styling too, so both sides feel like one consistent split-pane
+     layout rather than one column scrolling the OS default way and the
+     other scrolling on its own.
+
+     position:sticky (not just max-height) is the part that actually makes
+     the scrollbar show up: without it, max-height is measured from the top
+     of the viewport regardless of how far down the page this column starts
+     (below the header/step indicator) — so it could render taller than the
+     visible viewport before its own content ever exceeded that too-generous
+     cap, meaning the page scrolled while this element's own overflow never
+     engaged. Sticky pins it at the same top offset as .cart-sidebar, so its
+     height is measured from where it's actually stuck — the real remaining
+     viewport space — matching .cart-sidebar's own top/max-height values
+     exactly so both columns are pinned at the same scroll position. */
+  position: sticky;
+  top: 92px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.be-cart-left-col::-webkit-scrollbar {
+  width: 5px;
+}
+.be-cart-left-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+.be-cart-left-col::-webkit-scrollbar-thumb {
+  background: var(--be-color-primary-light, #e2e0d7);
+  border-radius: 2px;
+}
+
+.be-cart-left-col::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
+}
+
+@media (max-width: 1024px) {
+  .be-cart-details-layout {
+    flex-direction: column-reverse;
+    gap: 1.8rem;
+  }
+
+  .be-cart-left-col {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}

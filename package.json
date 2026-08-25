@@ -1,0 +1,47 @@
+{
+  "name": "booking-engine-new",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Themeable, standalone hotel booking engine (search bar, wizard, cart, loyalty auth) for Next.js apps.",
+  "repository": "github:CIN-Project/booking-engine-new",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./theme": "./dist/theme/ThemeProvider.js",
+    "./config": "./dist/config/ConfigProvider.js",
+    "./context/*": "./dist/context/*.js",
+    "./components/*": "./dist/components/*/index.js",
+    "./styles.css": "./dist/theme/all.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "next": ">=15.5.0 <17",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "crypto-js": "^4.2.0",
+    "md5": "^2.3.0",
+    "react-hot-toast": "^2.5.2"
+  },
+  "devDependencies": {
+    "glob": "^11.0.0",
+    "next": "^15.5.9",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "node scripts/dev.js",
+    "prepare": "npm run build"
+  }
+}

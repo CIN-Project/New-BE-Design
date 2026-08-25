@@ -1,0 +1,61 @@
+.be-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--be-space-xs, 4px);
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-radius: var(--be-radius-sm, 2px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--be-transition-smooth, all 0.3s ease);
+  white-space: nowrap;
+  color: white !important;
+}
+
+.be-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.be-btn--md {
+  padding: 8px 12px;
+}
+
+.be-btn--sm {
+  padding: 0.55rem 1.4rem;
+  font-size: 0.65rem;
+}
+
+.be-btn--primary {
+  background: var(--be-color-primary, #846836);
+  color: var(--be-color-on-primary, #ffffff);
+}
+
+.be-btn--primary:not(:disabled):hover {
+  background: var(--be-color-primary-hover, #bfa15f);
+}
+
+.be-btn--outline {
+  background: #846836;
+  color: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+}
+
+.be-btn--outline:not(:disabled):hover {
+  background: var(--be-color-primary, #846836);
+  color: var(--be-color-on-primary, #ffffff);
+}
+
+.be-btn--ghost {
+  background: transparent;
+  color: var(--be-color-text, #1d1d1d);
+  border-color: transparent;
+}
+
+.be-btn--ghost:not(:disabled):hover {
+  background: var(--be-color-surface-alt, #e8e6e2);
+}

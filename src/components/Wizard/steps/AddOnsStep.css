@@ -1,0 +1,236 @@
+.be-addons-step {
+  margin-bottom: 1.8rem;
+}
+
+.addons-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.addons-step-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--be-color-primary, #846836);
+  margin: 0;
+}
+
+.addons-header-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.addons-loading-text {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* --- carousel scroller (plain overflow-x + scroll-snap, no JS library) --- */
+
+.addons-carousel-container {
+  position: relative;
+  width: 100%;
+}
+
+.addons-carousel {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding: 0.25rem 0.25rem 0.6rem;
+  margin: 0 -0.25rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.addons-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Gradient-ring look — see SearchBar.css's .be-search-back-btn comment for
+   why this same treatment is repeated on every nav-arrow button. */
+.carousel-arrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  border: 1.5px solid transparent;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.carousel-arrow-btn:hover {
+  background:
+    linear-gradient(#faf9f6, #faf9f6) padding-box,
+    linear-gradient(135deg, var(--be-color-primary, #846836), rgba(132, 104, 54, 0) 70%) border-box;
+  color: var(--be-color-primary, #846836);
+}
+
+.carousel-arrow-btn:active {
+  transform: scale(0.95);
+}
+
+/* --- addon card --- */
+
+.addon-card {
+  flex: 0 0 calc((100% - 2 * 0.85rem) / 3);
+  scroll-snap-align: start;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@media (max-width: 991px) {
+  .addon-card {
+    flex: 0 0 calc((100% - 0.85rem) / 2);
+  }
+}
+
+@media (max-width: 576px) {
+  .addon-card {
+    flex: 0 0 82%;
+  }
+}
+
+.addon-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--be-color-primary, #846836);
+  box-shadow: 0 10px 25px rgba(132, 104, 54, 0.08);
+}
+
+.addon-card.selected {
+  border-color: var(--be-color-primary, #846836);
+  background: #faf9f6;
+  box-shadow: 0 8px 20px rgba(132, 104, 54, 0.06);
+}
+
+.addon-image-wrap {
+  width: 100%;
+  height: 100px;
+  position: relative;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.addon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.addon-card:hover .addon-image {
+  transform: scale(1.08);
+}
+
+.addon-content {
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 0.3rem;
+}
+
+.addon-card-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.1rem;
+}
+
+.addon-card-desc {
+  font-size: 0.68rem;
+  color: #666;
+  line-height: 1.35;
+}
+
+.addon-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.addon-card-price {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--be-color-primary, #846836);
+}
+
+.addon-select-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.addon-card.selected .addon-select-indicator {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+  color: #ffffff;
+}
+
+.addon-card-checkbox-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.addon-card.selected .addon-card-checkbox-overlay {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+}
+
+.addon-card-checkbox-overlay svg {
+  opacity: 0;
+  transform: scale(0.7);
+  transition: all 0.2s ease;
+}
+
+.addon-card.selected .addon-card-checkbox-overlay svg {
+  /* color: white; */
+  opacity: 1;
+  transform: scale(1);
+}

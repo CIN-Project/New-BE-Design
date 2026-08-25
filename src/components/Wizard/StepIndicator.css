@@ -1,0 +1,102 @@
+.be-back-to-rooms-btn {
+  background: none;
+  border: none;
+  color: var(--be-color-primary, #846836) !important;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.be-step-indicator {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 0.8rem 2.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(199, 163, 106, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  align-items: center;
+}
+
+.be-step-connector-line {
+  position: absolute;
+  top: 50%;
+  left: 1.5rem;
+  right: 1.5rem;
+  height: 1.5px;
+  background: rgba(199, 163, 106, 0.15);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.be-step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #8c8c8c;
+  position: relative;
+  z-index: 2;
+  background: #ffffff;
+  padding: 0 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.be-step-item--active {
+  color: var(--be-color-primary-hover, #bfa15f);
+  font-weight: 700;
+}
+
+.be-step-item--completed {
+  color: var(--be-color-text, #2b2b2b);
+}
+
+.be-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(199, 163, 106, 0.35);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8c8c8c;
+  transition: all 0.3s ease;
+}
+
+.be-step-item--active .be-step-num {
+  border-color: var(--be-color-primary-hover, #bfa15f);
+  background: var(--be-color-primary-hover, #bfa15f);
+  color: white;
+  box-shadow: 0 4px 10px rgba(191, 161, 95, 0.25);
+}
+
+.be-step-item--completed .be-step-num {
+  border-color: var(--be-color-primary-hover, #bfa15f);
+  background: #ffffff;
+  color: var(--be-color-primary-hover, #bfa15f);
+  box-shadow: 0 4px 10px rgba(191, 161, 95, 0.1);
+}
+
+@media (max-width: 580px) {
+  .be-step-indicator {
+    padding: 0.8rem 0.6rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .be-step-connector-line {
+    display: none;
+  }
+  .be-step-item {
+    padding: 0;
+    background: none;
+  }
+}

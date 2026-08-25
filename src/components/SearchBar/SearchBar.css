@@ -1,0 +1,818 @@
+@import "../shared/DropdownModal.css";
+
+.be-booking-widget-wrap {
+  position: relative;
+  width: 95%;
+  max-width: 1200px;
+  margin: -60px auto 0 auto;
+  background: #ffffff;
+  padding: 0.6rem 0.8rem 0.6rem 2rem;
+  border-radius: 100px;
+  border: 1px solid rgba(199, 163, 106, 0.2);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 0 20px rgba(199, 163, 106, 0.04);
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+}
+
+.be-booking-widget-wrap:hover {
+  border-color: rgba(199, 163, 106, 0.4);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12), 0 0 25px rgba(199, 163, 106, 0.08);
+}
+
+.be-booking-widget-wrap.be-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.be-booking-form {
+  display: grid;
+  /* Check-in and check-out used to each be their own 1fr column here;
+     they're now one combined 2fr column (be-date-group-pair) so the
+     calendar dropdown can anchor to a wrapper spanning both of them —
+     same total width as the two separate columns before, just structured
+     differently. See DateRangeField.jsx's comment for why. */
+  grid-template-columns: 1.3fr 2fr 1fr 0.9fr auto;
+  gap: 0;
+  align-items: center;
+  width: 100%;
+}
+
+.be-date-group-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-width: 0;
+}
+
+.be-form-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  /* border-right: 1px solid rgba(0, 0, 0, 0.08); */
+  padding: 0.35rem 0.65rem;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.be-form-group:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.be-booking-form > .be-form-group:last-of-type {
+  border-right: none;
+}
+
+.be-field-icon {
+  color: var(--be-color-primary, #5d4726);
+  flex-shrink: 0;
+}
+
+.be-form-field-inputs {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.be-form-field-inputs label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--be-color-primary, #5d4726);
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+
+.be-form-field-inputs input,
+.be-custom-date-display,
+.be-custom-guests-display,
+.be-custom-select-display {
+  width: 100%;
+  height: 1.8rem;
+  background: transparent;
+  border: none;
+  color: #1a1a1a;
+  padding: 0;
+  font-size: 0.85rem !important;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  outline: none;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+}
+
+.be-form-field-inputs input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.be-custom-select-display {
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.be-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Destination dropdown */
+.be-destination-modal {
+  position: absolute;
+  top: 115%;
+  left: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(199, 163, 106, 0.05);
+  z-index: 220;
+  text-align: left;
+  /* Unbounded before — with enough cities/properties this grew taller than
+     the viewport and, positioned top:115% off a trigger near the top of a
+     compact search bar, overflowed off-screen instead of scrolling. */
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+}
+
+.be-destination-modal::-webkit-scrollbar {
+  width: 5px;
+}
+.be-destination-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.be-destination-modal::-webkit-scrollbar-thumb {
+  background: var(--be-color-primary-light, #e2e0d7);
+  border-radius: 2px;
+}
+
+.be-destination-modal::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
+}
+
+.be-destination-group {
+  margin-bottom: 0.8rem;
+}
+.be-destination-group:last-child {
+  margin-bottom: 0;
+}
+
+.be-destination-group-title {
+  display: block;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--be-color-primary-light, #c7a36a);
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(29, 29, 29, 0.04);
+  padding-bottom: 2px;
+}
+
+.be-destination-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.be-destination-option {
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  font-size: 0.8rem;
+  color: var(--be-color-text, #1d1d1d);
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: var(--be-transition-fast, all 0.3s ease);
+}
+
+.be-destination-option:hover {
+  background-color: var(--be-color-surface, #f8f5ef);
+  color: var(--be-color-primary-hover, #a88650);
+}
+
+.be-destination-option--selected {
+  background-color: var(--be-color-surface, #f8f5ef);
+  color: var(--be-color-primary-light, #c7a36a);
+  font-weight: 500;
+}
+
+/* Travelers dropdown */
+.be-travelers-modal {
+  position: absolute;
+  top: 115%;
+  left: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12), 0 0 15px rgba(199, 163, 106, 0.05);
+  z-index: 200;
+  text-align: left;
+}
+
+.be-modal-room-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+.be-modal-room-item:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0.5rem;
+}
+
+.be-modal-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.be-room-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #8a6d3b;
+  font-weight: 600;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+}
+
+.be-remove-room-btn {
+  background: transparent;
+  border: none;
+  color: #ff5252;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+.be-remove-room-btn:hover {
+  opacity: 0.8;
+}
+
+.be-counters-grid {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: space-between;
+}
+
+.be-counter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.be-counter-label {
+  font-size: 0.75rem;
+  color: #1a1a1a;
+  font-weight: 500;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+}
+
+.be-counter-label-wrap {
+  margin-bottom: 6px;
+}
+
+.be-counter-sublabel {
+  font-size: 0.58rem;
+  color: rgba(0, 0, 0, 0.45);
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.be-counter-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+  max-width: 110px;
+}
+
+.be-counter-btn {
+  background: transparent;
+  border: none;
+  color: #8a6d3b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+.be-counter-btn:hover {
+  opacity: 0.8;
+}
+.be-counter-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.be-counter-value {
+  color: #1a1a1a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.be-add-room-btn {
+  background: transparent;
+  border: 1px dashed rgba(199, 163, 106, 0.6);
+  color: #8a6d3b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.6rem 0;
+  border-radius: 6px;
+  margin-bottom: 1.2rem;
+  transition: all 0.3s ease;
+}
+.be-add-room-btn:hover {
+  background: rgba(199, 163, 106, 0.06);
+  border-color: var(--be-color-primary-light, #c7a36a);
+}
+.be-add-room-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.be-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 0.8rem;
+}
+
+.be-btn-done {
+  padding: 0.4rem 1.2rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  border: 1px solid var(--be-color-primary-light, #c7a36a);
+  background: var(--be-color-primary-light, #c7a36a);
+  color: var(--be-color-on-primary, #ffffff) !important;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.be-btn-done:hover {
+  background: transparent;
+  color: var(--be-color-primary-light, #c7a36a);
+}
+
+/* Search submit — glowing golden orbit */
+.be-btn-booking-pill {
+  background-color: var(--be-color-primary-light, #c7a36a);
+  color: var(--be-color-on-primary, #ffffff) !important;
+  border: none;
+  border-radius: 50%;
+  width: 3.2rem;
+  height: 3.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 15px rgba(199, 163, 106, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.be-btn-booking-pill::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: 0.5s;
+}
+.be-btn-booking-pill:hover::before {
+  left: 100%;
+}
+.be-btn-booking-pill:hover {
+  background-color: #ffffff;
+  color: var(--be-color-text, #1d1d1d) !important;
+  transform: scale(1.08);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+}
+
+/* Compact variant — the search "recap" bar atop the wizard/listing view.
+   Compound selector (not just .be-booking-widget-wrap--compact) is
+   deliberate: the element always carries both classes, and this bumps
+   specificity so this rule keeps winning over the plain .be-booking-
+   widget-wrap tablet/mobile overrides below regardless of source order —
+   without it, dropping under 1200px silently reverted the compact bar to
+   the full hero variant's padding/margin (2rem vs this rule's 0.4rem/1rem),
+   since same-specificity + later source order was clobbering it. */
+.be-booking-widget-wrap.be-booking-widget-wrap--compact {
+  width: 100%;
+  max-width: 1280px;
+  margin: 1rem auto 1.5rem auto;
+  padding: 0.4rem 1rem;
+  /* Desktop overrides this to a full pill (border-radius:100px, see the
+     min-width:1025px block below) to match a reference design — kept as a
+     rounded rectangle here since mobile/tablet weren't asked to change. */
+  border-radius: 16px;
+  /* The base .be-booking-widget-wrap rule's border (rgba(199,163,106,0.2), a
+     faint gold tint meant to read against that variant's own drop shadow —
+     0 15px 35px, much heavier than this one) is inherited here too, but this
+     variant's own box-shadow is a much lighter 0 4px 16px whose falloff is
+     biased downward — it gives the bottom/sides some visible depth but
+     leaves the TOP edge with no shadow reinforcement at all, so the
+     inherited border alone was too faint to read there against a plain
+     white page.
+     `outline`, not `border`: a real `border` is part of this element's OWN
+     background/border layer, which — per the CSS stacking spec — always
+     paints FIRST (bottommost), before ANY child, no matter that child's
+     z-index. The ::before shield below is exactly such a child, and it has
+     to cover this element's own full footprint to mask the sticky-scroll
+     gap above it — so a `border` here would always end up silently painted
+     over by that shield. `outline` isn't part of that same layer (it's
+     drawn in its own step, on top of a stacking context's contents), so it
+     survives being layered against the shield, and — unlike putting a
+     border on the shield instead — it draws at THIS element's true edges,
+     not the shield's 12px-taller ones (which made the top gap visibly
+     larger than the bottom one once a border made that extra 12px visible
+     for the first time). outline-offset:-1px keeps it flush with the
+     rounded corners instead of sitting 1px outside them. */
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 0 12px rgba(199, 163, 106, 0.03);
+  /* The base .be-booking-widget-wrap rule's `transition: all 1.2s ...` (its
+     own initial fade/slide-in reveal) is inherited here too, and this
+     variant never overrode it — so any property that happens to recompute
+     while this bar is sticky-scrolling (e.g. a hover/focus state, or a
+     re-render touching its box-shadow) eases over a full 1.2s instead of
+     applying instantly, which reads as the bar slowly drifting/settling
+     rather than just being pinned in place. Explicitly off here since this
+     recap bar has no reveal animation of its own to begin with. */
+  transition: none;
+  transform: none;
+  opacity: 1;
+  /* Stays visible while scrolling the room list below (step 1 only — see
+     Wizard.jsx, which stops rendering this variant past step 1). top:12px
+     (not 0) keeps the same breathing room from the browser edge once stuck
+     that it has before scrolling starts, instead of clinging flush against
+     it. z-index 150 sits below the destination/date/travelers dropdowns
+     (200-220) so they still layer correctly above it when opened while
+     scrolled. */
+  position: sticky;
+  top: 12px;
+  z-index: 150;
+}
+
+/* top:12px above leaves a gap between the bar and the browser edge once
+   stuck — that gap isn't covered by anything opaque, so the room-card
+   content scrolling underneath shows through it, and (now that the compact
+   bar is a rounded, bordered card rather than a flush-edged strip) so does
+   whatever scrolls directly behind its own rounded bottom corners. This
+   shield covers both: extended up 12px above the wrap to mask the sticky
+   gap, and matched to the wrap's own width/radius (not a wider viewport-
+   spanning strip) so it stays flush inside the border instead of
+   overlapping — and painting it — which is what a wider strip did. */
+.be-booking-widget-wrap--compact::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  background: #ffffff;
+  /* No border here (see the wrap's own `outline` above for why a plain
+     `border` doesn't work reliably against this shield) — this element only
+     needs to supply opaque white fill, not a visible edge of its own. */
+  /* Absolutely-positioned boxes paint after normal-flow content by default,
+     which put this on top of (hiding) the real summary/form content once it
+     grew to cover the card's full area instead of just the strip above it.
+     A negative z-index moves it back to painting before (behind) that
+     normal-flow content, while the whole assembly still sits above the
+     scrolling room list via the wrap's own z-index:150 (unaffected by this
+     local value, which only orders siblings within the wrap itself). */
+  z-index: -1;
+}
+
+.be-booking-widget-wrap--compact .be-booking-form {
+  /* Check-in/check-out merged into one 1.7fr column (be-date-group-pair)
+     instead of two separate 0.85fr ones — see .be-booking-form's own
+     comment above for why. */
+  grid-template-columns: auto 1.1fr 1.7fr 0.9fr 0.8fr auto;
+}
+
+.be-booking-widget-wrap--compact .be-form-group {
+  padding: 0.35rem 1rem;
+}
+
+/* Desktop-only: pulls the back-arrow button out to sit beside the compact
+   bar as its own separate circle, instead of inline as the bar's first
+   field — matching a reference layout where the strip itself reads
+   narrower and the arrow is clearly a distinct control, not part of the
+   search fields. Scoped to desktop (min-width:1025px, the same threshold
+   the tablet/mobile rules below key off of) and left untouched below that,
+   since the mobile-editing layout already has its own bespoke positioning
+   for this button (see the max-width:768px block) that this isn't meant to
+   replace. */
+@media (min-width: 1025px) {
+  .be-booking-widget-wrap.be-booking-widget-wrap--compact {
+    /* `position: fixed` was tried here to match a reference layout, but it
+       takes the bar out of document flow entirely — every attempt at
+       correctly re-centering it (left/right:0 with auto margins, then
+       left:50%+translateX) either broke the bar's width/centering or, once
+       fixed, needed the StepIndicator below to be manually pushed down to
+       avoid rendering underneath it, and that spacing kept mismatching the
+       bar's real height. `position: sticky` (inherited from the base rule,
+       unchanged) already gives the same "always visible while scrolling"
+       behavior without any of that — it naturally reserves its own space
+       in the document flow, so nothing below it needs compensating. Only
+       the shape (pill) and the arrow's external placement are overridden
+       here for desktop; positioning itself is intentionally left alone. */
+    border-radius: 100px;
+    /* Narrower than the base rule's max-width:1280px specifically so the
+       externally-placed arrow (sitting at calc(-2.2rem - 12px), ~47px, to
+       this bar's left — see .be-search-back-btn below) always has real
+       margin to sit in. At max-width:1280px, a browser window only a little
+       wider than that left the arrow clipped by the viewport edge, with
+       barely a sliver of it visible — this trades a bit of the bar's own
+       width for guaranteeing that space exists. */
+    max-width: 1125px;
+  }
+
+  .be-booking-widget-wrap--compact::before {
+    border-radius: 100px;
+  }
+
+  .be-booking-widget-wrap--compact .be-search-back-btn {
+    position: absolute;
+    left: calc(-2.2rem - 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 0;
+  }
+
+  .be-booking-widget-wrap--compact .be-booking-form {
+    /* Drops the leading `auto` track the back button used to occupy inline
+       — it's absolutely positioned now, so nothing needs a reserved column
+       for it anymore. */
+    grid-template-columns: 1.1fr 1.7fr 0.9fr 0.8fr auto;
+  }
+}
+
+.be-booking-widget-wrap--compact .be-form-field-inputs label {
+  font-size: 0.6rem;
+}
+
+.be-booking-widget-wrap--compact .be-btn-booking-pill {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+/* Mobile-only compact-bar summary card + its edit/close controls (see
+   SearchBar.jsx's mobileEditOpen). Hidden unconditionally here so desktop/
+   tablet never see it regardless of the .be-mobile-editing class state —
+   only the <=768px block below ever turns it on. */
+.be-compact-summary {
+  display: none;
+}
+
+.be-compact-summary-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.be-compact-summary-property {
+  margin: 0 0 2px;
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--be-color-primary, #846836);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.be-compact-summary-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.be-compact-summary-edit-btn {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 1px solid rgba(132, 104, 54, 0.25);
+  background: var(--be-color-surface, #f8f5ef);
+  color: var(--be-color-primary, #846836);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 0.6rem;
+  transition: var(--be-transition-fast, all 0.25s ease);
+}
+
+.be-compact-summary-edit-btn:hover {
+  background: var(--be-color-primary, #846836);
+  color: #ffffff;
+  border-color: var(--be-color-primary, #846836);
+}
+
+.be-compact-close-btn {
+  display: none;
+}
+
+/* Shared gradient-ring arrow-button look, used on every circular prev/
+   next/back nav control in the package (see also .be-cal-nav-btn,
+   .carousel-arrow-btn, .be-carousel-nav-btn, .be-img-slider-arrow) — a thin
+   gold-to-transparent gradient ring around a plain white/cream fill,
+   instead of each control having its own flat-color border. */
+.be-search-back-btn {
+  background:
+    linear-gradient(var(--be-color-surface, #f8f5ef), var(--be-color-surface, #f8f5ef)) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  min-width: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--be-color-text, #1d1d1d);
+  cursor: pointer;
+  transition: var(--be-transition-fast, all 0.3s ease);
+  margin-right: 0.4rem;
+}
+.be-search-back-btn:hover {
+  background:
+    linear-gradient(var(--be-color-surface-alt, #e8e6e2), var(--be-color-surface-alt, #e8e6e2)) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  color: var(--be-color-primary-light, #c7a36a);
+}
+
+@media (max-width: 1200px) {
+  .be-booking-widget-wrap--compact .be-booking-form {
+    grid-template-columns: auto 1fr 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .be-booking-widget-wrap {
+    margin: 2rem auto 0 auto;
+    width: 100%;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    opacity: 1;
+    transform: none;
+  }
+  .be-booking-form {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .be-form-group {
+    border-right: none;
+    padding: 0;
+  }
+  .be-btn-booking-pill {
+    grid-column: span 2;
+    width: 100%;
+    border-radius: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .be-booking-form {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .be-btn-booking-pill {
+    grid-column: span 1;
+  }
+
+  /* The compact variant's own grid-template-columns override above
+     (.be-booking-widget-wrap--compact .be-booking-form, a descendant
+     selector) is more specific than the plain .be-booking-form rule right
+     above, so it would otherwise keep winning down to phone widths too —
+     a 3-column "auto 1fr 1fr" split (and a 2-up date-pair nested inside one
+     of those thirds) is far too cramped under ~768px. Matching descendant-
+     selector specificity here, declared later, stacks it to one column
+     like the full variant instead. */
+  .be-booking-widget-wrap--compact .be-booking-form {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .be-booking-widget-wrap--compact .be-btn-booking-pill {
+    grid-column: span 1;
+    justify-self: center;
+  }
+
+  /* Below 768px the compact bar shows the small summary card
+     (.be-compact-summary) by default and only reveals the full stacked
+     field form once the edit pencil is tapped (.be-mobile-editing, toggled
+     in SearchBar.jsx) — see the rules below. Since the default state is a
+     short single-row card again, position:sticky is back in play here
+     (it's only the *expanded* full-field form that's too tall to usefully
+     pin — hidden in that state below instead of fighting sticky sizing). */
+  .be-booking-widget-wrap--compact .be-booking-form {
+    display: none;
+  }
+
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-booking-form {
+    display: grid;
+  }
+
+  .be-booking-widget-wrap--compact .be-compact-summary {
+    display: flex;
+    align-items: center;
+    padding: 0.3rem 0.2rem;
+  }
+
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-compact-summary {
+    display: none;
+  }
+
+  /* The form's own padding (inherited from .be-booking-widget-wrap--compact
+     .be-form-group, 0.35rem 1rem) already pushes the first field down and
+     right — absolute-positioning the close button in that top-right corner
+     keeps it out of the stacked fields' flow instead of becoming its own
+     grid row. */
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-compact-close-btn {
+    display: flex;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--be-color-surface, #f8f5ef);
+    color: var(--be-color-text, #1d1d1d);
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  /* Without this, the back-arrow stayed a normal grid item taking its own
+     full row above Location — stacked with the close button's 2.6rem of
+     reserved top padding, that read as a large dead gap before the first
+     real field. Lifting it out of flow to sit alongside the close button
+     as a shared top-corner overlay (mirrored on the left) needs much less
+     reserved space above the fields — just enough to clear one button row. */
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-search-back-btn {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    margin-right: 0;
+    z-index: 1;
+  }
+
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-booking-form {
+    position: relative;
+    padding-top: 3rem;
+  }
+  .be-booking-widget-wrap.be-booking-widget-wrap--compact{
+    padding: 0.6rem 0.7rem;
+  }
+
+  /* The 380px desktop width reads as nearly edge-to-edge on an actual
+     phone (max-width:90vw only trims it slightly) — narrower and capped
+     so it reads as its own dropdown card instead of matching the full
+     field width. */
+  .be-destination-modal {
+    width: 315px;
+    max-width: 85vw;
+  }
+}
+

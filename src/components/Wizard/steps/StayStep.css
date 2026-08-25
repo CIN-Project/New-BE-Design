@@ -1,0 +1,1030 @@
+/*
+ * Visual spec ported 1:1 (value-for-value) from bawa-hotels-next's
+ * booking/page.js room-row / rate-plan-card / rate-option-row CSS.
+ * Bronze-gold is themable via --be-color-primary / --be-color-primary-hover
+ * (theme prop, see theme/defaultTheme.js for the fallback values used
+ * here). Near-black (#1a1a1a), gray
+ * (#8c8c8c/#555/#777), success green (#27ae60) and error red (#c0392b) stay
+ * literal — bawa itself never tokenized those either, and they aren't part
+ * of the package's controllable palette.
+ */
+
+/* ---------- Room row card ---------- */
+
+.be-room-row-card {
+  background: white;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease;
+  margin-bottom: 1rem;
+  /* .be-stay-step is a column flexbox, so this card is itself a flex item —
+     without min-width:0 a flex item defaults to its content's intrinsic
+     min-width, letting the expanded rate-plan grid below push this card
+     (and everything in it) wider than its parent, spilling past the page
+     edge instead of scrolling internally. */
+  min-width: 0;
+}
+
+.be-room-row-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(191, 161, 95, 0.3);
+}
+
+.be-room-row-card.be-selected {
+  border-color: var(--be-color-primary-hover, #bfa15f);
+  background: rgba(191, 161, 95, 0.02);
+}
+
+.be-room-row-top {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  /* Fixed height + overflow:hidden — ported from bawa-hotels-next's real
+     booking/page.js (~4032: height:"190px", overflow:"hidden"), not
+     approximated. A FIXED height here is actually what makes
+     .be-room-row-img's height:100% below resolve reliably (percentage
+     heights need a definite ancestor height); the auto/min-height version
+     tried earlier broke that resolution and left a gap under the image.
+     The description is line-clamped below so it can never grow taller than
+     this box and re-introduce the original overflow-into-next-card bug. */
+  height: 240px;
+  overflow: hidden;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.be-room-row-img {
+  height: 100%;
+  background-color: #eee;
+  cursor: pointer;
+}
+
+.be-room-row-details {
+  padding: 1.6rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.be-room-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.be-room-row-name {
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-size: 1.35rem;
+  color: var(--be-color-primary, #846836);
+  margin: 0;
+  font-weight: 500;
+}
+
+.be-room-row-meta {
+  display: flex;
+  gap: 1.4rem;
+  font-size: 0.72rem;
+  color: #777;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.be-room-row-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.be-room-row-meta svg {
+  flex-shrink: 0;
+  color: var(--be-color-primary, #846836);
+}
+
+/* Description + "Read More" sit side by side (bawa ~4057-4080) so Read
+   More never has to reflow inline text — the description column is the
+   flexible sibling, clamped to exactly 2 lines below regardless of length. */
+.be-room-row-desc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.be-room-read-more {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--be-color-primary, #846836) !important;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.be-room-read-more:hover {
+  color: var(--be-color-primary-hover, #bfa15f);
+}
+
+/* Hard-clamped to 2 lines (bawa ~4058-4070's -webkit-line-clamp) instead of
+   a JS char-slice — guarantees this can never grow taller than its fixed
+   height no matter how long RoomDescription is, which is what keeps
+   .be-room-row-top's fixed 190px from ever being pushed past by content. */
+.be-room-row-desc {
+  font-size: 0.82rem !important;
+  line-height: 1.45;
+  color: #555;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.61rem;
+}
+
+.be-room-price-select-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f2f2f2;
+  margin-top: 0.6rem;
+  padding-top: 0.9rem;
+}
+
+.be-room-row-price-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.be-room-row-price-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #888;
+  font-weight: 500;
+}
+
+.be-room-row-price {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--be-color-primary, #846836);
+}
+
+.be-room-row-price span {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #888;
+}
+
+.be-member-rate-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--be-color-surface, #f4f2eb);
+  color: var(--be-color-primary, #846836) !important;
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.be-btn-select-room {
+  background: var(--be-color-primary, #846836);
+  border: 1px solid var(--be-color-primary, #846836);
+  padding: 0.5rem 1.4rem;
+  cursor: pointer;
+  outline: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: white !important;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.25s ease;
+  border-radius: 4px;
+}
+
+.be-btn-select-room:hover {
+  background: var(--be-color-primary-hover, #bfa15f);
+  border-color: var(--be-color-primary-hover, #bfa15f);
+}
+
+.be-btn-select-room .be-arrow {
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.be-btn-select-room.be-expanded .be-arrow {
+  transform: rotate(-90deg);
+}
+
+/* ---------- Expand accordion (CSS grid-rows trick) ---------- */
+
+.be-rate-plans-expand-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  min-width: 0;
+}
+
+.be-rate-plans-expand-wrapper.be-expanded {
+  grid-template-rows: 1fr;
+  overflow: visible !important;
+}
+
+.be-rate-plans-container {
+  min-height: 0;
+  /* Grid item of .be-rate-plans-expand-wrapper — same min-width:auto
+     overflow risk as the flex items above; without this it can grow to fit
+     the rate cards' intrinsic content width instead of staying within the
+     room card. Deliberately carries NO padding/background of its own: a
+     grid item's padding doesn't shrink away when its track collapses to
+     0fr, so it used to render as a fixed ~42px sliver between cards even
+     fully collapsed. All of that visual styling now lives on
+     .be-rate-plans-container-inner instead, which isn't a grid item and so
+     actually goes to 0 height when the wrapper collapses. */
+  min-width: 0;
+  width: 100%;
+}
+
+.be-rate-plans-container-inner {
+  border-top: 1px solid #f2f2f2;
+  background: #fcfcfc;
+  padding: 0.6rem 2rem 2rem 2rem;
+  box-sizing: border-box;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 0.28s ease-out;
+}
+
+.be-rate-plans-expand-wrapper.be-expanded .be-rate-plans-container-inner {
+  opacity: 1;
+}
+
+.be-rate-plans-empty {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0.5rem 0 0;
+}
+
+/* ---------- Rate plan carousel + card shell ---------- */
+
+.be-rate-plans-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.be-rate-plans-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 1.2rem;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding: 0.5rem 0.25rem;
+  scrollbar-width: none;
+}
+
+.be-rate-plans-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.be-rate-card-col {
+  flex: 0 0 calc((100% - 2 * 1.2rem) / 3);
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  background: #ffffff;
+  border: 1px solid rgba(132, 104, 54, 0.12);
+  border-top: 3px solid var(--be-color-primary, #846836);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.015),
+    0 1px 3px rgba(132, 104, 54, 0.03);
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.be-rate-card-col:hover {
+  transform: translateY(-4px);
+  border-color: rgba(132, 104, 54, 0.35);
+  box-shadow:
+    0 12px 28px rgba(132, 104, 54, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.be-rate-card-col.be-selected {
+  border-color: var(--be-color-primary, #846836);
+  box-shadow: 0 12px 30px rgba(132, 104, 54, 0.18);
+  border-top-width: 4px;
+}
+
+/* Gradient-ring look — see SearchBar.css's .be-search-back-btn comment for
+   why this same treatment is repeated on every nav-arrow button. */
+.be-carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  border: 1.5px solid transparent;
+  color: #333;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.be-carousel-nav-btn:hover {
+  background:
+    linear-gradient(var(--be-color-primary, #846836), var(--be-color-primary, #846836)) padding-box,
+    linear-gradient(135deg, var(--be-color-primary, #846836), var(--be-color-primary, #846836)) border-box;
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.be-carousel-nav-btn.be-prev {
+  left: -50px;
+}
+
+.be-carousel-nav-btn.be-next {
+  right: -50px;
+}
+
+@media (max-width: 1024px) {
+  .be-rate-plans-grid {
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-x: visible;
+  }
+
+  .be-rate-card-col {
+    flex: none;
+    width: 100%;
+  }
+
+  .be-carousel-nav-btn {
+    display: none !important;
+  }
+
+  .be-room-row-top {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .be-room-row-img {
+    min-height: 160px;
+  }
+}
+
+/* Below 768px the vertical stack above (rate cards full-width, one after
+   another) makes comparing plans mean a lot of scrolling past a room's
+   other content. Swapping back to a horizontal, swipeable filmstrip (one
+   card at a time, peeking the next) keeps rate-plan browsing contained to
+   its own row like the desktop carousel does — just touch-scrolled instead
+   of button-navigated. Declared after the 1024px block above so it wins at
+   this narrower range while 769–1024px (tablet) keeps the vertical stack. */
+@media (max-width: 768px) {
+  .be-rate-plans-grid {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 1rem;
+  }
+
+  .be-rate-card-col {
+    flex: 0 0 85%;
+    width: auto;
+  }
+}
+
+/* ---------- Rate card interior ---------- */
+
+.be-rate-card-header {
+  padding: 0.4rem 1rem;
+  background: linear-gradient(to bottom, #fafaf8, #f4f2eb);
+  border-bottom: 1px solid rgba(132, 104, 54, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  height: 3.8rem;
+  box-sizing: border-box;
+}
+
+.be-rate-card-title {
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-size: 0.98rem;
+  font-weight: 550;
+  color: var(--be-color-primary, #846836);
+  margin: 0;
+  line-height: 1.3;
+  text-align: center;
+  width: 100%;
+  letter-spacing: 0.01em;
+}
+
+.be-cancellation-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.be-cancellation-pill.be-free {
+  background: #fbfaf5;
+  color: var(--be-color-primary, #846836);
+  border: 1px solid rgba(132, 104, 54, 0.15);
+}
+
+.be-cancellation-pill.be-non-ref {
+  background: #fdfaf9;
+  color: #c0392b;
+  border: 1px solid rgba(192, 57, 43, 0.12);
+}
+
+.be-rate-card-inclusions-wrapper {
+  padding: 1.4rem 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px dashed rgba(132, 104, 54, 0.15);
+  background: #ffffff;
+}
+
+.be-rate-card-inclusions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.be-rate-card-inclusions::-webkit-scrollbar {
+  width: 3px;
+}
+
+.be-rate-card-inclusions::-webkit-scrollbar-thumb {
+  background: var(--be-color-primary-light, #e2e0d7);
+  border-radius: 1.5px;
+}
+
+.be-rate-card-inclusions::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
+}
+
+.be-inclusion-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(132, 104, 54, 0.08);
+  border: 1px solid rgba(132, 104, 54, 0.15);
+  flex-shrink: 0;
+  margin-right: 9px;
+  margin-top: 1px;
+}
+
+.be-rate-card-inclusion-item {
+  display: flex;
+  align-items: flex-start;
+  font-size: 0.76rem;
+  color: #555;
+  line-height: 1.35;
+}
+
+.be-rate-card-pricing-footer {
+  padding: 1.2rem;
+  background: #fbfbf9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.be-rate-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ---------- Rate option rows: Standard vs Member ---------- */
+
+.be-rate-option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(132, 104, 54, 0.12);
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01);
+}
+
+.be-rate-option-row:hover {
+  border-color: var(--be-color-primary, #846836);
+  background: rgba(132, 104, 54, 0.02);
+  box-shadow: 0 4px 10px rgba(132, 104, 54, 0.04);
+}
+
+.be-rate-option-row.be-active {
+  border-color: #1a1a1a;
+  background: #fafaf9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.be-rate-option-row.be-member-row.be-active {
+  border-color: var(--be-color-primary, #846836);
+  background: #fbfaf6;
+  box-shadow: 0 4px 12px rgba(132, 104, 54, 0.08);
+}
+
+.be-rate-option-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.be-radio-circle {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #c8c5bc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.be-rate-option-row.be-active .be-radio-circle {
+  border-color: #1a1a1a;
+}
+
+.be-rate-option-row.be-member-row.be-active .be-radio-circle {
+  border-color: var(--be-color-primary, #846836);
+}
+
+.be-radio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1a1a1a;
+}
+
+.be-rate-option-row.be-member-row.be-active .be-radio-dot {
+  background: var(--be-color-primary, #846836);
+}
+
+.be-rate-option-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.be-rate-option-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.be-rate-option-label.be-member-label {
+  color: var(--be-color-primary, #846836);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.be-rate-option-savings {
+  font-size: 0.58rem;
+  color: #27ae60;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: rgba(39, 174, 96, 0.07);
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+  margin-top: 1px;
+  line-height: 1.2;
+}
+
+.be-rate-option-price {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  text-align: right;
+}
+
+.be-rate-option-price.be-member-price {
+  color: var(--be-color-primary, #846836);
+}
+
+.be-rate-unit {
+  font-size: 0.62rem;
+  color: #666;
+  font-weight: 400;
+}
+
+.be-rate-select-btn {
+  width: 100%;
+  background: var(--be-color-primary, #846836);
+  border: 1px solid var(--be-color-primary, #846836);
+  color: #ffffff !important;
+  padding: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 12px rgba(132, 104, 54, 0.2);
+}
+
+.be-rate-select-btn:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.be-rate-select-btn.be-selected {
+  background: #27ae60;
+  border-color: #27ae60;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ---------- Unlock-sweep animation ---------- */
+
+.be-unlock-sweep {
+  animation: be-gold-sweep 1.2s ease-out;
+}
+
+@keyframes be-gold-sweep {
+  0% {
+    box-shadow: 0 0 0 0px rgba(132, 104, 54, 0.4);
+    background: #fafaf9;
+  }
+  30% {
+    box-shadow: 0 0 0 8px rgba(132, 104, 54, 0.15);
+    background: #faf7f0;
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(132, 104, 54, 0);
+    background: #fbfaf6;
+  }
+}
+
+.be-unlocking-flash {
+  color: var(--be-color-primary, #846836) !important;
+  animation: be-pulse-gold 1.5s ease-out;
+}
+
+@keyframes be-pulse-gold {
+  0% {
+    text-shadow: 0 0 0px rgba(132, 104, 54, 0);
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(132, 104, 54, 0.8);
+    transform: scale(1.05);
+  }
+  100% {
+    text-shadow: 0 0 0px rgba(132, 104, 54, 0);
+    transform: scale(1);
+  }
+}
+
+/* ---------- Step-level chrome (not part of bawa's card spec) ---------- */
+
+.be-stay-step {
+  display: flex;
+  flex-direction: column;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.be-room-slot-stepper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+
+.be-room-slot-step-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.be-room-slot-step-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.be-room-slot-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #d8d2c4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #999;
+  background: #fff;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.be-room-slot-circle.be-active {
+  border-color: var(--be-color-primary, #846836);
+  color: var(--be-color-primary, #846836);
+  box-shadow: 0 0 0 3px rgba(132, 104, 54, 0.12);
+}
+
+.be-room-slot-circle.be-completed {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+  color: #fff;
+}
+
+.be-room-slot-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #4a4a4a;
+  margin: 0 0.6rem 0 0.4rem;
+  white-space: nowrap;
+}
+
+.be-room-slot-line {
+  width: 24px;
+  height: 1.5px;
+  background: #d8d2c4;
+  margin-right: 0.4rem;
+}
+
+.be-room-slot-line.be-completed {
+  background: var(--be-color-primary, #846836);
+}
+
+.be-stay-loading,
+.be-stay-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #777;
+  font-size: 0.95rem;
+}
+
+/* Sized/bordered like a collapsed .be-room-row-card (not just a bare line
+   of text) so the loader fills the same visual slot a room card would,
+   rather than reading as a generic page-wide status line disconnected
+   from where the room list actually is. */
+.be-room-advance-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 240px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+  color: var(--be-color-primary, #846836);
+  font-weight: 600;
+}
+
+.be-room-advance-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(132, 104, 54, 0.2);
+  border-top-color: var(--be-color-primary, #846836);
+  border-radius: 50%;
+  animation: be-room-advance-spin 0.8s linear infinite;
+}
+
+@keyframes be-room-advance-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Room details modal ("Read More") ---------- */
+
+.be-room-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1200;
+}
+
+.be-room-modal {
+  background: #ffffff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+}
+
+.be-room-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  transition: background 0.2s ease;
+}
+
+.be-room-modal-close:hover {
+  background: #ffffff;
+}
+
+.be-room-modal-img {
+  width: 100%;
+  height: 310px !important;
+  background-size: cover;
+  background-position: center;
+  background-color: #eee;
+}
+
+.be-room-modal-body {
+  padding: 1.8rem 2rem 2.2rem;
+}
+
+.be-room-modal-title {
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  margin: 0 0 0.8rem;
+  font-weight: 500;
+}
+
+.be-room-modal-desc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #555;
+  margin: 1rem 0 1.6rem;
+}
+
+.be-room-modal-amenity-group {
+  margin-bottom: 1.4rem;
+}
+
+.be-room-modal-amenity-group h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--be-color-primary, #846836);
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+  border-bottom: 1px solid #f2f2f2;
+  padding-bottom: 0.4rem;
+}
+
+.be-room-modal-amenity-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+}
+
+.be-room-modal-amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #444;
+}
+
+.be-room-modal-amenity-item svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .be-room-modal-amenity-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .be-room-row-details {
+    padding: 1.1rem 1.2rem;
+  }
+
+  .be-room-row-name {
+    font-size: 1.15rem;
+  }
+
+  .be-room-price-select-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+
+  .be-btn-select-room {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .be-rate-plans-container-inner {
+    padding: 0.6rem 1rem 1.5rem 1rem;
+  }
+
+  .be-rate-card-inclusions-wrapper {
+    padding: 1rem 1.1rem;
+  }
+
+  .be-rate-card-pricing-footer {
+    padding: 1rem;
+  }
+
+  .be-room-modal-body {
+    padding: 1.2rem 1.3rem 1.6rem;
+  }
+}
+
+.be-stay-error {
+  padding: 1.5rem;
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  background: #fdfaf9;
+  border-radius: 6px;
+  color: #c0392b;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: center;
+}

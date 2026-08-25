@@ -1,0 +1,171 @@
+.be-success-card {
+  background: white;
+  border: 1px solid rgba(191, 161, 95, 0.3);
+  border-radius: 4px;
+  padding: 4rem 2rem;
+  text-align: center;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.03);
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.be-success-icon-badge {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(191, 161, 95, 0.1);
+  color: var(--be-color-primary-hover, #bfa15f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.be-success-icon-badge--alert {
+  background: rgba(178, 60, 60, 0.08);
+  color: #b23c3c;
+}
+
+.be-success-icon-badge--pending {
+  background: rgba(140, 140, 140, 0.1);
+  color: #8c8c8c;
+}
+
+.be-spinner-icon {
+  animation: be-spin 1s linear infinite;
+}
+
+@keyframes be-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.be-success-title {
+  font-family: var(--be-font-serif, "Cormorant Garamond", serif);
+  font-size: 2.2rem;
+  color: #1a1a1a;
+  margin-bottom: 0.8rem;
+}
+
+.be-success-desc {
+  font-size: 1.05rem;
+  color: #666;
+  max-width: 500px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.6;
+}
+
+.be-booking-id-tag {
+  background: #2b2b2b;
+  color: white;
+  padding: 0.6rem 1.8rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
+
+.be-success-receipt-details {
+  width: 100%;
+  border: 1px solid #ecebe9;
+  border-radius: 4px;
+  padding: 2rem;
+  background: #faf9f7;
+  margin-bottom: 3rem;
+  text-align: left;
+}
+
+.be-receipt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.be-receipt-item span {
+  display: block;
+  font-size: 0.72rem;
+  color: #8c8c8c;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3rem;
+}
+
+.be-receipt-item p {
+  font-weight: 500;
+  color: #2b2b2b;
+}
+
+.be-success-actions {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.be-btn-success-primary {
+  background: var(--be-color-primary-hover, #bfa15f);
+  color: white;
+  padding: 0.9rem 2.2rem;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.be-btn-success-primary:hover {
+  background: var(--be-color-primary, #846836);
+}
+
+.be-btn-success-secondary {
+  background: #2b2b2b;
+  color: white;
+  padding: 0.9rem 2.2rem;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.be-btn-success-secondary:hover {
+  background: #111;
+}
+
+@media print {
+  .be-success-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .be-success-card {
+    padding: 2.5rem 1.25rem;
+  }
+
+  .be-receipt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .be-success-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+}

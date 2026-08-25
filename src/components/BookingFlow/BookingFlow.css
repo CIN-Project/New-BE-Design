@@ -1,0 +1,15 @@
+.be-booking-flow {
+  width: 100%;
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+}
+
+.be-booking-flow-cta {
+  display: flex;
+  justify-content: center;
+}
+
+.be-booking-flow-cta-btn {
+  font-size: 0.8rem;
+  padding: 1.1rem 3rem;
+  box-shadow: 0 8px 24px rgba(199, 163, 106, 0.35);
+}

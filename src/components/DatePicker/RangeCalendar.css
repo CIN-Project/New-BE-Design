@@ -1,0 +1,301 @@
+@import "../shared/DropdownModal.css";
+
+.be-calendar-modal {
+  position: absolute;
+  top: 115%;
+  left: 84%;
+  transform: translateX(-50%);
+  width: 660px;
+  max-width: min(90vw, calc(100vw - 2rem));
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(199, 163, 106, 0.05);
+  z-index: 210;
+  text-align: left;
+}
+
+/* Same calendar, no dropdown chrome — used inside CartOverview's "Modify
+   Dates" modal, which already provides its own box/shadow/padding. */
+.be-calendar-embedded {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.be-cal-header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.be-cal-months-titles {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  padding: 0 2rem;
+}
+
+.be-cal-month-title {
+  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
+  font-size: 1.1rem;
+  color: #1a1a1a;
+  font-weight: 400;
+  width: 50%;
+  text-align: center;
+}
+
+/* Gradient-ring look — see SearchBar.css's .be-search-back-btn comment for
+   why this same treatment is repeated on every nav-arrow button. */
+.be-cal-nav-btn {
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+  border: 1.5px solid transparent;
+  color: #333;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.be-cal-nav-btn:hover {
+  background:
+    linear-gradient(rgba(199, 163, 106, 0.12), rgba(199, 163, 106, 0.12)) padding-box,
+    linear-gradient(135deg, #8a6d3b, rgba(199, 163, 106, 0) 70%) border-box;
+  color: #8a6d3b;
+}
+
+.be-cal-grids {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.be-cal-month-grid {
+  flex: 1;
+}
+
+.be-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.be-cal-weekdays span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.be-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 6px;
+}
+
+.be-cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+  font-size: 0.8rem;
+  color: #1a1a1a;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+  border-radius: 8px;
+}
+
+.be-cal-day-num {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #1a1a1a;
+}
+
+.be-cal-day-rate {
+  font-size: 0.58rem;
+  line-height: 1;
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--be-color-primary, #846836);
+  background: rgba(132, 104, 54, 0.08);
+  padding: 2px 4px;
+  border-radius: 100px;
+  display: inline-block;
+}
+
+/* Shown in place of .be-cal-day-rate while rate-et's 6-month chunk for this
+   date is still in flight (RangeCalendar.jsx's isDateRateLoading). */
+.be-cal-day-rate-skeleton {
+  display: inline-block;
+  width: 65%;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 100px;
+  background: linear-gradient(90deg, #e6e6e6 25%, #f2f2f2 37%, #e6e6e6 63%);
+  background-size: 400% 100%;
+  /* animation: be-cal-skeleton-shimmer 1.4s ease infinite; */
+}
+
+@keyframes be-cal-skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.be-cal-day:hover:not(.be-cal-day--empty):not(.be-cal-day--disabled) {
+  background: rgba(199, 163, 106, 0.12) !important;
+  border-radius: 50%;
+}
+
+.be-cal-day--empty {
+  cursor: default;
+}
+
+.be-cal-day--disabled {
+  cursor: not-allowed;
+}
+.be-cal-day--disabled .be-cal-day-num {
+  color: rgba(0, 0, 0, 0.2);
+}
+.be-cal-day--disabled .be-cal-day-rate {
+  opacity: 0.4;
+}
+
+.be-cal-day--sold-out {
+  background: rgba(192, 57, 43, 0.03);
+  border: 1px dashed rgba(192, 57, 43, 0.25);
+  cursor: not-allowed;
+}
+.be-cal-day--sold-out .be-cal-day-num {
+  color: rgba(0, 0, 0, 0.35);
+}
+.be-cal-day--sold-out .be-cal-day-rate {
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.be-cal-day--selected-start,
+.be-cal-day--selected-end,
+.be-cal-day--selected-single,
+.be-cal-day--selected-range {
+  background-color: var(--be-color-primary-light, #c7a36a) !important;
+}
+
+.be-cal-day--selected-start .be-cal-day-num,
+.be-cal-day--selected-end .be-cal-day-num,
+.be-cal-day--selected-single .be-cal-day-num {
+  color: #ffffff !important;
+}
+.be-cal-day--selected-start .be-cal-day-rate,
+.be-cal-day--selected-end .be-cal-day-rate,
+.be-cal-day--selected-single .be-cal-day-rate {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.be-cal-day--selected-start {
+  border-radius: 50% 0 0 50% !important;
+}
+.be-cal-day--selected-end {
+  border-radius: 0 50% 50% 0 !important;
+}
+.be-cal-day--selected-single {
+  border-radius: 50% !important;
+}
+.be-cal-day--selected-range {
+  background-color: rgba(199, 163, 106, 0.18) !important;
+  border-radius: 0 !important;
+}
+.be-cal-day--selected-range .be-cal-day-num {
+  color: #1a1a1a !important;
+}
+
+.be-cal-holidays {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.65rem;
+  color: rgba(0, 0, 0, 0.6);
+  gap: 0.5rem 2rem;
+}
+
+.be-cal-holiday-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.be-cal-holiday-bullet {
+  width: 5px;
+  height: 5px;
+  background-color: var(--be-color-primary-light, #c7a36a);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Widened from 768px to 1024px: the desktop left:84%/transform:translateX(-50%)
+   positioning above is tuned for the wide desktop capsule bar and pushes the
+   calendar toward/off the right edge on tablet-width forms too, not just
+   phones — so tablets get the same safe full-width-under-the-field
+   positioning as mobile instead of the desktop offset. */
+@media (max-width: 1024px) {
+  .be-calendar-modal {
+    left: 0;
+    margin-left: 0;
+    width: 100%;
+    /* The desktop base rule's transform:translateX(-50%) (paired with
+       left:84% there) was never reset here — left:0 plus that same
+       leftover transform shifts the whole calendar an extra 50% of its
+       own width further left, pushing it half off-screen instead of
+       flush against the field. */
+    transform: none;
+  }
+  .be-cal-grids {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+/* Two full months (side by side on desktop, stacked above via the 1024px
+   rule) is too much scrolling/scanning on an actual phone — show just the
+   currently-navigated month, with the existing prev/next buttons already
+   advancing one month at a time now that there's nothing to keep in sync
+   alongside it. */
+@media (max-width: 768px) {
+  .be-cal-months-titles .be-cal-month-title:nth-child(2),
+  .be-cal-grids .be-cal-month-grid:nth-child(2) {
+    display: none;
+  }
+
+  .be-cal-months-titles {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .be-cal-month-title {
+    width: auto;
+    font-size: 1rem;
+  }
+}

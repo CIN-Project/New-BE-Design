@@ -1,0 +1,59 @@
+.be-date-modal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8f6f1;
+  border-radius: 10px;
+  padding: 1rem 1.4rem;
+  margin-bottom: 1.6rem;
+}
+
+.be-date-modal-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.be-date-modal-col-right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.be-date-modal-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--be-color-primary, #846836);
+}
+
+.be-date-modal-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.be-date-modal-nights {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--be-color-primary, #846836);
+}
+
+.be-date-modal-arrow {
+  color: var(--be-color-primary-hover, #bfa15f);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 560px) {
+  .be-date-modal-summary {
+    padding: 0.8rem 1rem;
+  }
+
+  .be-date-modal-value {
+    font-size: 0.9rem;
+  }
+}
