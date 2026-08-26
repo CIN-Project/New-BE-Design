@@ -10,8 +10,9 @@
 }
 
 .addons-step-title {
-  font-size: 1.05rem;
+  font-size: 0.85rem;
   font-weight: 700;
+  font-family: var(--be-font-sans);
   color: var(--be-color-primary, #846836);
   margin: 0;
 }

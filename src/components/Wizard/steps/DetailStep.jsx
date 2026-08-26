@@ -24,7 +24,16 @@ const COUNTRY_CODES = ["+91", "+1", "+44", "+971", "+65"];
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--be-color-primary, #846836)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -32,7 +41,16 @@ function CheckIcon() {
 
 function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--be-color-primary, #846836)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3Z" />
     </svg>
   );
@@ -40,7 +58,16 @@ function ShieldIcon() {
 
 function BoltIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--be-color-primary, #846836)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </svg>
   );
@@ -84,8 +111,14 @@ const errorStyle = {
  */
 export function GuestDetailsForm({ onComplete }) {
   const config = useConfig();
-  const { userDetails, updateUserDetails, selectedAddOns, addonAmountTotal, addonTaxTotal, promoCodeContext } =
-    useCartContext();
+  const {
+    userDetails,
+    updateUserDetails,
+    selectedAddOns,
+    addonAmountTotal,
+    addonTaxTotal,
+    promoCodeContext,
+  } = useCartContext();
   const stay = useStayContext();
   const { selectedRoom } = stay;
   const search = useSearchContext();
@@ -149,7 +182,10 @@ export function GuestDetailsForm({ onComplete }) {
       setFormData((prev) => ({ ...prev, phone: digitsOnly }));
       return;
     }
-    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   // Returning-guest CRM lookup by phone (non-fatal — a convenience autofill,
@@ -158,9 +194,17 @@ export function GuestDetailsForm({ onComplete }) {
     if (!formData.phone || formData.phone.trim().length < 7) return;
     setIsLookingUpPhone(true);
     try {
-      const keyData = search.keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
-      const roomNames = (stay.selectedRoom || []).map((r) => r?.roomName).filter(Boolean).join(", ");
-      const packageNames = (stay.selectedRoom || []).map((r) => r?.roomPackage).filter(Boolean).join(", ");
+      const keyData =
+        search.keyData ||
+        (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const roomNames = (stay.selectedRoom || [])
+        .map((r) => r?.roomName)
+        .filter(Boolean)
+        .join(", ");
+      const packageNames = (stay.selectedRoom || [])
+        .map((r) => r?.roomPackage)
+        .filter(Boolean)
+        .join(", ");
       const result = await postUserEnrollment(config, {
         payload: {
           MobileNo: formData.phone,
@@ -191,17 +235,22 @@ export function GuestDetailsForm({ onComplete }) {
   const validate = () => {
     const next = {};
     if (!formData.title) next.title = "Please select a title.";
-    if (!formData.firstName.trim()) next.firstName = "Please enter your first name.";
+    if (!formData.firstName.trim())
+      next.firstName = "Please enter your first name.";
     else if (!/^[a-zA-Z\s]+$/.test(formData.firstName))
       next.firstName = "First name can only contain letters and spaces.";
-    if (!formData.lastName.trim()) next.lastName = "Please enter your last name.";
+    if (!formData.lastName.trim())
+      next.lastName = "Please enter your last name.";
     else if (!/^[a-zA-Z\s]+$/.test(formData.lastName))
       next.lastName = "Last name can only contain letters and spaces.";
     if (!formData.email.trim()) next.email = "Please enter your email.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) next.email = "Please enter a valid email address.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      next.email = "Please enter a valid email address.";
     if (!formData.phone.trim()) next.phone = "Please enter your phone number.";
-    else if (!/^\d{10}$/.test(formData.phone.trim())) next.phone = "Please enter a valid 10-digit phone number.";
-    if (!formData.agreeToTerms) next.agreeToTerms = "You must agree to the privacy policy.";
+    else if (!/^\d{10}$/.test(formData.phone.trim()))
+      next.phone = "Please enter a valid 10-digit phone number.";
+    if (!formData.agreeToTerms)
+      next.agreeToTerms = "You must agree to the privacy policy.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -224,7 +273,9 @@ export function GuestDetailsForm({ onComplete }) {
       return "Select your room(s)";
     }
 
-    const isInStock = (rooms || []).every((room) => Number(room?.roomRateWithTax) > 0);
+    const isInStock = (rooms || []).every(
+      (room) => Number(room?.roomRateWithTax) > 0,
+    );
     if (!isInStock) {
       toast.error("One or more room(s) are out of stock.");
       return "One or more room(s) are out of stock.";
@@ -234,29 +285,45 @@ export function GuestDetailsForm({ onComplete }) {
       (room) => (room.adults || 0) + (room.children || 0) > room.maxGuest,
     );
     if (isGuestLimitExceeded) {
-      toast.error("Selected guests are greater than the max guest allowed in one or more rooms");
+      toast.error(
+        "Selected guests are greater than the max guest allowed in one or more rooms",
+      );
       return "Selected guests are greater than the max guest allowed in one or more rooms";
     }
 
-    const isAdultLimitExceeded = (rooms || []).some((room) => room.adults > room.maxAdult);
+    const isAdultLimitExceeded = (rooms || []).some(
+      (room) => room.adults > room.maxAdult,
+    );
     if (isAdultLimitExceeded) {
-      toast.error("Selected adults are greater than the max adults allowed in one or more rooms");
+      toast.error(
+        "Selected adults are greater than the max adults allowed in one or more rooms",
+      );
       return "Selected adults are greater than the max adults allowed in one or more rooms";
     }
 
-    const isChildLimitExceeded = (rooms || []).some((room) => room.children > room.maxChildren);
+    const isChildLimitExceeded = (rooms || []).some(
+      (room) => room.children > room.maxChildren,
+    );
     if (isChildLimitExceeded) {
-      toast.error("Selected children are greater than the max children allowed in one or more rooms");
+      toast.error(
+        "Selected children are greater than the max children allowed in one or more rooms",
+      );
       return "Selected children are greater than the max children allowed in one or more rooms";
     }
 
     const roomCountMap = (rooms || []).reduce((acc, room) => {
-      if (!acc[room.roomId]) acc[room.roomId] = { count: 0, roomName: room.roomName, minInventory: room.minInventory };
+      if (!acc[room.roomId])
+        acc[room.roomId] = {
+          count: 0,
+          roomName: room.roomName,
+          minInventory: room.minInventory,
+        };
       acc[room.roomId].count += 1;
       return acc;
     }, {});
     const exceededRoomId = Object.keys(roomCountMap).find(
-      (roomId) => roomCountMap[roomId].count > roomCountMap[roomId].minInventory,
+      (roomId) =>
+        roomCountMap[roomId].count > roomCountMap[roomId].minInventory,
     );
     if (exceededRoomId) {
       const { roomName, minInventory } = roomCountMap[exceededRoomId];
@@ -276,9 +343,15 @@ export function GuestDetailsForm({ onComplete }) {
 
     setIsProcessing(true);
     try {
-      const reservationResp = await generateReservationId(config, selectedPropertyId);
+      const reservationResp = await generateReservationId(
+        config,
+        selectedPropertyId,
+      );
       const reservationId = reservationResp?.reservation_id;
-      if (!reservationId) throw new Error("Could not generate a reservation ID. Please try again.");
+      if (!reservationId)
+        throw new Error(
+          "Could not generate a reservation ID. Please try again.",
+        );
 
       // Ported from DetailStep.js:1389 — real's exact ctaName ("Pay Now
       // Click"), fired the moment a reservation id is successfully
@@ -290,7 +363,10 @@ export function GuestDetailsForm({ onComplete }) {
         customerGuid: formData.customerGuid,
       });
 
-      const numberOfDays = calculateNumberOfDays(selectedStartDate, selectedEndDate);
+      const numberOfDays = calculateNumberOfDays(
+        selectedStartDate,
+        selectedEndDate,
+      );
       // computeStayTotals is the single source of truth for what's actually
       // charged — CartOverview.jsx's displayed total reads from the exact
       // same function, so what the guest sees and what gets submitted here
@@ -302,15 +378,18 @@ export function GuestDetailsForm({ onComplete }) {
       // embedded in `totalamountaftertax`, even though addon tax is already
       // baked into addonAmount rather than added again on top of it. That's
       // exactly `gstTotal` here.
-      const { gstTotal, grandTotal, roomSurcharges, nights } = computeStayTotals({
-        selectedRoom,
-        selectedStartDate,
-        selectedEndDate,
-        addonAmountTotal,
-        addonTaxTotal,
-      });
+      const { gstTotal, grandTotal, roomSurcharges, nights } =
+        computeStayTotals({
+          selectedRoom,
+          selectedStartDate,
+          selectedEndDate,
+          addonAmountTotal,
+          addonTaxTotal,
+        });
       const totalTaxAmount = gstTotal;
-      const surchargeByRoomId = new Map((roomSurcharges || []).map((s) => [s.roomId, s]));
+      const surchargeByRoomId = new Map(
+        (roomSurcharges || []).map((s) => [s.roomId, s]),
+      );
 
       // atob()-decode a real promo code; fall back to config.defaultMemberPromoCode
       // only for a member rate with no promo applied (mirrors Amritara's
@@ -324,7 +403,9 @@ export function GuestDetailsForm({ onComplete }) {
           : "";
 
       const dateRange = getDateRange(selectedStartDate, selectedEndDate);
-      const mappedAddons = (selectedAddOns || []).map((addon) => mapAddon(addon, numberOfDays));
+      const mappedAddons = (selectedAddOns || []).map((addon) =>
+        mapAddon(addon, numberOfDays),
+      );
 
       // Shared by BookingDetailsJson and the be_bookingData fallback below —
       // both need the same room summary (including adults/children, so
@@ -352,16 +433,25 @@ export function GuestDetailsForm({ onComplete }) {
         const adults = searchRoom?.adults ?? room?.applicableAdult ?? 1;
         const children = searchRoom?.children ?? room?.applicableChild ?? 0;
         const surcharge = surchargeByRoomId.get(room?.roomId) || {};
-        const extraAdultCount = room?.maxAdult != null && adults > room.maxAdult ? adults - room.maxAdult : 0;
+        const extraAdultCount =
+          room?.maxAdult != null && adults > room.maxAdult
+            ? adults - room.maxAdult
+            : 0;
 
         // Real Amritara replaces the room's normal tax with the extra-child
         // recomputed GST when there's a qualifying extra child, rather than
         // adding both — see ratePricing.js's computeRoomSurcharge doc
         // comment for the exact source lines this mirrors.
         const standardTaxTotal =
-          Math.max(0, (Number(room?.roomRateWithTax) || 0) - (parseFloat(room?.packageRate) || 0)) *
-          (nights || 1);
-        const roomTaxAmount = surcharge.extraChildren >= 1 ? surcharge.extraChildTax : standardTaxTotal;
+          Math.max(
+            0,
+            (Number(room?.roomRateWithTax) || 0) -
+              (parseFloat(room?.packageRate) || 0),
+          ) * (nights || 1);
+        const roomTaxAmount =
+          surcharge.extraChildren >= 1
+            ? surcharge.extraChildTax
+            : standardTaxTotal;
 
         // Add-ons aren't attached per-room in this package's cart model
         // (flat list, see the Addons comment below) — approximated onto the
@@ -398,8 +488,12 @@ export function GuestDetailsForm({ onComplete }) {
             extraGuests: {
               extraAdult: String(extraAdultCount),
               extraChild: String(surcharge.extraChildren || 0),
-              extraAdultRate: surcharge.extraAdultCharge ? String(Math.round(surcharge.extraAdultCharge)) : "0",
-              extraChildRate: surcharge.extraChildRoomCharge ? String(Math.round(surcharge.extraChildRoomCharge)) : "0",
+              extraAdultRate: surcharge.extraAdultCharge
+                ? String(Math.round(surcharge.extraAdultCharge))
+                : "0",
+              extraChildRate: surcharge.extraChildRoomCharge
+                ? String(Math.round(surcharge.extraChildRoomCharge))
+                : "0",
             },
             fees: [],
             // CartContext's add-ons aren't associated per-room (flat list), so
@@ -411,7 +505,10 @@ export function GuestDetailsForm({ onComplete }) {
           // an aggregate amount per room) — one GST-labelled entry is a
           // reasonable single-line approximation of real Amritara's named
           // tax breakdown here (DetailStep.js:1094-1123).
-          taxes: roomTaxAmount > 0 ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }] : [],
+          taxes:
+            roomTaxAmount > 0
+              ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
+              : [],
           amountaftertax: roomTotal.toFixed(2),
           remarks: "No Smoking",
           GuestCount: [
@@ -459,7 +556,9 @@ export function GuestDetailsForm({ onComplete }) {
                 ExpireDate: "",
                 CardNumber: "",
                 cvv: "",
-                PaymentRefenceId: Math.floor(Math.random() * 1000000000).toString(),
+                PaymentRefenceId: Math.floor(
+                  Math.random() * 1000000000,
+                ).toString(),
               },
               room: roomPayload,
             },
@@ -477,14 +576,16 @@ export function GuestDetailsForm({ onComplete }) {
       // simplified rather than 1:1. CtaCustomerId/cust_address ARE real
       // (sourced from formData.customerGuid, captured off the phone-lookup
       // autofill below), matching DetailStep.js:1255,1266,1278 exactly.
-      const finalKeyData = keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const finalKeyData =
+        keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
       const bookingSessionId = getOrCreateSessionId();
 
       const finalRequestData2 = {
         property_id: selectedPropertyId?.toString(),
         property_name: selectedPropertyName,
         property_tel: selectedPropertyPhone,
-        cust_name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+        cust_name:
+          `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
         cust_email: formData.email || "",
         cust_phone: formData.phone || "",
         // Real Amritara genuinely puts the loyalty customerGuid here when
@@ -526,7 +627,9 @@ export function GuestDetailsForm({ onComplete }) {
         Ip: "",
         CtaCustomerId: formData.customerGuid || "",
         Room: (selectedRoom || []).map((room) => room?.roomName).join(", "),
-        Package: (selectedRoom || []).map((room) => room?.roomPackage).join(", "),
+        Package: (selectedRoom || [])
+          .map((room) => room?.roomPackage)
+          .join(", "),
       };
 
       const paymentResp = await postPaymentRequest(config, {
@@ -544,10 +647,16 @@ export function GuestDetailsForm({ onComplete }) {
         apiUrl: `${config?.staahBaseUrl || ""}/api/th-payment-request`,
         apiStatus: paymentResp?.errorMessage === "success" ? "0" : "1",
         apiErrorCode: paymentResp?.errorMessage === "success" ? "0" : "1166",
-        apiMessage: paymentResp?.errorMessage === "success" ? "Success" : paymentResp?.errorMessage || "Payment failed",
+        apiMessage:
+          paymentResp?.errorMessage === "success"
+            ? "Success"
+            : paymentResp?.errorMessage || "Payment failed",
       });
       if (paymentResp?.errorMessage !== "success") {
-        throw new Error(paymentResp?.errorMessage || "Payment request failed. Please try again.");
+        throw new Error(
+          paymentResp?.errorMessage ||
+            "Payment request failed. Please try again.",
+        );
       }
 
       // Same shape as BookingDetailsJson above on purpose — this is the
@@ -575,15 +684,17 @@ export function GuestDetailsForm({ onComplete }) {
             Address: { Phone: selectedPropertyPhone },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
-        })
+        }),
       );
 
-      const resolvedKeyData = keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const resolvedKeyData =
+        keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
       const paramvalues = JSON.stringify({
         property_id: selectedPropertyId,
         property_name: selectedPropertyName,
         property_tel: selectedPropertyPhone,
-        cust_name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+        cust_name:
+          `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
         cust_email: formData.email || "",
         cust_phone: formData.phone || "",
         cust_address: "N/A",
@@ -621,13 +732,28 @@ export function GuestDetailsForm({ onComplete }) {
           letterSpacing: "0.06em",
           color: "var(--be-color-primary, #846836)",
           margin: "0 0 0.6rem",
+          fontFamily: "var(--be-font-sans)",
         }}
       >
         Guest Profile Details
       </h3>
 
-      <form id="be-guest-details-form" className="be-form-card" onSubmit={handleSubmit} noValidate>
-        <h4 style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1a1a1a", margin: "0 0 0.7rem", textTransform: "uppercase" }}>
+      <form
+        id="be-guest-details-form"
+        className="be-form-card"
+        onSubmit={handleSubmit}
+        noValidate
+      >
+        <h4
+          style={{
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            color: "#1a1a1a",
+            margin: "0 0 0.7rem",
+            textTransform: "uppercase",
+            fontFamily: "var(--be-font-sans)"
+          }}
+        >
           Guest Contact Details
         </h4>
 
@@ -641,7 +767,14 @@ export function GuestDetailsForm({ onComplete }) {
                 the card's right edge on narrow phones. minmax(0, 1fr) is
                 the grid equivalent of min-width:0: it lets the second track
                 actually shrink to fit instead of sizing off its content. */}
-            <div style={{ display: "grid", gridTemplateColumns: "82px minmax(0, 1fr)", gap: "6px", width: "100%" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "82px minmax(0, 1fr)",
+                gap: "6px",
+                width: "100%",
+              }}
+            >
               <select
                 name="countryCode"
                 value={formData.countryCode}
@@ -683,7 +816,12 @@ export function GuestDetailsForm({ onComplete }) {
           </div>
 
           <div className="be-detail-form-group">
-            <select name="title" value={formData.title} onChange={handleChange} aria-label="Title">
+            <select
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              aria-label="Title"
+            >
               <option value="">Title</option>
               {TITLE_OPTIONS.map((t) => (
                 <option key={t} value={t}>
@@ -702,7 +840,9 @@ export function GuestDetailsForm({ onComplete }) {
               value={formData.firstName}
               onChange={handleChange}
             />
-            {errors.firstName && <span style={errorStyle}>{errors.firstName}</span>}
+            {errors.firstName && (
+              <span style={errorStyle}>{errors.firstName}</span>
+            )}
           </div>
 
           <div className="be-detail-form-group">
@@ -713,7 +853,9 @@ export function GuestDetailsForm({ onComplete }) {
               value={formData.lastName}
               onChange={handleChange}
             />
-            {errors.lastName && <span style={errorStyle}>{errors.lastName}</span>}
+            {errors.lastName && (
+              <span style={errorStyle}>{errors.lastName}</span>
+            )}
           </div>
 
           <div className="be-detail-form-group">
@@ -746,14 +888,21 @@ export function GuestDetailsForm({ onComplete }) {
             checked={formData.agreeToTerms}
             onChange={handleChange}
           />
-          <label htmlFor="be-agree-terms" style={{ fontSize: "0.82rem", color: "#666", cursor: "pointer" }}>
+          <label
+            htmlFor="be-agree-terms"
+            style={{ fontSize: "0.82rem", color: "#666", cursor: "pointer" }}
+          >
             I agree to the{" "}
             <a href="/privacy-policy" target="_blank" rel="noreferrer">
               privacy policy
             </a>
           </label>
         </div>
-        {errors.agreeToTerms && <span style={{ ...errorStyle, display: "block" }}>{errors.agreeToTerms}</span>}
+        {errors.agreeToTerms && (
+          <span style={{ ...errorStyle, display: "block" }}>
+            {errors.agreeToTerms}
+          </span>
+        )}
 
         <div className="be-trust-badges-row">
           <div className="be-trust-badge-item">
@@ -784,7 +933,8 @@ export function GuestDetailsForm({ onComplete }) {
           fully visible on top. Same fix already applied to shared/Modal.jsx
           for the identical reason — matched here rather than re-discovering
           it differently. */}
-      {isProcessing && mounted &&
+      {isProcessing &&
+        mounted &&
         createPortal(
           <div className="be-processing-overlay">
             <div className="be-loading-dial" />
@@ -803,7 +953,8 @@ function formatDateISO(date) {
 
 /** Every calendar date of the stay (mirrors Amritara's getDateRange). */
 function getDateRange(startDate, endDate) {
-  if (!startDate || !endDate) return startDate ? [formatDateISO(startDate)] : [];
+  if (!startDate || !endDate)
+    return startDate ? [formatDateISO(startDate)] : [];
   const dates = [];
   let current = new Date(startDate);
   const last = new Date(endDate);
