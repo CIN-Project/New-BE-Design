@@ -19,7 +19,15 @@
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
   padding: 1.8rem 2rem;
   box-sizing: border-box;
-  /* max-width: 400px !important; */
+  /* No max-width here on purpose — this class is shared by every modal that
+     uses shared/Modal.jsx (GuestsModal, DateRangeModal, ...), each of which
+     sets its own maxWidth via that component's prop (inline style, applied
+     per-instance). A max-width here — especially with !important, which
+     used to sit here commented out — would apply to all of them at once
+     and silently override every one of those per-modal props, which is
+     exactly the "changing one modal's width changed another one too" bug
+     this was causing. Resize a specific modal via its own maxWidth prop,
+     not here. */
 }
 
 .be-modal-close-btn {

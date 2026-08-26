@@ -1467,12 +1467,20 @@ export function StayStep({ onRoomsSelected }) {
       adults,
       { isMemberRate: true, savings },
     );
-    const updated = applySelection(activeSlot.id, selection);
+    applySelection(activeSlot.id, selection);
     setIsMemberRate(true);
     setIsMemberRateSelected(true);
     triggerUnlockAnimation(cardKey);
     setPendingMemberSelection(null);
-    advanceAfterSelection(updated);
+    // Deliberately no advanceAfterSelection here (unlike
+    // handleSelectStandard/handleSelectMember, which both auto-advance) —
+    // a guest who just went through OTP verification stays on this exact
+    // room/step afterward instead of being swept straight to the next
+    // empty slot or checkout. The selection is already applied and visible
+    // (the room card shows it as selected); moving on from here — to
+    // another room slot via the stepper, or to checkout via the "Continue"
+    // button below once every slot is filled — is always the guest's own
+    // next click, never automatic, right after verifying.
   };
 
   const handleDeclineStandardRate = () => {
@@ -1614,6 +1622,27 @@ export function StayStep({ onRoomsSelected }) {
             />
           );
         })}
+
+      {/* A guest could always reach checkout automatically before (every
+          selection auto-advanced, including straight past step 1 once the
+          last slot was filled) — that's exactly what handleUnlocked no
+          longer does after OTP verification, so there has to be an
+          explicit way forward here instead, once every room slot actually
+          has a selection. Standard/already-a-member selections still
+          auto-advance as before (this just sits unused, and hidden, until
+          the guest is already done either way). */}
+      {!loading &&
+        advancingToIndex === null &&
+        !error &&
+        rooms.length > 0 &&
+        (selectedRoom || []).length > 0 &&
+        (selectedRoom || []).every((r) => r?.roomId) && (
+          <div className="be-stay-continue-row">
+            <Button variant="primary" size="md" onClick={() => onRoomsSelected?.()}>
+              Continue to Guest Details →
+            </Button>
+          </div>
+        )}
 
       <RoomDetailsModal
         room={detailsRoom}
