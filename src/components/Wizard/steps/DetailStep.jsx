@@ -206,8 +206,71 @@ export function GuestDetailsForm({ onComplete }) {
     return Object.keys(next).length === 0;
   };
 
+  // Ported from real Amritara's DetailStep.js `proceedToPay` (~297-372) —
+  // the same guest/adult/children-limit checks CartOverview.jsx's cart
+  // rows already display inline as red warnings (see that file), but
+  // enforced here too so an over-limit selection can't actually reach
+  // payment just because the guest didn't notice the warning. Also blocks
+  // on a room genuinely out of stock (roomRateWithTax <= 0) or over-booked
+  // relative to minInventory (two rooms slots picking the same room when
+  // only one is left). Returns "success" or the exact error string real
+  // Amritara shows via toast for that failure — same wording, so an
+  // integration relying on that text (analytics, support scripts) isn't
+  // affected by this being a different codebase underneath.
+  const proceedToPay = (rooms) => {
+    const isSelected = (rooms || []).every((room) => room?.roomId);
+    if (!isSelected) {
+      toast.error("Select your room(s)");
+      return "Select your room(s)";
+    }
+
+    const isInStock = (rooms || []).every((room) => Number(room?.roomRateWithTax) > 0);
+    if (!isInStock) {
+      toast.error("One or more room(s) are out of stock.");
+      return "One or more room(s) are out of stock.";
+    }
+
+    const isGuestLimitExceeded = (rooms || []).some(
+      (room) => (room.adults || 0) + (room.children || 0) > room.maxGuest,
+    );
+    if (isGuestLimitExceeded) {
+      toast.error("Selected guests are greater than the max guest allowed in one or more rooms");
+      return "Selected guests are greater than the max guest allowed in one or more rooms";
+    }
+
+    const isAdultLimitExceeded = (rooms || []).some((room) => room.adults > room.maxAdult);
+    if (isAdultLimitExceeded) {
+      toast.error("Selected adults are greater than the max adults allowed in one or more rooms");
+      return "Selected adults are greater than the max adults allowed in one or more rooms";
+    }
+
+    const isChildLimitExceeded = (rooms || []).some((room) => room.children > room.maxChildren);
+    if (isChildLimitExceeded) {
+      toast.error("Selected children are greater than the max children allowed in one or more rooms");
+      return "Selected children are greater than the max children allowed in one or more rooms";
+    }
+
+    const roomCountMap = (rooms || []).reduce((acc, room) => {
+      if (!acc[room.roomId]) acc[room.roomId] = { count: 0, roomName: room.roomName, minInventory: room.minInventory };
+      acc[room.roomId].count += 1;
+      return acc;
+    }, {});
+    const exceededRoomId = Object.keys(roomCountMap).find(
+      (roomId) => roomCountMap[roomId].count > roomCountMap[roomId].minInventory,
+    );
+    if (exceededRoomId) {
+      const { roomName, minInventory } = roomCountMap[exceededRoomId];
+      const message = `inventory exceeded for "${roomName}". Available: ${minInventory}`;
+      toast.error(message);
+      return message;
+    }
+
+    return "success";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (proceedToPay(selectedRoom) !== "success") return;
     if (!validate()) return;
     updateUserDetails({ ...formData });
 

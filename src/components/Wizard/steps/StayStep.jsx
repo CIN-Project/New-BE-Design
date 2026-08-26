@@ -1534,7 +1534,10 @@ export function StayStep({ onRoomsSelected }) {
       )}
 
       {loading && (
-        <div className="be-stay-loading">Loading available rooms…</div>
+        <div className="be-stay-loading">
+          <span className="be-room-advance-spinner" aria-hidden="true" />
+          Loading available rooms…
+        </div>
       )}
 
       {advancingToIndex !== null && (

@@ -221,6 +221,20 @@
   border-top: 1px dashed #f0efe9;
 }
 
+/* Matches real Amritara's inline red cart-row warning (a raw red span + text,
+   no dedicated class there) — see CartOverview.jsx's doc comment above where
+   these render. */
+.cart-room-limit-warning {
+  margin: 0.2rem 0 0;
+  font-size: 0.74rem !important;
+  color: #c0392b;
+}
+
+.cart-room-limit-warning-mark {
+  color: #c0392b;
+  margin-right: 2px;
+}
+
 .cart-room-name {
   margin: 0;
   font-size: 0.78rem !important;

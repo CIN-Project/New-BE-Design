@@ -238,7 +238,6 @@ export function CartOverview({ onModifyRooms }) {
             (selectedRoom || []).map((room, index) =>
               room?.roomId ? (
                 <div
-                  className="cart-room-row"
                   // Keyed by the room SLOT's own identity (room.id, same as
                   // the placeholder branch below), not by which room+rate
                   // was picked for it — two different slots picking the
@@ -247,24 +246,53 @@ export function CartOverview({ onModifyRooms }) {
                   // same key since roomId+rateId was all it was keyed on.
                   key={room?.id ?? index}
                 >
-                  <div>
-                    <p className="cart-room-name">
-                      Room {index + 1}: {room.roomName}
+                  {/* Ported from real Amritara's CartOverview.js (~598-622)
+                      — a room picked before a "Modify Dates"/"Modify Guests"
+                      edit can end up over that room's own capacity (e.g. the
+                      guest count went up but the room selection didn't
+                      change, or useRepriceSelectedRooms.js's same-room
+                      reprice kept a room that no longer fits). Purely
+                      informational here; DetailStep.jsx's proceedToPay
+                      enforces the same three limits at submit time so this
+                      can't silently reach payment. */}
+                  {(room?.adults || 0) + (room?.children || 0) > room?.maxGuest && (
+                    <p className="cart-room-limit-warning">
+                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
+                      {room?.maxGuest} guests are allowed
                     </p>
-                    <p className="cart-room-package">{room.roomPackage}</p>
-                  </div>
-                  <div className="cart-room-right">
-                    <p className="cart-room-price">
-                      {formatCurrency(
-                        room?.packageRate ?? room?.roomRateWithTax,
-                      )}
+                  )}
+                  {room?.adults > room?.maxAdult && (
+                    <p className="cart-room-limit-warning">
+                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
+                      {room?.maxAdult} adults are allowed
                     </p>
-                    <span
-                      style={modifyLinkStyle}
-                      onClick={() => onModifyRooms?.(index)}
-                    >
-                      Modify
-                    </span>
+                  )}
+                  {room?.children > room?.maxChildren && (
+                    <p className="cart-room-limit-warning">
+                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
+                      {room?.maxChildren} children are allowed
+                    </p>
+                  )}
+                  <div className="cart-room-row">
+                    <div>
+                      <p className="cart-room-name">
+                        Room {index + 1}: {room.roomName}
+                      </p>
+                      <p className="cart-room-package">{room.roomPackage}</p>
+                    </div>
+                    <div className="cart-room-right">
+                      <p className="cart-room-price">
+                        {formatCurrency(
+                          room?.packageRate ?? room?.roomRateWithTax,
+                        )}
+                      </p>
+                      <span
+                        style={modifyLinkStyle}
+                        onClick={() => onModifyRooms?.(index)}
+                      >
+                        Modify
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (

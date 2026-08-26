@@ -827,6 +827,20 @@
 
 .be-stay-loading,
 .be-stay-empty {
+  /* min-height (not just padding) so this reserves roughly the same amount
+     of page height the eventual room list will occupy — without it, the
+     page was only as tall as this short status line while rooms were still
+     loading, which visibly yanked whatever comes after the wizard (a page
+     footer, in a host app that has one) up near the top of the screen for
+     a moment before snapping back down once results arrived. Matches real
+     Amritara's own loading state, which reserves a large, stable area
+     rather than a bare line of text. */
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
   padding: 3rem 1rem;
   text-align: center;
   color: #777;

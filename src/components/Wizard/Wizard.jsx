@@ -9,6 +9,8 @@ import { ConfirmStep } from "./steps/ConfirmStep.js";
 import { CartOverview } from "../Cart/CartOverview.js";
 import { SearchBar } from "../SearchBar/SearchBar.js";
 import { useStayContext } from "../../context/StayContext.js";
+import { useRepriceSelectedRooms } from "../../hooks/useRepriceSelectedRooms.js";
+import { useSyncSelectedRoomsWithSearch } from "../../hooks/useSyncSelectedRoomsWithSearch.js";
 import "./Wizard.css";
 
 /**
@@ -22,6 +24,14 @@ import "./Wizard.css";
 export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
   const { setActiveRoomSlotIndex } = useStayContext();
+  // Active across every step (not just step 1) — the cart sidebar's own
+  // "Modify Dates"/"Modify Guests"/promo controls render on step 2 too.
+  // Sync must run for the guest-limit warnings (CartOverview.jsx) and the
+  // reprice below to see up-to-date adults/children on step 2, where
+  // StayStep.jsx (which used to be the only place this sync ran) isn't
+  // mounted at all. Both no-op whenever nothing has actually changed.
+  useSyncSelectedRoomsWithSearch();
+  useRepriceSelectedRooms();
 
   const changeStep = (next) => {
     setStep(next);
