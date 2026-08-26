@@ -138,7 +138,6 @@ export function SearchBar({
   };
 
   const handleSelectProperty = (property) => {
-    console.log("property",property)
     // staahPropertyId (not the CMS propertyId) is what every rate/room/
     // calendar API call needs — see api/properties.js's
     // mapCityWithPropertyResponse doc comment. Falls back to propertyId/id

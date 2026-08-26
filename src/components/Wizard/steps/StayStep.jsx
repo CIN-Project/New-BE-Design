@@ -1521,8 +1521,6 @@ export function StayStep({ onRoomsSelected }) {
     return (a?.RoomName || "").localeCompare(b?.RoomName || "");
   });
 
-  console.log("rooms",rooms)
-
   return (
     <div className="be-stay-step">
       <Toaster position="top-right" />
