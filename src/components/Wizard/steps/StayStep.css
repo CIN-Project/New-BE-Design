@@ -82,7 +82,12 @@
 }
 
 .be-room-row-name {
-  font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif) !important;
+  font-family: var(
+    --be-font-serif,
+    "Cormorant Garamond",
+    Georgia,
+    serif
+  ) !important;
   font-size: 1.35rem;
   color: var(--be-color-primary, #846836);
   margin: 0;
@@ -92,8 +97,8 @@
 .be-room-row-meta {
   display: flex;
   gap: 1.4rem;
-  font-size: 0.72rem;
-  color: #777;
+  font-size: 0.76rem;
+  color: #666;
   margin-bottom: 0.7rem;
   flex-wrap: wrap;
 }
@@ -355,7 +360,12 @@
   border-radius: 50%;
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(135deg, var(--be-color-primary-light, #c7a36a), rgba(199, 163, 106, 0) 70%) border-box;
+    linear-gradient(
+        135deg,
+        var(--be-color-primary-light, #c7a36a),
+        rgba(199, 163, 106, 0) 70%
+      )
+      border-box;
   border: 1.5px solid transparent;
   color: #333;
   font-size: 1.1rem;
@@ -371,8 +381,17 @@
 
 .be-carousel-nav-btn:hover {
   background:
-    linear-gradient(var(--be-color-primary, #846836), var(--be-color-primary, #846836)) padding-box,
-    linear-gradient(135deg, var(--be-color-primary, #846836), var(--be-color-primary, #846836)) border-box;
+    linear-gradient(
+        var(--be-color-primary, #846836),
+        var(--be-color-primary, #846836)
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        var(--be-color-primary, #846836),
+        var(--be-color-primary, #846836)
+      )
+      border-box;
   color: #ffffff;
   transform: translateY(-50%) scale(1.08);
 }
@@ -962,9 +981,18 @@
 .be-room-modal-title {
   font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
   font-size: 1.6rem;
-  color: #1a1a1a;
+  color: var(--be-color-primary, #846836);
   margin: 0 0 0.8rem;
   font-weight: 500;
+}
+.be-room-modal-desc-header {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--be-color-primary, #846836);
+  margin: 1.6rem 0 0.6rem;
+  border-bottom: 1px solid #f2f2f2;
+  font-weight: 600;
 }
 
 .be-room-modal-desc {
@@ -979,7 +1007,7 @@
 }
 
 .be-room-modal-amenity-group h4 {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--be-color-primary, #846836);

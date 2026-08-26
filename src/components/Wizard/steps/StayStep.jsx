@@ -267,6 +267,8 @@ function RoomDetailsModal({ room, onClose }) {
             ) : null}
           </div>
 
+          <h4 className="be-room-modal-desc-header">Room Overview</h4>
+
           {fullDescription && (
             <p className="be-room-modal-desc">{fullDescription}</p>
           )}
