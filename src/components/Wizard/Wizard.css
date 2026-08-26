@@ -49,7 +49,11 @@
   background: transparent;
 }
 .be-cart-left-col::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #c7a36a);
+  /* Literal, not var(--be-color-primary-light) — this is a specific shade
+     requested for scrollbars only, independent of the shared theme primary
+     color (which many other elements also read from and shouldn't shift
+     just because this one wants a different, lighter tone). */
+  background: #e9dcc7;
   border-radius: 3px;
 }
 

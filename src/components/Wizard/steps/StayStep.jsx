@@ -1327,6 +1327,14 @@ export function StayStep({ onRoomsSelected }) {
     // (selection itself, the merge, validation) already happened above;
     // this only delays *displaying* the next slot.
     setAdvancingToIndex(nextEmptyIndex);
+    // The room-slot stepper + this loader render near the top of the step,
+    // but selecting a rate happens from wherever the guest scrolled down to
+    // (often well past that point once a room's rate-plan cards expand) —
+    // without this, the loader appears entirely off-screen above the fold
+    // and the guest sees nothing happen for the full 700ms.
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     setTimeout(() => {
       setCurrentRoomIndex(nextEmptyIndex);
       setAdvancingToIndex(null);

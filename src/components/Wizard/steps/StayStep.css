@@ -505,7 +505,11 @@
 }
 
 .be-rate-card-inclusions::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #e2e0d7);
+  /* Literal, not var(--be-color-primary-light) — matches the cart sidebar's
+     two scrollbars exactly (Wizard.css's .be-cart-left-col, CartOverview.css's
+     .cart-body-scroll), a specific shade for scrollbars only, independent
+     of the shared theme primary color other elements read from. */
+  background: #e9dcc7;
   border-radius: 1.5px;
 }
 
@@ -756,6 +760,14 @@
 }
 
 .be-room-slot-stepper {
+  /* Explicit (rather than the implicit static default) — this stepper's own
+     render condition in StayStep.jsx never depends on the room-to-room
+     transition state, so it already stays mounted in place the whole time;
+     this pins that down at the CSS layer too, so it can never be pulled out
+     of normal flow by anything layered on top of it later, and stays a
+     stable anchor point with the transition loader rendering as its own
+     block directly below rather than overlapping or displacing it. */
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

@@ -23,19 +23,30 @@
 }
 
 .cart-body-scroll::-webkit-scrollbar {
-  /* Matches .be-cart-left-col's own scrollbar (Wizard.css) — both sides of
-     the split-pane guest-details/cart layout should feel like one
-     consistent design, not two different scrollbar treatments. */
-  width: 8px;
+  /* Matches .be-cart-left-col's own scrollbar (Wizard.css) exactly — both
+     sides of the split-pane guest-details/cart layout should feel like one
+     consistent design, not two different scrollbar treatments. This was
+     left at the old 8px when that one was reduced to 4px, so the two
+     columns had visibly different scrollbar widths. */
+  width: 4px;
 }
 
 .cart-body-scroll::-webkit-scrollbar-track {
-  background: #fdfcf7;
+  /* Was #fdfcf7 (a warm cream) — .be-cart-left-col's own track is
+     transparent, so even with the identical thumb color below, the two
+     scrollbars read as different colors against their different track
+     backgrounds. Matched here for real visual consistency, not just an
+     identical thumb value that looks different in practice. */
+  background: transparent;
 }
 
 .cart-body-scroll::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #c7a36a);
-  border-radius: 4px;
+  /* Literal, not var(--be-color-primary-light) — matches
+     .be-cart-left-col's own scrollbar exactly (Wizard.css), and is a
+     specific shade for scrollbars only, independent of the shared theme
+     primary color other elements read from. */
+  background: #e9dcc7;
+  border-radius: 3px;
 }
 
 .cart-body-scroll::-webkit-scrollbar-thumb:hover {
