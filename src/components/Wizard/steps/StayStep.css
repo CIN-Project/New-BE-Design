@@ -856,7 +856,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  min-height: 240px;
+  /* Matches .be-stay-loading's own min-height (350px) — this used to be a
+     smaller 240px, sized to look like a single collapsed room card, but
+     that meant switching between multiple room slots reserved noticeably
+     less page height than the initial room-list load, so the page (and
+     anything after it) visibly resized between the two loading states
+     instead of staying at one stable height throughout step 1. */
+  min-height: 350px;
   background: white;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.06);
