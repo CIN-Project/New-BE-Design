@@ -6,6 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useConfig } from "../../config/configContext.js";
 import { useSearchContext } from "../../context/SearchContext.js";
 import { useCartContext } from "../../context/CartContext.js";
+import { useStayContext } from "../../context/StayContext.js";
 import { DestinationField } from "./DestinationField.js";
 import { DateRangeField } from "./DateRangeField.js";
 import { GuestsField } from "./GuestsField.js";
@@ -44,6 +45,7 @@ export function SearchBar({
   const config = useConfig();
   const search = useSearchContext();
   const cart = useCartContext();
+  const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
 
   const properties = config.properties || [];
 
@@ -205,6 +207,30 @@ export function SearchBar({
       rooms: search.searchRooms,
       promoCode: cart.promoCodeContext,
     });
+    // Every search click starts room selection over from scratch — clears
+    // whatever room/rate was picked on every slot (keeping only the slot's
+    // id/adults/children, i.e. the same empty shape
+    // useSyncSelectedRoomsWithSearch.js gives a brand-new slot) and jumps
+    // back to Room 1. This is a deliberate product decision (explicitly
+    // requested): a guest who clicks Search — whether it's their first
+    // search or they changed dates/guests after already picking rooms —
+    // should always see a fresh room list to choose from, not a repriced
+    // carry-over of an earlier pick. useRepriceSelectedRooms still handles
+    // the OTHER path (editing dates/guests via the cart sidebar's own
+    // "Modify Dates"/"Modify Guests", without touching this Search button)
+    // by repricing in place instead of clearing — those are two genuinely
+    // different guest actions with two different expected outcomes.
+    setSelectedRoom((prev) =>
+      (prev || []).map((slot) => ({
+        id: slot.id,
+        adults: slot.adults,
+        children: slot.children,
+        roomId: "",
+        roomName: "",
+        roomImage: null,
+      })),
+    );
+    setActiveRoomSlotIndex(0);
     // Collapse back to the short summary card on mobile once a search runs
     // — staying expanded would leave the full field form pinned open over
     // whatever just loaded below it.

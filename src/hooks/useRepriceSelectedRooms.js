@@ -88,15 +88,17 @@ export function useRepriceSelectedRooms() {
         const searchRoomsById = new Map((searchRooms || []).map((sr) => [sr.id, sr]));
         const freshGuests = (slot) => searchRoomsById.get(slot.id) || slot;
 
-        const guestSlotsOnly = (selectedRoom || []).map((r) => {
-          const fresh = freshGuests(r);
-          return {
-            id: r.id,
-            adults: fresh.adults,
-            children: fresh.children,
-            roomId: "",
-          };
-        });
+        // Built from searchRooms directly (not selectedRoom) — this hook's
+        // own network round-trip can take long enough that a room gets
+        // added/removed via "Modify Guests" while it's in flight, and
+        // searchRooms (not this effect's closed-over selectedRoom) is the
+        // up-to-date source of which slots currently exist.
+        const guestSlotsOnly = (searchRooms || []).map((sr) => ({
+          id: sr.id,
+          adults: sr.adults,
+          children: sr.children,
+          roomId: "",
+        }));
 
         const [contentData, inventoryData] = await Promise.all([
           getRoomsRates(config, {
@@ -129,29 +131,45 @@ export function useRepriceSelectedRooms() {
         );
         if (cancelled || !merged) return;
 
-        const updated = (selectedRoom || []).map((slot) => {
-          if (!slot?.roomId) return slot;
-          const room = (merged.RoomData || []).find((r) => r.RoomId === slot.roomId);
-          const rate = (merged.RateData || []).find((r) => r.RateId === slot.rateId);
-          const mapping = (merged.Mapping || []).find(
-            (m) => m.RoomId === slot.roomId && m.RateId === slot.rateId,
-          );
-          if (!room || !rate || !mapping) return slot;
+        // Drop any slot that's no longer part of the current search-room
+        // set before repricing, and use React's functional setState form
+        // (not the `selectedRoom` closed over when this async effect
+        // started) — the fetch above is a real network round-trip, easily
+        // slow enough for useSyncSelectedRoomsWithSearch.js's own (synchronous)
+        // effect to add or remove a slot in the meantime (guest added/
+        // removed a room via "Modify Guests" then hit Search). Reading the
+        // outer `selectedRoom` closure here would either resurrect a
+        // just-removed room (stale array still had it) or, just as easily,
+        // silently drop a just-added one (stale array didn't have it yet) —
+        // the functional form guarantees this always builds off whatever
+        // selectedRoom truly is at the moment this commits, not a snapshot
+        // from before the fetch began.
+        const currentSearchRoomIds = new Set((searchRooms || []).map((sr) => sr.id));
+        setSelectedRoom((prevSelectedRoom) =>
+          (prevSelectedRoom || [])
+            .filter((slot) => currentSearchRoomIds.has(slot?.id))
+            .map((slot) => {
+              if (!slot?.roomId) return slot;
+              const room = (merged.RoomData || []).find((r) => r.RoomId === slot.roomId);
+              const rate = (merged.RateData || []).find((r) => r.RateId === slot.rateId);
+              const mapping = (merged.Mapping || []).find(
+                (m) => m.RoomId === slot.roomId && m.RateId === slot.rateId,
+              );
+              if (!room || !rate || !mapping) return slot;
 
-          const fresh = freshGuests(slot);
-          const repriced = buildRoomSelection(room, mapping, rate, fresh.adults ?? 1, {
-            isMemberRate: slot.isMemberRate,
-            savings: slot.savings,
-          });
-          // Also carries the fresh adults/children onto the slot itself
-          // (buildRoomSelection's own return doesn't include them) — belt
-          // and suspenders alongside useSyncSelectedRoomsWithSearch.js's
-          // separate effect, so this hook's own output is self-consistent
-          // even in the render before that other effect commits.
-          return { ...slot, adults: fresh.adults, children: fresh.children, ...repriced };
-        });
-
-        setSelectedRoom(updated);
+              const fresh = freshGuests(slot);
+              const repriced = buildRoomSelection(room, mapping, rate, fresh.adults ?? 1, {
+                isMemberRate: slot.isMemberRate,
+                savings: slot.savings,
+              });
+              // Also carries the fresh adults/children onto the slot itself
+              // (buildRoomSelection's own return doesn't include them) — belt
+              // and suspenders alongside useSyncSelectedRoomsWithSearch.js's
+              // separate effect, so this hook's own output is self-consistent
+              // even in the render before that other effect commits.
+              return { ...slot, adults: fresh.adults, children: fresh.children, ...repriced };
+            }),
+        );
       } catch (err) {
         console.warn(
           "booking-engine-new: failed to reprice selected rooms for new dates/guests",
