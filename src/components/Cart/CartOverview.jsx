@@ -335,11 +335,15 @@ export function CartOverview({ onModifyRooms }) {
         ) : null}
 
         {/* Pricing breakdown — two expandable groups (Base Stay Cost / GST),
-            each decomposed per-night. Real Amritara's own CartOverview.js
-            only breaks "Price"/"Taxes & Fees" down per-ROOM, not per-night —
-            this is a presentational enhancement layered on top of the same
-            underlying flat-rate-times-nights numbers (computeStayTotals),
-            not a claim that nights are actually priced differently. */}
+            each decomposed per-night. Real Amritara's own StayStep.js cart
+            widget (~1657-1685) breaks "Price" down the same way — per room,
+            per actual calendar date — because nightly OBP rates genuinely
+            differ (weekday/weekend pricing etc); computeStayTotals's
+            perNightBreakdown now sums each room's own per-date rate data
+            (getRoomNightlyBreakdown) rather than repeating one flat
+            rate-times-nights figure, so what's shown here matches what
+            real Amritara actually charges for a stay with varying nightly
+            rates. */}
         <div className="cart-section">
           <div
             className="cart-accordion-row"

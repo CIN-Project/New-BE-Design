@@ -14,7 +14,7 @@ import {
   redirectToPayment,
   postUserEnrollment,
 } from "../../../api/payment.js";
-import { computeStayTotals } from "../../../utils/ratePricing.js";
+import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
 import { getOrCreateSessionId } from "../../../utils/session.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./DetailStep.css";
@@ -438,16 +438,22 @@ export function GuestDetailsForm({ onComplete }) {
             ? adults - room.maxAdult
             : 0;
 
+        // True per-night pricing for this room (see ratePricing.js's
+        // getRoomNightlyBreakdown doc comment) — used below both for the
+        // per-date `price[]` entries and for this room's whole-stay total,
+        // instead of repeating one flat first-night rate across every date.
+        const nightlyBreakdown = getRoomNightlyBreakdown(room, nights || 1);
+        const nightByDateKey = new Map(
+          nightlyBreakdown.nights
+            .filter((n) => n.dateKey)
+            .map((n) => [n.dateKey, n]),
+        );
+
         // Real Amritara replaces the room's normal tax with the extra-child
         // recomputed GST when there's a qualifying extra child, rather than
         // adding both — see ratePricing.js's computeRoomSurcharge doc
         // comment for the exact source lines this mirrors.
-        const standardTaxTotal =
-          Math.max(
-            0,
-            (Number(room?.roomRateWithTax) || 0) -
-              (parseFloat(room?.packageRate) || 0),
-          ) * (nights || 1);
+        const standardTaxTotal = nightlyBreakdown.taxTotal;
         const roomTaxAmount =
           surcharge.extraChildren >= 1
             ? surcharge.extraChildTax
@@ -459,7 +465,7 @@ export function GuestDetailsForm({ onComplete }) {
         // still reconciles with the reservation-level total.
         const roomAddonAmount = index === 0 ? addonAmountTotal || 0 : 0;
         const roomTotal =
-          (parseFloat(room?.packageRate) || 0) * (nights || 1) +
+          nightlyBreakdown.baseTotal +
           (surcharge.extraChildRoomCharge || 0) +
           (surcharge.extraAdultCharge || 0) +
           roomTaxAmount +
@@ -480,27 +486,38 @@ export function GuestDetailsForm({ onComplete }) {
           salutation: formData.title || "",
           first_name: formData.firstName || "",
           last_name: formData.lastName || "",
-          price: dateRange.map((date, dateIndex) => ({
-            date,
-            rate_id: room?.rateId,
-            rate_name: room?.roomPackage,
-            amountaftertax: Math.round(room?.roomRateWithTax || 0).toString(),
-            extraGuests: {
-              extraAdult: String(extraAdultCount),
-              extraChild: String(surcharge.extraChildren || 0),
-              extraAdultRate: surcharge.extraAdultCharge
-                ? String(Math.round(surcharge.extraAdultCharge))
-                : "0",
-              extraChildRate: surcharge.extraChildRoomCharge
-                ? String(Math.round(surcharge.extraChildRoomCharge))
-                : "0",
-            },
-            fees: [],
-            // CartContext's add-ons aren't associated per-room (flat list), so
-            // the full set is attached once, on the first room's first date,
-            // to avoid duplicate-billing the same add-on across every room/date.
-            Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
-          })),
+          price: dateRange.map((date, dateIndex) => {
+            // Each date gets its OWN rate from the room's real per-date OBP
+            // data — falls back to the room's representative
+            // roomRateWithTax only if that specific date isn't found in
+            // packageRateList (shouldn't normally happen for dates inside
+            // the booked range).
+            const nightEntry = nightByDateKey.get(date);
+            const dateAmountAfterTax = nightEntry
+              ? nightEntry.amount + nightEntry.tax
+              : Number(room?.roomRateWithTax) || 0;
+            return {
+              date,
+              rate_id: room?.rateId,
+              rate_name: room?.roomPackage,
+              amountaftertax: Math.round(dateAmountAfterTax || 0).toString(),
+              extraGuests: {
+                extraAdult: String(extraAdultCount),
+                extraChild: String(surcharge.extraChildren || 0),
+                extraAdultRate: surcharge.extraAdultCharge
+                  ? String(Math.round(surcharge.extraAdultCharge))
+                  : "0",
+                extraChildRate: surcharge.extraChildRoomCharge
+                  ? String(Math.round(surcharge.extraChildRoomCharge))
+                  : "0",
+              },
+              fees: [],
+              // CartContext's add-ons aren't associated per-room (flat list), so
+              // the full set is attached once, on the first room's first date,
+              // to avoid duplicate-billing the same add-on across every room/date.
+              Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
+            };
+          }),
           // Per-date tax detail isn't tracked by name in this package (only
           // an aggregate amount per room) — one GST-labelled entry is a
           // reasonable single-line approximation of real Amritara's named

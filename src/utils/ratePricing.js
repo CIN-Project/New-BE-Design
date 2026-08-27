@@ -674,6 +674,73 @@ function nightsBetween(startDate, endDate) {
 }
 
 /**
+ * True per-night pricing for one selected room slot, summed from its own
+ * `packageRateList` (buildRoomSelection's raw per-date `Rates` object)
+ * rather than assuming its single representative `packageRate`/
+ * `roomRateWithTax` (always the FIRST night only — see buildRoomSelection)
+ * applies uniformly to every night.
+ *
+ * Real Amritara's StayStep.js computes the actual stay total the exact same
+ * way: calculateBasePrice (~227-252) reduces over
+ * `Object.values(room.packageRateList)`, reading each date's own
+ * `OBP[adults].RateBeforeTax` — nightly OBP rates commonly differ (weekday
+ * vs weekend pricing etc), confirmed directly against real production data
+ * (a 2-night stay where night 2's rate for both rooms was higher than night
+ * 1's). A flat `packageRate * nights` assumption silently mis-totals
+ * (usually undercharges) any stay where rates aren't perfectly flat — and
+ * since DetailStep.jsx's real payment submission reads its `deposit`/
+ * `totalamountaftertax` straight from this function's `grandTotal`, that
+ * mis-total was actually being charged, not just mis-displayed.
+ *
+ * @param {object} selectedRoomEntry - a selectedRoom[] entry with
+ *   packageRateList/adults/rateId (all already present via
+ *   buildRoomSelection) and, for the no-packageRateList fallback below,
+ *   packageRate/roomRateWithTax.
+ * @param {number} fallbackNights - nights to assume if packageRateList is
+ *   missing (only happens for a selection built without it, which
+ *   shouldn't occur via buildRoomSelection today, but is handled rather
+ *   than silently reporting a zero total).
+ * @returns {{ baseTotal: number, taxTotal: number, nights: Array<{
+ *   dateKey: string|null, date: Date|null, amount: number, tax: number }> }}
+ */
+export function getRoomNightlyBreakdown(selectedRoomEntry, fallbackNights = 1) {
+  const dateEntries = Object.entries(selectedRoomEntry?.packageRateList || {});
+
+  if (dateEntries.length === 0) {
+    const amount = parseFloat(selectedRoomEntry?.packageRate) || 0;
+    const afterTax = Number(selectedRoomEntry?.roomRateWithTax) || 0;
+    const tax = Math.max(0, afterTax - amount);
+    return {
+      baseTotal: amount * fallbackNights,
+      taxTotal: tax * fallbackNights,
+      nights: Array.from({ length: fallbackNights }, () => ({
+        dateKey: null,
+        date: null,
+        amount,
+        tax,
+      })),
+    };
+  }
+
+  let baseTotal = 0;
+  let taxTotal = 0;
+  const nights = dateEntries
+    .map(([dateKey, dateData]) => {
+      const guestRate = getGuestRateFromObp(dateData?.OBP, selectedRoomEntry?.adults);
+      const amount = parseFloat(guestRate?.RateBeforeTax || "0");
+      const afterTax = parseFloat(guestRate?.RateAfterTax || "0");
+      const tax = Math.max(0, afterTax - amount);
+      baseTotal += amount;
+      taxTotal += tax;
+      const parsedDate = new Date(dateKey);
+      return { dateKey, date: isNaN(parsedDate.getTime()) ? null : parsedDate, amount, tax };
+    })
+    .sort((a, b) => (a.dateKey < b.dateKey ? -1 : a.dateKey > b.dateKey ? 1 : 0));
+
+  return { baseTotal, taxTotal, nights };
+}
+
+/**
  * Single source of truth for what the stay actually costs — both the cart
  * sidebar's price breakdown (CartOverview.jsx) and the real payment
  * submission (DetailStep.jsx's grandTotal/totalTaxAmount) read from this,
@@ -683,19 +750,18 @@ function nightsBetween(startDate, endDate) {
  * StayContext's own `totalPrice`/`totalRoomPrice`/`baseRoomPrice`/
  * `roomTaxes`/`totalTax` fields are never populated anywhere in this
  * package (confirmed via grep — only ever read, never set), so this
- * derives everything directly from `selectedRoom`, which already carries a
- * real per-night `packageRate` (before tax) and `roomRateWithTax` (after
- * tax) per room from buildRoomSelection/StayStep's merge. Real Amritara's
- * own CartOverview.js (~106-122) makes the same simplifying assumption —
- * one flat per-night rate per room, multiplied by nights — rather than
- * summing each date's (possibly different) OBP entry, so this matches that
- * behavior rather than inventing true day-by-day variable pricing.
+ * derives everything directly from `selectedRoom`, via getRoomNightlyBreakdown
+ * (see its doc comment for why a flat per-night-rate-times-nights assumption
+ * is wrong and was corrected).
  */
 export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEndDate, addonAmountTotal, addonTaxTotal }) {
   const nights = nightsBetween(selectedStartDate, selectedEndDate);
   const rooms = (selectedRoom || []).filter((r) => r?.roomId);
 
-  const perNightRoomBase = rooms.reduce((sum, r) => sum + (parseFloat(r?.packageRate) || 0), 0);
+  const roomBreakdowns = rooms.map((r) => ({
+    room: r,
+    ...getRoomNightlyBreakdown(r, nights),
+  }));
 
   // Aggregate member-rate savings across every room slot — real Amritara's
   // calculateTotalSavings (StayStep.js ~254-260) sums each room's own
@@ -716,10 +782,8 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
   // average like the base rate above.
   let roomTaxTotal = 0;
   let extraChargeTotal = 0;
-  const roomSurcharges = rooms.map((r) => {
+  const roomSurcharges = roomBreakdowns.map(({ room: r, taxTotal: standardTax }) => {
     const surcharge = computeRoomSurcharge(r);
-    const standardTax =
-      Math.max(0, (Number(r?.roomRateWithTax) || 0) - (parseFloat(r?.packageRate) || 0)) * nights;
 
     // When there's a qualifying extra child, the recomputed GST REPLACES
     // the room's normal tax rather than adding to it — see
@@ -737,7 +801,7 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
   // Amritara's cart does (Taxes & Fees -> GST + Extra Child Rate, both
   // itemized). Moved into the tax/fees bucket below instead — grandTotal is
   // unchanged either way, only which bucket the guest sees it in.
-  const roomBaseCost = perNightRoomBase * nights;
+  const roomBaseCost = roomBreakdowns.reduce((sum, rb) => sum + rb.baseTotal, 0);
   const addonAmount = addonAmountTotal || 0;
   // addonAmountTotal is sourced from the addon API's `amountAfterTax` field
   // (AddOnsStep.jsx's getAddonAmount) — already tax-inclusive. addonTaxTotal
@@ -751,19 +815,45 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
   const gstTotal = roomTaxTotal + (addonTaxTotal || 0);
   const taxesAndFeesTotal = gstTotal + extraChargeTotal;
   const grandTotal = roomBaseCost + roomTaxTotal + extraChargeTotal + addonAmount;
-  const gstPercent = perNightRoomBase > 0 ? Math.round((roomTaxTotal / nights / perNightRoomBase) * 100) : 0;
+  const gstPercent = roomBaseCost > 0 ? Math.round((roomTaxTotal / roomBaseCost) * 100) : 0;
 
-  const perNightBreakdown = Array.from({ length: nights }, (_, i) => {
-    const date = selectedStartDate ? new Date(selectedStartDate) : null;
-    if (date) date.setDate(date.getDate() + i);
+  // Built from each room's own date keys (real per-date OBP data), not from
+  // selectedStartDate + i — this reflects exactly what each room's own rate
+  // data says was charged for that specific calendar date, so nights whose
+  // rates differ show their real, different amounts instead of a repeated
+  // first-night figure.
+  const allDateKeys = Array.from(
+    new Set(roomBreakdowns.flatMap((rb) => rb.nights.map((n) => n.dateKey).filter(Boolean))),
+  ).sort();
+
+  const nightRows =
+    allDateKeys.length > 0
+      ? allDateKeys
+      : Array.from({ length: nights }, (_, i) => i); // fallback-only stays: no real date keys at all
+
+  const perNightBreakdown = nightRows.map((dateKeyOrIndex, i) => {
+    const isFallback = allDateKeys.length === 0;
+    const date = isFallback
+      ? (() => {
+          const d = selectedStartDate ? new Date(selectedStartDate) : null;
+          if (d) d.setDate(d.getDate() + i);
+          return d;
+        })()
+      : (roomBreakdowns
+          .flatMap((rb) => rb.nights)
+          .find((n) => n.dateKey === dateKeyOrIndex)?.date ?? null);
+
     return {
       date,
-      rooms: rooms.map((r) => ({
-        roomId: r.roomId,
-        roomName: r.roomName,
-        amount: parseFloat(r.packageRate) || 0,
-        tax: Math.max(0, (Number(r.roomRateWithTax) || 0) - (parseFloat(r.packageRate) || 0)),
-      })),
+      rooms: roomBreakdowns.map((rb) => {
+        const nightEntry = isFallback ? rb.nights[i] : rb.nights.find((n) => n.dateKey === dateKeyOrIndex);
+        return {
+          roomId: rb.room.roomId,
+          roomName: rb.room.roomName,
+          amount: nightEntry?.amount ?? 0,
+          tax: nightEntry?.tax ?? 0,
+        };
+      }),
       // Add-ons are billed once (first night only) — mirrors DetailStep.jsx's
       // reservation payload, which attaches the full add-on list only to the
       // first room's first date to avoid duplicate-billing across nights.
