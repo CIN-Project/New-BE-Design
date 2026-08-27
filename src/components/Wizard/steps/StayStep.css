@@ -793,6 +793,37 @@
   margin-bottom: 1.4rem;
 }
 
+/* Pill/tab switcher shown instead of the checkmark stepper once the guest
+   is editing an already-picked room (see RoomSlotStepper's isEditing) —
+   same layout slot, so it doesn't shift anything else on the page. */
+.be-room-slot-tabs {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.4rem;
+}
+
+.be-room-slot-tab {
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid #e2ded2;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--be-color-primary, #846836);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.be-room-slot-tab.be-active {
+  border-color: var(--be-color-primary, #846836);
+  background: rgba(132, 104, 54, 0.06);
+}
+
 .be-room-slot-step-wrap {
   display: flex;
   align-items: center;
@@ -832,9 +863,12 @@
 }
 
 .be-room-slot-circle.be-completed {
-  background: var(--be-color-primary, #846836);
-  border-color: var(--be-color-primary, #846836);
-  color: #fff;
+  /* Success green, not the theme's gold accent — a completed room slot
+     reads as a "done" checkmark state (like a form-validation success),
+     distinct from "active" (gold ring) and "not started" (plain grey). */
+  background: #fff;
+  border-color: var(--be-color-success, #2e7d32);
+  color: var(--be-color-success, #2e7d32);
 }
 
 .be-room-slot-label {
@@ -845,6 +879,10 @@
   white-space: nowrap;
 }
 
+.be-room-slot-label.be-completed {
+  color: var(--be-color-success, #2e7d32);
+}
+
 .be-room-slot-line {
   width: 24px;
   height: 1.5px;
@@ -853,7 +891,7 @@
 }
 
 .be-room-slot-line.be-completed {
-  background: var(--be-color-primary, #846836);
+  background: var(--be-color-success, #2e7d32);
 }
 
 .be-stay-loading,
@@ -1091,8 +1129,3 @@
   align-items: center;
 }
 
-.be-stay-continue-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-}

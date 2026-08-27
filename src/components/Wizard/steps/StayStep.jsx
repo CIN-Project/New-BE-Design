@@ -550,7 +550,22 @@ function RateCard({
   const cancellation = classifyCancellation(cancellationText);
   const inclusionItems = extractInclusionItems(rate, cancellationText);
 
-  const effectiveTab = activeTab ?? (memberRatePlan ? "member" : "standard");
+  // Prefer whichever variant is ACTUALLY selected over the "member if
+  // available" default — without this, re-opening a room whose STANDARD
+  // rate was chosen (e.g. via the cart sidebar's "Modify" link) fell back
+  // to previewing the Member tab whenever one existed, so the card never
+  // showed as selected at all even though it truly was (just under the
+  // other tab). Only kicks in once something is genuinely selected; an
+  // untouched card keeps the original member-first default.
+  const effectiveTab =
+    activeTab ??
+    (isMemberSelected
+      ? "member"
+      : isStandardSelected
+        ? "standard"
+        : memberRatePlan
+          ? "member"
+          : "standard");
   const isSelected =
     effectiveTab === "member" ? isMemberSelected : isStandardSelected;
 
@@ -936,9 +951,49 @@ function RoomRow({
  * per-room "Select Room"/"Modify" line in the cart sidebar instead, which
  * only appears from step 2 onward) — this mirrors that exactly: status
  * display only, not interactive. */
-function RoomSlotStepper({ selectedRoom, activeIndex, onSelectSlot }) {
+function RoomSlotStepper({ selectedRoom, activeIndex, onSelectSlot, isAdvancing }) {
   const rooms = selectedRoom || [];
   if (rooms.length < 2) return null;
+
+  // Once the guest is reviewing/editing an already-picked room (arrived via
+  // the cart sidebar's "Modify" link, or clicking back into a slot they'd
+  // already finished), switch from the green-checkmark progress stepper to
+  // a pill/tab switcher naming each room's own pick — someone editing a
+  // choice wants to see WHICH rooms they picked and jump between them, not
+  // a "still in progress" checklist ticking off steps they already
+  // finished. Still-in-progress selection (the active slot is blank) keeps
+  // the original checkmark stepper.
+  //
+  // `!isAdvancing` matters here: right after picking a room,
+  // advanceAfterSelection keeps `activeIndex` pointed at the slot that was
+  // JUST completed for ~700ms (a brief "moving to the next room" loader)
+  // before switching it to the new, still-blank slot. Without this guard,
+  // that slot now has a roomId, so isEditing briefly flips true and the
+  // pill design flashes on screen for that instant before flipping back to
+  // the checkmark stepper once activeIndex actually advances.
+  const isEditing = !isAdvancing && Boolean(rooms[activeIndex]?.roomId);
+
+  if (isEditing) {
+    return (
+      <div className="be-room-slot-tabs">
+        {rooms.map((room, i) => {
+          const active = i === activeIndex;
+          return (
+            <button
+              type="button"
+              key={room?.id ?? i}
+              className={`be-room-slot-tab${active ? " be-active" : ""}`}
+              onClick={() => onSelectSlot?.(i)}
+              aria-current={active}
+            >
+              Room {i + 1}
+              {room?.roomName ? `: ${room.roomName}` : ""}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="be-room-slot-stepper">
@@ -968,7 +1023,7 @@ function RoomSlotStepper({ selectedRoom, activeIndex, onSelectSlot }) {
                   >
                     <path
                       d="M3 8.5L6.5 12L13 4.5"
-                      stroke="#fff"
+                      stroke="var(--be-color-success, #2e7d32)"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -978,7 +1033,11 @@ function RoomSlotStepper({ selectedRoom, activeIndex, onSelectSlot }) {
                   i + 1
                 )}
               </span>
-              <span className="be-room-slot-label">Room {i + 1}</span>
+              <span
+                className={`be-room-slot-label${completed ? " be-completed" : ""}`}
+              >
+                Room {i + 1}
+              </span>
             </button>
             {i < rooms.length - 1 && (
               <div
@@ -1253,19 +1312,25 @@ export function StayStep({ onRoomsSelected }) {
     });
   };
 
-  // Jumping to a slot from the Room 1/Room 2 stepper — no fetch, no merge,
-  // just switching which slot is "active" (isSelected/isActiveSlotRoom
-  // downstream key off currentRoomIndex already, so nothing re-loads).
-  // If that slot already has a pick, auto-expand its room card so editing
-  // it shows the previously-selected rate highlighted immediately, instead
-  // of landing on the collapsed room list with no indication of what was
-  // chosen.
-  const handleSelectSlot = (index) => {
-    setCurrentRoomIndex(index);
-    const existingRoomId = selectedRoom?.[index]?.roomId;
+  // Whenever the active slot has a pick, auto-expand its room card — keyed
+  // off currentRoomIndex itself (not the stepper's onClick) so this covers
+  // every way the active slot can change: clicking the Room 1/Room 2
+  // stepper, arriving here via the cart sidebar's per-room "Modify" link
+  // (Wizard.jsx's onModifyRooms sets activeRoomSlotIndex directly on
+  // StayContext, bypassing any StayStep-local handler), and auto-advancing
+  // to the next slot after a selection. Without this, editing a previous
+  // pick from the cart landed on the collapsed room list with no
+  // indication of what was chosen, even though the correct slot was active.
+  useEffect(() => {
+    const existingRoomId = selectedRoom?.[currentRoomIndex]?.roomId;
     if (existingRoomId) {
       setExpandedRoomIds((prev) => new Set(prev).add(existingRoomId));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoomIndex]);
+
+  const handleSelectSlot = (index) => {
+    setCurrentRoomIndex(index);
   };
 
   const setCardTab = (cardKey, tab) => {
@@ -1548,6 +1613,7 @@ export function StayStep({ onRoomsSelected }) {
           selectedRoom={selectedRoom}
           activeIndex={currentRoomIndex}
           onSelectSlot={handleSelectSlot}
+          isAdvancing={advancingToIndex !== null}
         />
       )}
 
@@ -1622,27 +1688,6 @@ export function StayStep({ onRoomsSelected }) {
             />
           );
         })}
-
-      {/* A guest could always reach checkout automatically before (every
-          selection auto-advanced, including straight past step 1 once the
-          last slot was filled) — that's exactly what handleUnlocked no
-          longer does after OTP verification, so there has to be an
-          explicit way forward here instead, once every room slot actually
-          has a selection. Standard/already-a-member selections still
-          auto-advance as before (this just sits unused, and hidden, until
-          the guest is already done either way). */}
-      {!loading &&
-        advancingToIndex === null &&
-        !error &&
-        rooms.length > 0 &&
-        (selectedRoom || []).length > 0 &&
-        (selectedRoom || []).every((r) => r?.roomId) && (
-          <div className="be-stay-continue-row">
-            <Button variant="primary" size="md" onClick={() => onRoomsSelected?.()}>
-              Continue to Guest Details →
-            </Button>
-          </div>
-        )}
 
       <RoomDetailsModal
         room={detailsRoom}
