@@ -1300,15 +1300,15 @@ export function StayStep({ onRoomsSelected }) {
     // ("Select Package And Cart Open"), fired whenever a room+rate is
     // chosen (standard, member, or post-login-unlock — applySelection is
     // the single funnel all three go through).
-    postBookingWidged(config, {
-      ctaName: "Select Package And Cart Open",
-      propertyId: selectedPropertyId,
-      checkIn: checkInParam,
-      checkOut: checkOutParam,
-      roomsName: selection?.roomName,
-      packageName: selection?.roomPackage,
-      isCartOpen: true,
-    });
+    // postBookingWidged(config, {
+    //   ctaName: "Select Package And Cart Open",
+    //   propertyId: selectedPropertyId,
+    //   checkIn: checkInParam,
+    //   checkOut: checkOutParam,
+    //   roomsName: selection?.roomName,
+    //   packageName: selection?.roomPackage,
+    //   isCartOpen: true,
+    // });
 
     return updated;
   };

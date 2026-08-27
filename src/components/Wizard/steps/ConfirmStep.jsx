@@ -136,15 +136,15 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
 
         // Ported from ConfirmStep.js's handleConfirm (~251-329) — real's
         // exact apiName ("confirm") and apiUrl for this specific call.
-        postBookingWidged(config, {
-          ctaName: "",
-          propertyId: parsedResponseJson?.property_id,
-          apiName: "confirm",
-          apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
-          apiStatus: confirmedSuccess ? "200" : "0",
-          apiErrorCode: confirmedSuccess ? "200" : "0",
-          apiMessage: confirmedSuccess ? "Success" : "Payment failed",
-        });
+        // postBookingWidged(config, {
+        //   ctaName: "",
+        //   propertyId: parsedResponseJson?.property_id,
+        //   apiName: "confirm",
+        //   apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
+        //   apiStatus: confirmedSuccess ? "200" : "0",
+        //   apiErrorCode: confirmedSuccess ? "200" : "0",
+        //   apiMessage: confirmedSuccess ? "Success" : "Payment failed",
+        // });
 
         if (confirmedSuccess) {
           // Optional/secondary: persist the confirmed booking server-side.
@@ -155,14 +155,14 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       } catch (err) {
         console.error("[booking-engine-new] confirmPayment failed:", err);
         if (!cancelled) setReservationStatus("failed");
-        postBookingWidged(config, {
-          ctaName: "Reservation post",
-          propertyId: parsedResponseJson?.property_id,
-          apiName: "confirm",
-          apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
-          apiErrorCode: "1166",
-          apiMessage: "Payment failed",
-        });
+        // postBookingWidged(config, {
+        //   ctaName: "Reservation post",
+        //   propertyId: parsedResponseJson?.property_id,
+        //   apiName: "confirm",
+        //   apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
+        //   apiErrorCode: "1166",
+        //   apiMessage: "Payment failed",
+        // });
       } finally {
         if (!cancelled) setConfirming(false);
       }

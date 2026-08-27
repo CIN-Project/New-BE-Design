@@ -357,11 +357,11 @@ export function GuestDetailsForm({ onComplete }) {
       // Click"), fired the moment a reservation id is successfully
       // generated (i.e. right before building/submitting the payment
       // request), not on the button click itself.
-      postBookingWidged(config, {
-        ctaName: "Pay Now Click",
-        propertyId: selectedPropertyId,
-        customerGuid: formData.customerGuid,
-      });
+      // postBookingWidged(config, {
+      //   ctaName: "Pay Now Click",
+      //   propertyId: selectedPropertyId,
+      //   customerGuid: formData.customerGuid,
+      // });
 
       const numberOfDays = calculateNumberOfDays(
         selectedStartDate,
@@ -657,18 +657,18 @@ export function GuestDetailsForm({ onComplete }) {
       // Ported from DetailStep.js's th-payment-request success/failure
       // beacons (~505-506,579-580 pattern — ApiName "reservation post" on
       // this call, ApiErrorCode "1166" on any non-success result).
-      postBookingWidged(config, {
-        ctaName: "Reservation post",
-        propertyId: selectedPropertyId,
-        apiName: "reservation post",
-        apiUrl: `${config?.staahBaseUrl || ""}/api/th-payment-request`,
-        apiStatus: paymentResp?.errorMessage === "success" ? "0" : "1",
-        apiErrorCode: paymentResp?.errorMessage === "success" ? "0" : "1166",
-        apiMessage:
-          paymentResp?.errorMessage === "success"
-            ? "Success"
-            : paymentResp?.errorMessage || "Payment failed",
-      });
+      // postBookingWidged(config, {
+      //   ctaName: "Reservation post",
+      //   propertyId: selectedPropertyId,
+      //   apiName: "reservation post",
+      //   apiUrl: `${config?.staahBaseUrl || ""}/api/th-payment-request`,
+      //   apiStatus: paymentResp?.errorMessage === "success" ? "0" : "1",
+      //   apiErrorCode: paymentResp?.errorMessage === "success" ? "0" : "1166",
+      //   apiMessage:
+      //     paymentResp?.errorMessage === "success"
+      //       ? "Success"
+      //       : paymentResp?.errorMessage || "Payment failed",
+      // });
       if (paymentResp?.errorMessage !== "success") {
         throw new Error(
           paymentResp?.errorMessage ||
@@ -730,12 +730,12 @@ export function GuestDetailsForm({ onComplete }) {
     } catch (err) {
       setIsProcessing(false);
       toast.error(err?.message || "Payment failed. Please try again.");
-      postBookingWidged(config, {
-        ctaName: err?.message || "Payment failed",
-        propertyId: selectedPropertyId,
-        apiErrorCode: "1166",
-        apiMessage: err?.message || "Payment failed",
-      });
+      // postBookingWidged(config, {
+      //   ctaName: err?.message || "Payment failed",
+      //   propertyId: selectedPropertyId,
+      //   apiErrorCode: "1166",
+      //   apiMessage: err?.message || "Payment failed",
+      // });
     }
   };
 

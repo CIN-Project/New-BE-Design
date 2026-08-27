@@ -192,10 +192,10 @@ export function SearchBar({
 
     // Ported from Filterbar.js:2580 — real's exact ctaName string
     // ("Search Click"), fired unconditionally on a valid search submit.
-    postBookingWidged(config, {
-      ctaName: "Search Click",
-      propertyId: search.selectedPropertyId,
-    });
+    // postBookingWidged(config, {
+    //   ctaName: "Search Click",
+    //   propertyId: search.selectedPropertyId,
+    // });
 
     onSearch?.({
       propertyId: search.selectedPropertyId,
