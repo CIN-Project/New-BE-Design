@@ -140,14 +140,17 @@
 }
 
 .be-destination-modal::-webkit-scrollbar {
-  width: 5px;
+  /* Matches the Booking Cart Summary / guest-details column scrollbars
+     (CartOverview.css, Wizard.css) — same width/thumb color/radius, so
+     every scrollbar in the booking flow reads as one consistent design. */
+  width: 4px;
 }
 .be-destination-modal::-webkit-scrollbar-track {
   background: transparent;
 }
 .be-destination-modal::-webkit-scrollbar-thumb {
-  background: var(--be-color-primary-light, #e2e0d7);
-  border-radius: 2px;
+  background: #e9dcc7;
+  border-radius: 3px;
 }
 
 .be-destination-modal::-webkit-scrollbar-thumb:hover {
@@ -219,6 +222,36 @@
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12), 0 0 15px rgba(199, 163, 106, 0.05);
   z-index: 200;
   text-align: left;
+  /* Capped so "+ Add More Rooms" (up to 4 rooms) can't grow this past a
+     sane height / off the bottom of the viewport — the room list scrolls
+     internally instead, while the Done footer below stays pinned and
+     always visible, same layout pattern as the cart sidebar
+     (CartOverview.css's .cart-sidebar / .cart-body-scroll / footer). */
+  max-height: min(480px, 70vh);
+  display: flex;
+  flex-direction: column;
+}
+
+.be-travelers-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.be-travelers-modal-body::-webkit-scrollbar {
+  /* Same scrollbar treatment as the Booking Cart Summary / destination
+     dropdown — one consistent scrollbar design across the booking flow. */
+  width: 4px;
+}
+.be-travelers-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.be-travelers-modal-body::-webkit-scrollbar-thumb {
+  background: #e9dcc7;
+  border-radius: 3px;
+}
+.be-travelers-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
 }
 
 .be-modal-room-item {
@@ -363,6 +396,10 @@
   justify-content: flex-end;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   padding-top: 0.8rem;
+  /* .be-travelers-modal is now a column flex container (see its own max-
+     height/scroll comment) — pins this footer at its natural size so it
+     can never be squeezed by the scrollable room list above it. */
+  flex-shrink: 0;
 }
 
 .be-btn-done {

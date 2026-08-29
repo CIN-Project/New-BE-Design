@@ -17,7 +17,13 @@
   overflow-y: auto;
   position: relative;
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
-  padding: 1.8rem 2rem;
+  /* No right padding at all — this is the element that actually scrolls
+     (the "parent" the scrollbar belongs to), so any right padding here
+     just pushes the scrollbar in from the true edge, leaving a gap. All of
+     the ~2rem right inset guests see around the text instead lives on
+     .be-modal-content below, which isn't a scroll container, so it can
+     have real padding without creating that gap. */
+  padding: 1.8rem 0 1.8rem 2rem;
   box-sizing: border-box;
   /* No max-width here on purpose — this class is shared by every modal that
      uses shared/Modal.jsx (GuestsModal, DateRangeModal, ...), each of which
@@ -28,6 +34,25 @@
      exactly the "changing one modal's width changed another one too" bug
      this was causing. Resize a specific modal via its own maxWidth prop,
      not here. */
+}
+
+.be-modal-box::-webkit-scrollbar {
+  /* Was unstyled entirely (plain browser-default scrollbar) — every other
+     scrollable surface in the booking flow (cart summary, destination
+     dropdown, travelers dropdown) already uses this exact treatment; this
+     is the last one that didn't, shared by every Modal.jsx-based popup
+     (Modify Guests, Modify Dates, room details, ...). */
+  width: 4px;
+}
+.be-modal-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.be-modal-box::-webkit-scrollbar-thumb {
+  background: #e9dcc7;
+  border-radius: 3px;
+}
+.be-modal-box::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
 }
 
 .be-modal-close-btn {
@@ -75,8 +100,20 @@
   margin: 0;
 }
 
+.be-modal-content {
+  /* Restores the full ~2rem right inset for actual content/text that
+     .be-modal-box used to provide on its own — moved here entirely (not
+     split between the two) so .be-modal-box's own right edge, where the
+     scrollbar lives, can have zero gap. */
+  padding-right: 2rem;
+}
+
 @media (max-width: 560px) {
   .be-modal-box {
-    padding: 1.4rem 1.2rem;
+    padding: 1.4rem 0 1.4rem 1.2rem;
+  }
+
+  .be-modal-content {
+    padding-right: 1.2rem;
   }
 }
