@@ -156,6 +156,31 @@ export function GuestDetailsForm({ onComplete }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Fixes the "stuck on Processing your secure payment... forever after
+  // returning from the gateway" bug. Root cause: paymentHash.js's
+  // redirectToPayment does `window.history.replaceState({}, "", "/?pay-now")`
+  // immediately before submitting the hidden form that navigates the
+  // browser away to STAAH's hosted payment page — right as/after
+  // `setIsProcessing(true)` fires below. If the guest later lands back on
+  // this tab via the browser's bfcache (e.g. STAAH's own return flow uses
+  // history navigation rather than a fresh redirect, or the guest hits
+  // Back), the browser restores the EXACT frozen page from the instant
+  // before that form submitted — including isProcessing still `true` — and
+  // since nothing re-runs to advance it, the overlay never goes away.
+  // `pageshow`'s `event.persisted` flag is the standard way to detect
+  // exactly this bfcache restoration; resetting isProcessing here lets the
+  // guest see the form again (and retry) instead of a permanently stuck
+  // spinner.
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        setIsProcessing(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
   // Prefill from a logged-in loyalty member the moment auth resolves, without
   // clobbering anything the guest has already typed.
   useEffect(() => {
