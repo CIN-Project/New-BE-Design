@@ -12,7 +12,7 @@ export function getCityWithProperty(config, cityId) {
   return cmsGet(
     config,
     "cmsBaseUrl",
-    `/cmsapi/property/GetCityWithProperty${query}`,
+    `/api/property/GetCityWithProperty${query}`,
   );
 }
 
@@ -58,6 +58,6 @@ export function getGalleryByProperty(config, propertyId) {
   return cmsGet(
     config,
     "cmsBaseUrl",
-    `/cmsapi/gallery/GetGalleryByProperty?propertyId=${parseInt(propertyId, 10)}`,
+    `/api/gallery/GetGalleryByProperty?propertyId=${parseInt(propertyId, 10)}`,
   );
 }

@@ -227,7 +227,7 @@
      internally instead, while the Done footer below stays pinned and
      always visible, same layout pattern as the cart sidebar
      (CartOverview.css's .cart-sidebar / .cart-body-scroll / footer). */
-  max-height: min(480px, 70vh);
+  max-height: min(480px, 50vh);
   display: flex;
   flex-direction: column;
 }
@@ -429,6 +429,13 @@
   box-shadow: 0 0 15px rgba(199, 163, 106, 0.4);
   position: relative;
   overflow: hidden;
+}
+
+/* Hidden everywhere by default — only BookingFlow's mobileModal sheet
+   (BookingFlow.css) shows it, turning this icon-only circle into a
+   full-width labeled button. */
+.be-btn-booking-pill-label {
+  display: none;
 }
 
 .be-btn-booking-pill::before {

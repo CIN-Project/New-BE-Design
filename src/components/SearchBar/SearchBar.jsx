@@ -41,6 +41,16 @@ export function SearchBar({
   holidays,
   variant = "full",
   onBack,
+  // BookingFlow's mobileModal renders this "full" variant inside a tall,
+  // scrollable full-screen sheet — checkSpace below measures space under
+  // the *whole form* (via widgetRef), and with every field stacked plus a
+  // full-width submit button, that reads as "not enough room" even for the
+  // very first field (Location) near the top. Flipping it upward then
+  // renders the dropdown above the field, i.e. off the top of the sheet
+  // where there's nothing to scroll to — it just gets clipped. Forcing
+  // every dropdown open-down here (same override isCompact already gets)
+  // fixes it without touching the desktop/inline-mobile checkSpace logic.
+  alwaysOpenDown = false,
 }) {
   const config = useConfig();
   const search = useSearchContext();
@@ -132,7 +142,7 @@ export function SearchBar({
     // which has nowhere to go if the trigger itself is already near y:0).
     // The full hero variant can be anywhere on a tall page, so it keeps
     // the real space-below check.
-    setOpenUpwards(isCompact ? false : checkSpace(threshold));
+    setOpenUpwards(isCompact || alwaysOpenDown ? false : checkSpace(threshold));
     setShowDestModal(false);
     setShowCalModal(false);
     setShowGuestsModal(false);
@@ -388,6 +398,12 @@ export function SearchBar({
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
+          {/* Hidden by default (see SearchBar.css) — every existing layout
+              (desktop capsule, compact recap bar) keeps its icon-only
+              circular button untouched. BookingFlow's mobileModal sheet is
+              the only place this becomes visible, via a descendant
+              selector on its own wrapper class. */}
+          <span className="be-btn-booking-pill-label">Search</span>
         </button>
       </form>
 

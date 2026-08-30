@@ -26,6 +26,16 @@
      beside the field instead of below it, and on the 2-column .be-form-grid
      that made it visually bleed toward the next field over. */
   flex-direction: column;
+  /* Every group here is also a grid item of .be-form-grid, and grid items
+     default to min-width:auto — refusing to shrink below their content's
+     min-content size. The phone group already had this patched via an
+     inline style (its own nested country-code+phone grid needed the same
+     fix one level deeper), but every *other* group here (email, name, GST,
+     etc.) was still exposed to it: on a narrow phone the 2-column grid
+     couldn't actually shrink groups down to fit, so .be-form-card (and
+     everything alongside it) got pushed wider than the viewport instead of
+     wrapping to one column. */
+  min-width: 0;
 }
 
 .be-detail-form-group label {

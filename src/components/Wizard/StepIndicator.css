@@ -13,6 +13,13 @@
 .be-step-indicator {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
+  /* Safety net for any width where the 4 items don't fit one row but the
+     640px breakpoint below hasn't switched to the column layout yet (e.g.
+     a longer room label, or a viewport in between) — without this,
+     wrapped items had no vertical breathing room and the second row's
+     circle visually touched the first row's text right above it. */
+  row-gap: 0.6rem;
   justify-content: space-between;
   background: #ffffff;
   padding: 0.8rem 2.5rem;
@@ -85,7 +92,7 @@
   box-shadow: 0 4px 10px rgba(191, 161, 95, 0.1);
 }
 
-@media (max-width: 580px) {
+@media (max-width: 640px) {
   .be-step-num{
     width: 32px;
     height: 28px;

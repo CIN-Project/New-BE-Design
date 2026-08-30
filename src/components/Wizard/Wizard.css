@@ -65,6 +65,17 @@
   .be-cart-details-layout {
     flex-direction: column-reverse;
     gap: 1.8rem;
+    /* align-items:flex-start (base rule above) is for the side-by-side
+       desktop row — it top-aligns the two columns instead of stretching
+       them to match heights. In this stacked column-reverse layout the
+       cross axis is horizontal, so flex-start instead means each column
+       sizes to its own preferred (max-content) width rather than filling
+       the screen. Preferred-width sizing computes as if nothing wraps —
+       so e.g. DetailStep's trust-badges row (flex-wrap:wrap, 3 items)
+       sized as if laid out on one unbroken line, that width became this
+       column's width, and the whole page had to grow wide enough to
+       fit it, overflowing the viewport instead of ever actually wrapping. */
+    align-items: stretch;
   }
 
   .be-cart-left-col {
