@@ -23,7 +23,10 @@ const CALENDAR_RANGES = [
  * 6-month chunks. Pass `getDayRate`/`isDateSoldOut` to override with a
  * caller-supplied source instead (self-fetch is then skipped entirely).
  */
-export function useCalendarRates(propertyId, { getDayRate, isDateSoldOut } = {}) {
+export function useCalendarRates(
+  propertyId,
+  { getDayRate, isDateSoldOut } = {},
+) {
   const config = useConfig();
   const dayRateMapRef = useRef({});
   const loadedRangesRef = useRef(new Set());
@@ -91,7 +94,8 @@ export function useCalendarRates(propertyId, { getDayRate, isDateSoldOut } = {})
     const today = getISTNow();
     const visible = new Date(year, month, 1);
     const diffMonths =
-      (visible.getFullYear() - today.getFullYear()) * 12 + (visible.getMonth() - today.getMonth());
+      (visible.getFullYear() - today.getFullYear()) * 12 +
+      (visible.getMonth() - today.getMonth());
 
     for (const range of CALENDAR_RANGES) {
       if (range.key === "0-6") continue;
@@ -109,9 +113,14 @@ export function useCalendarRates(propertyId, { getDayRate, isDateSoldOut } = {})
   const isDateRateLoading = (date) => {
     if (selfFetchDisabled || loadingRanges.size === 0) return false;
     const today = getISTNow();
-    const diffMonths = (date.getFullYear() - today.getFullYear()) * 12 + (date.getMonth() - today.getMonth());
+    const diffMonths =
+      (date.getFullYear() - today.getFullYear()) * 12 +
+      (date.getMonth() - today.getMonth());
     return CALENDAR_RANGES.some(
-      (range) => loadingRanges.has(range.key) && diffMonths >= range.from && diffMonths < range.to
+      (range) =>
+        loadingRanges.has(range.key) &&
+        diffMonths >= range.from &&
+        diffMonths < range.to,
     );
   };
 

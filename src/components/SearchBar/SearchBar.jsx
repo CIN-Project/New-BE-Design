@@ -140,6 +140,7 @@ export function SearchBar({
   };
 
   const handleSelectProperty = (property) => {
+    console.log("Prem property",property)
     // staahPropertyId (not the CMS propertyId) is what every rate/room/
     // calendar API call needs — see api/properties.js's
     // mapCityWithPropertyResponse doc comment. Falls back to propertyId/id
@@ -242,6 +243,7 @@ export function SearchBar({
   // not a compact inline summary.
   const formatShort = (d) =>
     d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  console.log("Prem isCompact",isCompact)
 
   return (
     <div
@@ -268,7 +270,14 @@ export function SearchBar({
             onClick={() => setMobileEditOpen(true)}
             aria-label="Edit search"
           >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
@@ -284,7 +293,14 @@ export function SearchBar({
             onClick={() => setMobileEditOpen(false)}
             aria-label="Close"
           >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>

@@ -133,6 +133,11 @@ export function resolveExternalRedirectUrl(
   config,
   { propertyId, startDate, endDate, rooms },
 ) {
+  console.log("Prem config",config)
+  console.log("Prem propertyId",propertyId)
+  console.log("Prem startDate",startDate);
+  console.log("Prem endDate",endDate);
+  console.log("Prem rooms",rooms);
   if (!isExternalRedirectMode(config)) return null;
 
   const checkIn = formatIsoDateForRedirect(startDate);

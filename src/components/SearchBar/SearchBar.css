@@ -236,22 +236,15 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Scrolls, but the scrollbar itself stays invisible (Firefox + IE/Edge). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .be-travelers-modal-body::-webkit-scrollbar {
-  /* Same scrollbar treatment as the Booking Cart Summary / destination
-     dropdown — one consistent scrollbar design across the booking flow. */
-  width: 4px;
-}
-.be-travelers-modal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-.be-travelers-modal-body::-webkit-scrollbar-thumb {
-  background: #e9dcc7;
-  border-radius: 3px;
-}
-.be-travelers-modal-body::-webkit-scrollbar-thumb:hover {
-  background: var(--be-color-primary, #846836);
+  /* Same invisible-but-scrollable treatment, WebKit/Blink. */
+  width: 0;
+  display: none;
 }
 
 .be-modal-room-item {

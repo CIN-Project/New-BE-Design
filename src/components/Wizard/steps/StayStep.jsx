@@ -401,7 +401,9 @@ function getRoomFromPrice(property, room) {
     }
   });
 
-  return isFinite(min) ? { price: Math.round(min), isMemberRate: minIsMemberRate } : null;
+  return isFinite(min)
+    ? { price: Math.round(min), isMemberRate: minIsMemberRate }
+    : null;
 }
 
 function calcNights(start, end) {
@@ -731,7 +733,10 @@ function RoomRow({
     if (!isExpanded) return;
     let innerTimeout;
     const outerTimeout = setTimeout(() => {
-      expandWrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      expandWrapperRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
       innerTimeout = setTimeout(() => {
         window.scrollBy({ top: 80, behavior: "smooth" });
       }, 300);
@@ -951,7 +956,12 @@ function RoomRow({
  * per-room "Select Room"/"Modify" line in the cart sidebar instead, which
  * only appears from step 2 onward) — this mirrors that exactly: status
  * display only, not interactive. */
-function RoomSlotStepper({ selectedRoom, activeIndex, onSelectSlot, isAdvancing }) {
+function RoomSlotStepper({
+  selectedRoom,
+  activeIndex,
+  onSelectSlot,
+  isAdvancing,
+}) {
   const rooms = selectedRoom || [];
   if (rooms.length < 2) return null;
 
@@ -1357,8 +1367,9 @@ export function StayStep({ onRoomsSelected }) {
     // already does this exact same lookup for its own inline display
     // (cancellationText, ~line 493) — this mirrors it at selection time.
     const cancellationText =
-      (cancellationPolicyPackage || []).find((rp) => rp?.RateId === selection?.rateId)
-        ?.CancellationPolicy?.Description || "";
+      (cancellationPolicyPackage || []).find(
+        (rp) => rp?.RateId === selection?.rateId,
+      )?.CancellationPolicy?.Description || "";
     if (cancellationText) setCancellationPolicyState(cancellationText);
 
     // Ported from Filterbar.js:2913/3293 — real's exact ctaName string
@@ -1569,12 +1580,16 @@ export function StayStep({ onRoomsSelected }) {
   const maxAdultsInRoom = emptyRoom
     ? (emptyRoom.adults || 0) + (emptyRoom.children || 0)
     : (selectedRoom || []).reduce(
-        (max, r) => (r.adults > max ? (r.adults || 0) + (r.children || 0) : max),
+        (max, r) =>
+          r.adults > max ? (r.adults || 0) + (r.children || 0) : max,
         0,
       );
   const maxAdultsOnly = emptyRoom
     ? emptyRoom.adults || 0
-    : (selectedRoom || []).reduce((max, r) => (r.adults > max ? r.adults : max), 0);
+    : (selectedRoom || []).reduce(
+        (max, r) => (r.adults > max ? r.adults : max),
+        0,
+      );
 
   // Copied via [...] before filtering/sorting since `filteredRooms` here may
   // otherwise be the exact same array reference as component state —
@@ -1590,7 +1605,8 @@ export function StayStep({ onRoomsSelected }) {
   // package's existing empty-state message below.
   const rooms = [...(filteredRooms || [])].filter(
     (room) =>
-      Number(room?.MaxGuest) >= maxAdultsInRoom && Number(room?.MaxAdult) >= maxAdultsOnly,
+      Number(room?.MaxGuest) >= maxAdultsInRoom &&
+      Number(room?.MaxAdult) >= maxAdultsOnly,
   );
   // Real's price-ascending sort (~4801-4804) as the primary tie-break; its
   // "target room on top" rule (~4796-4799) depends on a filteredRoomId
@@ -1627,7 +1643,8 @@ export function StayStep({ onRoomsSelected }) {
       {advancingToIndex !== null && (
         <div className="be-stay-loading be-room-advance-loading">
           <span className="be-room-advance-spinner" aria-hidden="true" />
-          Room {currentRoomIndex + 1} selected — loading Room {advancingToIndex + 1}…
+          Room {currentRoomIndex + 1} selected — loading Room{" "}
+          {advancingToIndex + 1}…
         </div>
       )}
 
@@ -1647,13 +1664,16 @@ export function StayStep({ onRoomsSelected }) {
         </div>
       )}
 
-      {!loading && advancingToIndex === null && !error && rooms.length === 0 && (
-        <div className="be-stay-empty">
-          {hasSearchedRef.current
-            ? "No rooms available for the selected dates."
-            : "Select a destination and dates above to see available rooms."}
-        </div>
-      )}
+      {!loading &&
+        advancingToIndex === null &&
+        !error &&
+        rooms.length === 0 && (
+          <div className="be-stay-empty">
+            {hasSearchedRef.current
+              ? "No rooms available for the selected dates."
+              : "Select a destination and dates above to see available rooms."}
+          </div>
+        )}
 
       {!loading &&
         advancingToIndex === null &&
