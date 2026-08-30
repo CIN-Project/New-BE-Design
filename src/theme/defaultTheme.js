@@ -7,7 +7,7 @@ export const defaultTheme = {
     // as the same values every component already renders by default, so
     // this rename is a pure config-surface change — zero visual diff
     // unless a consumer's theme prop overrides them.
-    primary: "#846836",
+    primary: "#c7a36a",
     primaryHover: "#bfa15f",
     primaryLight: "#c7a36a",
     onPrimary: "#FFFFFF",
