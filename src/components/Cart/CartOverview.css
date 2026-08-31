@@ -103,6 +103,12 @@
   flex-shrink: 0;
 }
 
+.cart-sidebar-savings {
+  color: #27ae60;
+  font-weight: 700;
+  text-transform: none;
+}
+
 .cart-section {
   padding: 0.7rem 0 0.7rem 0;
   border-bottom: 1px solid #f2f2f2;

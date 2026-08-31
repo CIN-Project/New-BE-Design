@@ -150,6 +150,15 @@ export function CartOverview({ onModifyRooms }) {
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           Booking Cart Summary
+          {/* Mirrors real Amritara's StayStep.js cart header (~1483/1488),
+              which appends " - You Saved INR X" straight onto the "Booking
+              Details" title instead of a separate summary row. */}
+          {totalSavings > 0 ? (
+            <span className="cart-sidebar-savings">
+              {" "}
+              - You Saved {formatCurrency(totalSavings)}
+            </span>
+          ) : null}
         </h4>
       </div>
 
@@ -460,17 +469,6 @@ export function CartOverview({ onModifyRooms }) {
               })}
             </div>
           )}
-
-          {/* Aggregate member-rate savings across every selected room — real
-              Amritara's StayStep.js shows this same rolled-up "You Saved"
-              figure (~1483/1488) above its cart total; this package
-              computed the per-room number but never surfaced the sum. */}
-          {totalSavings > 0 ? (
-            <div className="cart-price-row cart-price-row-discount">
-              <span>You Saved</span>
-              <span>{formatCurrency(totalSavings)}</span>
-            </div>
-          ) : null}
 
           {/* No discount amount is shown here on purpose — there isn't one
               to show. Whatever a valid promo code actually discounts is
