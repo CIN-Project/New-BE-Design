@@ -674,7 +674,7 @@ function RateCard({
                   standardMapping: mapping,
                   standardRate: rate,
                 })
-              : onSelectStandard()
+              : onSelectStandard(standardTotals.totalSavings)
           }
         >
           {isSelected
@@ -902,8 +902,8 @@ function RoomRow({
                         cancellationPolicyPackage={cancellationPolicyPackage}
                         activeTab={activeTabMap[cardKey]}
                         onSetActiveTab={(tab) => onSetActiveTab(cardKey, tab)}
-                        onSelectStandard={() =>
-                          onSelectStandard(room, mapping, rate)
+                        onSelectStandard={(savings) =>
+                          onSelectStandard(room, mapping, rate, savings)
                         }
                         onSelectMember={({
                           memberMapping,
@@ -1424,7 +1424,7 @@ export function StayStep({ onRoomsSelected }) {
     setTimeout(() => setAnimatingUnlockKey(null), 1200);
   };
 
-  const handleSelectStandard = (room, mapping, rate) => {
+  const handleSelectStandard = (room, mapping, rate, savings) => {
     if (!activeSlot) return;
     const adults = activeSlot.adults ?? 1;
     const children = activeSlot.children ?? 0;
@@ -1444,8 +1444,15 @@ export function StayStep({ onRoomsSelected }) {
       return;
     }
 
+    // Standard (non-member) rates carry their own API-reported `Savings`
+    // too (e.g. "Last Minute Deal" off-rack pricing) — real Amritara's
+    // handleSelectRoom (Filterbar.js ~3276-3670) passes this same
+    // savingsPerPackage through for standard selections, not just member
+    // ones, which is why its cart header can show "You Saved" on a plain
+    // booking with no member rate involved at all.
     const selection = buildRoomSelection(room, mapping, rate, adults, {
       isMemberRate: false,
+      savings,
     });
     const updated = applySelection(activeSlot.id, selection);
     advanceAfterSelection(updated);
