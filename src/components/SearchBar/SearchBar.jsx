@@ -337,6 +337,7 @@ export function SearchBar({
             </svg>
           </button>
         )}
+        {console.log("properties",properties)}
 
         <DestinationField
           properties={properties}
