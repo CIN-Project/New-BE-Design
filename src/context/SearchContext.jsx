@@ -80,10 +80,14 @@ export function useSearchContext() {
     );
   };
 
+  // Matches real Amritara's RoomManager.js (~162) exactly — always
+  // "Adult"/"Room" singular regardless of count, and children always shown
+  // (never hidden at 0) rather than folded into a combined "Guests" figure.
   const getSearchGuestsSummary = () => {
     const totalAdults = ctx.searchRooms.reduce((acc, r) => acc + r.adults, 0);
+    const totalChildren = ctx.searchRooms.reduce((acc, r) => acc + (r.children || 0), 0);
     const totalRooms = ctx.searchRooms.length;
-    return `${totalAdults} Guest${totalAdults > 1 ? "s" : ""} — ${totalRooms} Room${totalRooms > 1 ? "s" : ""}`;
+    return `${totalAdults} Adult, ${totalChildren} Children - ${totalRooms} Room`;
   };
 
   return {
