@@ -34,23 +34,30 @@ function DayCell({
   const startTime = rangeStart ? rangeStart.getTime() : 0;
   const endTime = rangeEnd ? rangeEnd.getTime() : 0;
 
+  // Computed regardless of isDisabled/isSoldOut — a date the guest already
+  // picked as check-in/out must always read as clearly selected, even if
+  // it would otherwise be disabled/sold-out for a *new* pick (e.g. it's
+  // today and a cutoff-time rule kicks in, or a sold-out flag arrives after
+  // the pick was already made). Previously this only ran when neither was
+  // true, so an already-selected date could silently lose its selected
+  // background/white text to the disabled/sold-out styling instead —
+  // exactly the "faded, hard to see it's selected" bug this fixes.
   let variant = "";
-  if (!isDisabled && !isSoldOut) {
-    if (startTime && time === startTime) {
-      variant = endTime ? "selected-start" : "selected-single";
-    } else if (endTime && time === endTime) {
-      variant = "selected-end";
-    } else if (startTime && endTime && time > startTime && time < endTime) {
-      variant = "selected-range";
-    } else if (startTime && !endTime && hoveredDate && time > startTime && time < hoveredDate.getTime()) {
-      variant = "selected-range";
-    }
+  if (startTime && time === startTime) {
+    variant = endTime ? "selected-start" : "selected-single";
+  } else if (endTime && time === endTime) {
+    variant = "selected-end";
+  } else if (startTime && endTime && time > startTime && time < endTime) {
+    variant = "selected-range";
+  } else if (startTime && !endTime && hoveredDate && time > startTime && time < hoveredDate.getTime()) {
+    variant = "selected-range";
   }
 
   const isSelected = variant === "selected-start" || variant === "selected-end" || variant === "selected-single";
 
   const classes = ["be-cal-day"];
-  if (isDisabled) classes.push("be-cal-day--disabled");
+  if (isSelected) classes.push(`be-cal-day--${variant}`);
+  else if (isDisabled) classes.push("be-cal-day--disabled");
   else if (isSoldOut) classes.push("be-cal-day--sold-out");
   else if (variant) classes.push(`be-cal-day--${variant}`);
 
@@ -139,6 +146,14 @@ export function RangeCalendar({
     } else if (rangeStart && !rangeEnd) {
       if (date < rangeStart) {
         onChangeRange(date, null);
+      } else if (date.getTime() === rangeStart.getTime()) {
+        // Clicking the same day again as checkout would produce a
+        // 0-night stay (check-in === check-out) — treat it as "I want to
+        // stay starting here" and advance checkout to the next day
+        // instead of accepting an invalid same-day range.
+        const nextDay = new Date(rangeStart);
+        nextDay.setDate(nextDay.getDate() + 1);
+        onChangeRange(rangeStart, nextDay);
       } else {
         onChangeRange(rangeStart, date);
       }

@@ -161,7 +161,12 @@
   }
 }
 
-.be-cal-day:hover:not(.be-cal-day--empty):not(.be-cal-day--disabled) {
+/* Excludes the selected-* variants too — without that, this rule's higher
+   specificity (4 class-level selectors vs. 1) beat .be-cal-day--selected-*'s
+   own !important background, so hovering an already-selected day swapped
+   its solid gold fill for this faint hover tint instead — reading as
+   "barely visible/not actually selected" the moment the cursor sat on it. */
+.be-cal-day:hover:not(.be-cal-day--empty):not(.be-cal-day--disabled):not(.be-cal-day--selected-start):not(.be-cal-day--selected-end):not(.be-cal-day--selected-single):not(.be-cal-day--selected-range) {
   background: rgba(199, 163, 106, 0.12) !important;
   border-radius: 50%;
 }
