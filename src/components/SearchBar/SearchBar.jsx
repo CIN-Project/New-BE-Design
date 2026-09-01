@@ -151,7 +151,6 @@ export function SearchBar({
   };
 
   const handleSelectProperty = (property) => {
-    console.log("Prem property",property)
     // staahPropertyId (not the CMS propertyId) is what every rate/room/
     // calendar API call needs — see api/properties.js's
     // mapCityWithPropertyResponse doc comment. Falls back to propertyId/id
@@ -276,7 +275,6 @@ export function SearchBar({
   // not a compact inline summary.
   const formatShort = (d) =>
     d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-  console.log("Prem isCompact",isCompact)
 
   // Shared between the full capsule (its own standalone field) and the
   // compact recap bar (grouped with the back button, see the render below)
@@ -402,7 +400,6 @@ export function SearchBar({
           // group it with.
           stayModeToggle
         )}
-        {console.log("properties",properties)}
 
         <DestinationField
           properties={properties}

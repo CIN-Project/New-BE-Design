@@ -56,7 +56,6 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [syncStepToUrl]);
-  console.log("Prem step",step)
 
   return (
     <div className="be-wizard">
