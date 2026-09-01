@@ -2,7 +2,7 @@
 
 .be-booking-widget-wrap {
   position: relative;
-  width: 95%;
+  width: 97%;
   max-width: 1200px;
   margin: -60px auto 0 auto;
   background: #ffffff;
@@ -33,17 +33,80 @@
      they're now one combined 2fr column (be-date-group-pair) so the
      calendar dropdown can anchor to a wrapper spanning both of them —
      same total width as the two separate columns before, just structured
-     differently. See DateRangeField.jsx's comment for why. */
-  grid-template-columns: 1.3fr 2fr 1fr 0.9fr auto;
+     differently. See DateRangeField.jsx's comment for why.
+     Leading `auto` track is the Day Use switch (be-stay-mode-group) — same
+     "first field in the row" placement Filterbar.js uses for its own
+     day-use switch. */
+  grid-template-columns: auto 1.3fr 2fr 1fr 0.9fr auto;
   gap: 0;
   align-items: center;
   width: 100%;
+}
+
+/* Day Use: the date field collapses from a check-in+check-out pair down to
+   one field (DateRangeField.jsx), but it was still sitting inside that
+   same wide 2fr track sized for the pair — the single field left-aligned
+   inside it, with the rest of that track's width showing as a dead gap
+   before Travelers. Shrinking the track to match Travelers' own 1fr closes
+   it, since a single date field is roughly that width, not the pair's. */
+.be-booking-form--dayuse {
+  grid-template-columns: auto 1.3fr 1fr 1fr 0.9fr auto;
+}
+
+/* Day Use switch — its own narrow field at the start of the row (not a
+   full-width bar), styled like every other field here: a
+   .be-form-field-inputs label above a control, `auto`-sized track so it
+   only takes the width its content needs. */
+.be-stay-mode-group {
+  white-space: nowrap;
+}
+
+.be-stay-mode-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: var(--be-radius-pill, 999px);
+  border: 1.5px solid rgba(132, 104, 54, 0.35);
+  background: #ffffff;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: var(--be-transition-fast, all 0.3s ease);
+  flex-shrink: 0;
+}
+
+.be-stay-mode-switch--active {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+}
+
+.be-stay-mode-switch-knob {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--be-color-primary, #846836);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transform: translateX(0);
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+.be-stay-mode-switch--active .be-stay-mode-switch-knob {
+  background: #ffffff;
+  transform: translateX(16px);
 }
 
 .be-date-group-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-width: 0;
+}
+
+/* Day Use: one field, not a check-in/check-out pair — without this it'd
+   sit in the pair's default first 1fr track, leaving the second track's
+   width empty/unused instead of the field filling the whole pair. */
+.be-date-group-pair--dayuse {
+  grid-template-columns: 1fr;
 }
 
 .be-form-group {
@@ -110,6 +173,20 @@
 .be-custom-select-display {
   justify-content: space-between;
   cursor: pointer;
+}
+
+/* "2 Adult, 0 Children - 1 Room" is long enough to wrap onto a second line
+   in this field's available width — the shared rule above has no
+   white-space rule at all, so it wrapped instead of ever truncating.
+   min-width:0 lets it actually shrink below its own text's natural width
+   in the first place (a flex child otherwise refuses to, same class of bug
+   documented on .be-detail-form-group elsewhere in this package) so
+   text-overflow can then kick in. */
+.be-custom-guests-display {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .be-truncate {
@@ -561,6 +638,24 @@
   grid-template-columns: auto 1.1fr 1.7fr 0.9fr 0.8fr auto;
 }
 
+/* Day Use: same "date field collapses, its wide track doesn't" fix as the
+   full variant's own .be-booking-form--dayuse, sized to this compact
+   grid's own proportions. Needs the extra .be-booking-form--dayuse class
+   in the selector to outrank the plain compact rule right above it (same
+   specificity otherwise, and this one has to win). */
+.be-booking-widget-wrap--compact .be-booking-form.be-booking-form--dayuse {
+  grid-template-columns: auto 1.1fr 0.9fr 0.9fr 0.8fr auto;
+}
+
+/* Back button + Day Use switch share the grid's one leading `auto` track
+   (sized originally just for the back button alone) instead of each
+   needing their own — see SearchBar.jsx's comment on why they're grouped. */
+.be-compact-leading-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .be-booking-widget-wrap--compact .be-form-group {
   padding: 0.35rem 1rem;
 }
@@ -699,6 +794,15 @@
   .be-booking-widget-wrap--compact .be-booking-form {
     grid-template-columns: auto 1fr 1fr;
   }
+  /* .be-booking-form--dayuse's own rule (outside any media query) has
+     higher specificity (3 classes vs. this rule's 2) and would otherwise
+     keep winning even at this width, reintroducing the 6-track desktop
+     template into a layout meant to wrap to 3 columns here. Restating the
+     same template under the dayuse class specifically is a no-op that
+     just lets this breakpoint's own reflow apply regardless of mode. */
+  .be-booking-widget-wrap--compact .be-booking-form.be-booking-form--dayuse {
+    grid-template-columns: auto 1fr 1fr;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -744,6 +848,15 @@
      selector specificity here, declared later, stacks it to one column
      like the full variant instead. */
   .be-booking-widget-wrap--compact .be-booking-form {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  /* Same specificity problem as the ≤1200px block's own restatement above:
+     .be-booking-form--dayuse's un-scoped rule outranks this width's plain
+     2-class one and would reintroduce a multi-column template into what
+     needs to be a single stacked column here. */
+  .be-booking-widget-wrap--compact .be-booking-form.be-booking-form--dayuse {
     grid-template-columns: 1fr;
     gap: 0.4rem;
   }

@@ -1068,6 +1068,7 @@ export function StayStep({ onRoomsSelected }) {
     selectedStartDate,
     selectedEndDate,
     searchRooms,
+    isDayUse,
   } = useSearchContext();
   const { promoCodeContext } = useCartContext();
   const {
@@ -1254,11 +1255,53 @@ export function StayStep({ onRoomsSelected }) {
       roomId: "",
     }));
 
-    const { property, uniqueRatePlans } = mergeRoomContentWithRates(
+    const { property: mergedProperty, uniqueRatePlans } = mergeRoomContentWithRates(
       contentPropertyRef.current,
       inventoryRoomsRef.current,
       guestSlotsOnly,
     );
+
+    // Day Use filtering — ported from Filterbar.js's checkIfBothReady
+    // (~789-809). property.Mapping[] entries (from the CMS content
+    // response, preserved as-is through mergeRoomContentWithRates) carry a
+    // DayusePackage boolean marking which room+rate combinations are
+    // day-use packages. A room is excluded when NONE of its mappings match
+    // the current mode — a room mixing both day-use and overnight rate
+    // plans stays in the list, but property.Mapping is filtered down to
+    // only the current mode's entries so getStandardRateEntries/
+    // getRoomFromPrice (both cross-reference Mapping by RoomId+RateId)
+    // only ever price/show the relevant rate plans for it.
+    //
+    // getRoomMinRate below does NOT consult Mapping at all (it reads
+    // room.RatePlans directly from the raw STAAH inventory data) — so
+    // without this explicit exclusion set, a room whose only rate plans
+    // are the wrong mode would still pass the "has a computable rate"
+    // check further down and incorrectly stay in the list.
+    const dayUseExcludedRoomIds = new Set();
+    let property = mergedProperty;
+    if (mergedProperty) {
+      const mapping = mergedProperty.Mapping || [];
+      const groupedByRoom = {};
+      for (const m of mapping) {
+        const roomId = m?.RoomId;
+        if (roomId == null) continue;
+        if (!groupedByRoom[roomId]) groupedByRoom[roomId] = [];
+        groupedByRoom[roomId].push(m);
+      }
+      for (const roomId of Object.keys(groupedByRoom)) {
+        const roomMappings = groupedByRoom[roomId];
+        const excluded = isDayUse
+          ? roomMappings.every((m) => m?.DayusePackage !== true)
+          : roomMappings.every((m) => m?.DayusePackage === true);
+        if (excluded) dayUseExcludedRoomIds.add(roomId);
+      }
+      property = {
+        ...mergedProperty,
+        Mapping: mapping.filter((m) =>
+          isDayUse ? m?.DayusePackage === true : m?.DayusePackage !== true,
+        ),
+      };
+    }
 
     // Real Amritara only ever shows rooms with live inventory (Filterbar.js's
     // checkIfBothReady: `availableRooms = RoomData.filter(r => r.MinInventory > 0)`,
@@ -1286,6 +1329,7 @@ export function StayStep({ onRoomsSelected }) {
     //    list rather than showing a room with a blank/zero starting price.
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
     const availableRooms = (property?.RoomData || [])
+      .filter((room) => !dayUseExcludedRoomIds.has(String(room?.RoomId)))
       .filter((room) => Number(room?.MinInventory) > 0)
       .filter(
         (room) =>
@@ -1295,7 +1339,11 @@ export function StayStep({ onRoomsSelected }) {
       .filter((room) => getRoomMinRate(room) !== null);
 
     if (!property || availableRooms.length === 0) {
-      setError("No rooms available for the selected dates.");
+      setError(
+        isDayUse
+          ? "No day use rooms available for the selected date."
+          : "No rooms available for the selected dates.",
+      );
       setRateResponse(null);
       setFilteredRooms([]);
       setCancellationPolicyPackage([]);
@@ -1310,8 +1358,13 @@ export function StayStep({ onRoomsSelected }) {
   useEffect(() => {
     if (!hasSearchedRef.current) return;
     applyMerge();
+    // isDayUse: re-run the (already-fetched) content+inventory merge with
+    // the new mode's Mapping filter when the guest switches stay type from
+    // the compact recap bar mid-wizard, without a wasted network refetch —
+    // the underlying API responses don't change, only which rate plans
+    // get surfaced from them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRoom]);
+  }, [selectedRoom, isDayUse]);
 
   const toggleExpand = (roomId) => {
     setExpandedRoomIds((prev) => {

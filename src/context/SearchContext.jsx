@@ -16,6 +16,15 @@ const initialState = {
   keyData: null,
   searchResults: [],
   searchRooms: [{ id: 1, adults: 2, children: 0 }],
+  // Day Use booking — ported from Filterbar.js's day-use toggle. Kept as a
+  // single flag (not Filterbar.js's two-tier "live filter state" vs
+  // "committed context state" split) since this package doesn't have that
+  // same "results must stay stable mid-search" concern — SearchBar.jsx's
+  // fields are the only thing reading isDayUse before a search runs, and
+  // StayStep/DetailStep read it fresh each render regardless of when it
+  // last changed.
+  isDayUse: false,
+  dayUseArrivalTime: "",
 };
 
 const { Provider, useDomainContext } = createDomainContext(

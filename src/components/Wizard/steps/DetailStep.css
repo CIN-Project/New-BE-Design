@@ -182,6 +182,138 @@
   }
 }
 
+/* Day Use: "Expected Arrival Time" field + bottom-sheet time picker
+   (guest-details step only) — matches the same field look as the inputs
+   above it (border/height/radius/font-size) rather than a bare button. */
+.be-dayuse-time-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 34px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.be-dayuse-time-trigger:hover,
+.be-dayuse-time-trigger:focus-visible {
+  border-color: #1a1a1a;
+  outline: none;
+}
+
+.be-dayuse-time-value {
+  font-weight: 600;
+}
+
+.be-dayuse-time-caret {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1;
+}
+
+.be-dayuse-time-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.be-dayuse-time-sheet {
+  width: min(480px, 100%);
+  max-height: 65vh;
+  background: #ffffff;
+  border-radius: 18px 18px 0 0;
+  padding: 14px 16px 22px;
+  overflow: auto;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.be-dayuse-time-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.be-dayuse-time-sheet-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-family: var(--be-font-sans);
+}
+
+.be-dayuse-time-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.be-dayuse-time-close:hover {
+  background: var(--be-color-surface, #f8f5ef);
+}
+
+.be-dayuse-time-grid {
+  padding-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.be-dayuse-time-option {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.7);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--be-transition-fast, all 0.3s ease);
+}
+
+.be-dayuse-time-option:hover {
+  border-color: var(--be-color-primary-light, #c7a36a);
+  color: #1a1a1a;
+}
+
+.be-dayuse-time-option--active {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+  color: #ffffff;
+}
+
+@media (min-width: 576px) {
+  .be-dayuse-time-modal {
+    align-items: center;
+  }
+  .be-dayuse-time-sheet {
+    border-radius: 14px;
+    max-height: 70vh;
+  }
+  .be-dayuse-time-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 560px) {
   .be-form-grid {
     grid-template-columns: 1fr;

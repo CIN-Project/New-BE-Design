@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useConfig } from "../../../config/configContext.js";
@@ -130,8 +130,46 @@ export function GuestDetailsForm({ onComplete }) {
     selectedEndDate,
     searchRooms,
     keyData,
+    isDayUse,
+    dayUseArrivalTime,
+    setDayUseArrivalTime,
   } = search;
   const { user } = useBookingEngineAuth();
+  const [isDayUseTimePickerOpen, setIsDayUseTimePickerOpen] = useState(false);
+
+  // Auto-close if the guest switches back to Overnight Stay mid-form (e.g.
+  // via the compact recap bar above this step) — mirrors DetailStep.js's
+  // own `useEffect(() => { if (!isDayUseEnabled) setIsTimePickerOpen(false) },
+  // [isDayUseEnabled])`.
+  useEffect(() => {
+    if (!isDayUse) setIsDayUseTimePickerOpen(false);
+  }, [isDayUse]);
+
+  // 13 hourly slots, 10 AM through 10 PM — same range as Filterbar.js's
+  // reference implementation.
+  const dayUseTimeOptions = useMemo(
+    () =>
+      Array.from({ length: 13 }, (_, i) => {
+        const hour = i + 10;
+        const hour12 = ((hour + 11) % 12) + 1;
+        const period = hour < 12 ? "AM" : "PM";
+        return `${String(hour12).padStart(2, "0")}:00 ${period}`;
+      }),
+    [],
+  );
+
+  // "hh:mm AM/PM" -> 24h "HH:mm" for the reservation payload's arrival_time.
+  const to24HourTime = (time12h) => {
+    if (!time12h) return "00:00";
+    const match = String(time12h).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return "00:00";
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+    if (period === "AM" && hours === 12) hours = 0;
+    if (period === "PM" && hours !== 12) hours += 12;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  };
 
   const [formData, setFormData] = useState({
     title: userDetails?.title || "",
@@ -501,7 +539,7 @@ export function GuestDetailsForm({ onComplete }) {
           room_name: room?.roomName ?? "",
           arrival_date: formatDateISO(selectedStartDate),
           departure_date: formatDateISO(selectedEndDate),
-          arrival_time: "00:00",
+          arrival_time: isDayUse ? to24HourTime(dayUseArrivalTime) : "00:00",
           // Real Amritara's backend key is genuinely misspelled this way
           // (DetailStep.js:960) — matching it, not "correcting" it, since a
           // corrected spelling means the backend (which looks for the
@@ -567,6 +605,11 @@ export function GuestDetailsForm({ onComplete }) {
             {
               reservation_datetime: new Date().toISOString().split("T")[0],
               reservation_id: reservationId,
+              // Signals the backend this is a Day Use (same-day, hourly)
+              // booking rather than an overnight stay — the arrival_time
+              // above (set on each room, not here) is meaningless without
+              // this flag telling the backend to actually treat it as one.
+              DayuseBooking: isDayUse ? true : false,
               commissionamount: "0.00",
               // Real Amritara sends these two raw/unrounded (DetailStep.js:
               // 905-906) — only totaltax below is rounded there. Rounding
@@ -910,6 +953,22 @@ export function GuestDetailsForm({ onComplete }) {
             />
           </div>
 
+          {isDayUse && (
+            <div className="be-detail-form-group be-full-width">
+              <label>Expected Arrival Time</label>
+              <button
+                type="button"
+                className="be-dayuse-time-trigger"
+                onClick={() => setIsDayUseTimePickerOpen(true)}
+              >
+                <span className="be-dayuse-time-value">
+                  {dayUseArrivalTime || "12:00 PM"}
+                </span>
+                <span className="be-dayuse-time-caret">⌄</span>
+              </button>
+            </div>
+          )}
+
           <div className="be-detail-form-group be-full-width">
             <textarea
               name="specialRequests"
@@ -981,6 +1040,56 @@ export function GuestDetailsForm({ onComplete }) {
           <div className="be-processing-overlay">
             <div className="be-loading-dial" />
             <p>Processing your secure payment...</p>
+          </div>,
+          document.body,
+        )}
+
+      {isDayUse &&
+        isDayUseTimePickerOpen &&
+        mounted &&
+        createPortal(
+          <div
+            className="be-dayuse-time-modal"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setIsDayUseTimePickerOpen(false);
+            }}
+          >
+            <div
+              className="be-dayuse-time-sheet"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="be-dayuse-time-sheet-head">
+                <span className="be-dayuse-time-sheet-title">Select arrival time</span>
+                <button
+                  type="button"
+                  className="be-dayuse-time-close"
+                  onClick={() => setIsDayUseTimePickerOpen(false)}
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div className="be-dayuse-time-grid">
+                {dayUseTimeOptions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`be-dayuse-time-option ${t === dayUseArrivalTime ? "be-dayuse-time-option--active" : ""}`}
+                    onClick={() => {
+                      setDayUseArrivalTime(t);
+                      setIsDayUseTimePickerOpen(false);
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>,
           document.body,
         )}

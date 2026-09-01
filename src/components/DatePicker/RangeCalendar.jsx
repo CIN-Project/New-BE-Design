@@ -100,6 +100,15 @@ export function RangeCalendar({
   // container — e.g. CartOverview's "Modify Dates" modal (SearchBar.jsx
   // instead anchors it as a dropdown below the date field trigger).
   embedded = false,
+  // Day Use booking: a single click picks the stay date and immediately
+  // commits (start, start+1) as the range — mirrors Flatpicker.js switching
+  // flatpickr's own `mode` between "range" and "single" for this same
+  // feature. The +1-day end date is purely an internal convention so the
+  // existing rate/room search (which is date-*range*-shaped end to end)
+  // keeps working unchanged; nothing about it is guest-facing here — the
+  // date fields above this calendar collapse to a single "Date" display in
+  // day-use mode (see DateRangeField.jsx).
+  isDayUse = false,
 }) {
   const today = getISTNow();
   const [calStartMonth, setCalStartMonth] = useState(today.getMonth());
@@ -141,6 +150,12 @@ export function RangeCalendar({
   };
 
   const handleDayClick = (date) => {
+    if (isDayUse) {
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      onChangeRange(date, nextDay);
+      return;
+    }
     if (!rangeStart || (rangeStart && rangeEnd)) {
       onChangeRange(date, null);
     } else if (rangeStart && !rangeEnd) {

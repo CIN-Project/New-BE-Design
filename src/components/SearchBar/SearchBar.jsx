@@ -164,6 +164,26 @@ export function SearchBar({
     setShowDestModal(false);
   };
 
+  // Day Use / Overnight Stay toggle — ported from Filterbar.js's day-use
+  // switch. Resets any picked arrival time on every mode change (matches
+  // Filterbar.js's own reset-on-toggle), and if a check-in date is already
+  // picked, immediately snaps the internal end date to +1 day so switching
+  // modes mid-selection doesn't leave a stale multi-night range behind
+  // (RangeCalendar's own day-use click handler does the same +1-day
+  // derivation for a *fresh* pick — this covers switching modes on a date
+  // that was already selected before the toggle changed).
+  const handleStayModeChange = (nextIsDayUse) => {
+    if (nextIsDayUse === search.isDayUse) return;
+    search.setIsDayUse(nextIsDayUse);
+    search.setDayUseArrivalTime("");
+    if (nextIsDayUse && search.selectedStartDate) {
+      const nextDay = new Date(search.selectedStartDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      search.setSelectedEndDate(nextDay);
+    }
+    setShowCalModal(false);
+  };
+
   const handleChangeRange = (start, end) => {
     if (end) {
       search.setSelectedDates(start, end);
@@ -217,6 +237,8 @@ export function SearchBar({
       endDate: search.selectedEndDate,
       rooms: search.searchRooms,
       promoCode: cart.promoCodeContext,
+      isDayUse: search.isDayUse,
+      dayUseArrivalTime: search.dayUseArrivalTime,
     });
     // Every search click starts room selection over from scratch — clears
     // whatever room/rate was picked on every slot (keeping only the slot's
@@ -255,6 +277,27 @@ export function SearchBar({
     d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
   console.log("Prem isCompact",isCompact)
 
+  // Shared between the full capsule (its own standalone field) and the
+  // compact recap bar (grouped with the back button, see the render below)
+  // so both stay in sync without duplicating the markup.
+  const stayModeToggle = (
+    <div className="be-form-group be-stay-mode-group">
+      <div className="be-form-field-inputs">
+        <label>Day Use</label>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={search.isDayUse}
+          aria-label="Toggle Day Use booking"
+          className={`be-stay-mode-switch ${search.isDayUse ? "be-stay-mode-switch--active" : ""}`}
+          onClick={() => handleStayModeChange(!search.isDayUse)}
+        >
+          <span className="be-stay-mode-switch-knob" />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div
       ref={widgetRef}
@@ -267,8 +310,10 @@ export function SearchBar({
               {search.selectedPropertyName || "Select a hotel"}
             </p>
             <p className="be-compact-summary-meta">
-              {search.selectedStartDate && search.selectedEndDate
-                ? `${formatShort(search.selectedStartDate)} – ${formatShort(search.selectedEndDate)}`
+              {search.selectedStartDate && (search.isDayUse || search.selectedEndDate)
+                ? search.isDayUse
+                  ? formatShort(search.selectedStartDate)
+                  : `${formatShort(search.selectedStartDate)} – ${formatShort(search.selectedEndDate)}`
                 : "Select dates"}
               {" · "}
               {search.getSearchGuestsSummary()}
@@ -295,7 +340,10 @@ export function SearchBar({
         </div>
       )}
 
-      <form className="be-booking-form" onSubmit={handleSubmit}>
+      <form
+        className={`be-booking-form ${search.isDayUse ? "be-booking-form--dayuse" : ""}`}
+        onSubmit={handleSubmit}
+      >
         {isCompact && mobileEditOpen && (
           <button
             type="button"
@@ -317,25 +365,41 @@ export function SearchBar({
           </button>
         )}
 
-        {isCompact && onBack && (
-          <button
-            type="button"
-            className="be-search-back-btn"
-            onClick={onBack}
-            aria-label="Back"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-            >
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-          </button>
+        {isCompact ? (
+          // Grouped together so both share the grid's existing leading
+          // `auto` track (already sized for the back button alone) instead
+          // of needing a whole new track whose presence/absence would
+          // depend on whether `onBack` was passed — that would leave every
+          // later field off by one grid slot whenever it wasn't.
+          <div className="be-compact-leading-controls">
+            {onBack && (
+              <button
+                type="button"
+                className="be-search-back-btn"
+                onClick={onBack}
+                aria-label="Back"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+              </button>
+            )}
+            {stayModeToggle}
+          </div>
+        ) : (
+          // Full variant (the main search entry point): its own standalone
+          // field, first in the row — same placement Filterbar.js uses for
+          // its own day-use switch — since there's no back button here to
+          // group it with.
+          stayModeToggle
         )}
         {console.log("properties",properties)}
 
@@ -363,6 +427,7 @@ export function SearchBar({
           isDateRateLoading={isDateRateLoading}
           holidays={holidays}
           onMonthChange={handleCalendarMonthChange}
+          isDayUse={search.isDayUse}
         />
 
         <GuestsField
