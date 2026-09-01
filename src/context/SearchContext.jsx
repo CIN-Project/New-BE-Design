@@ -25,6 +25,15 @@ const initialState = {
   // last changed.
   isDayUse: false,
   dayUseArrivalTime: "",
+  // Set only when a "Book Now" for one specific room (a hotel detail page's
+  // Accommodation section, not any of the site's other generic "Book Now"
+  // entry points) hands off to /be-booking — StayStep tries to match it
+  // against its real STAAH room list on load and auto-expand + scroll to
+  // that room, best-effort (this page's own room-name text has no
+  // guaranteed 1:1 relationship to STAAH's own room naming). Cleared by
+  // StayStep once it's acted on it (matched or not), so it never re-applies
+  // itself against a later, unrelated room list.
+  preselectRoomName: null,
 };
 
 const { Provider, useDomainContext } = createDomainContext(

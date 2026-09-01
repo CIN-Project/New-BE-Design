@@ -577,11 +577,11 @@ function RateCard({
         <h4 className="be-rate-card-title">
           {rate?.MappingDisplayName || rate?.RateName}
         </h4>
-        {cancellation && (
+        {/* {cancellation && (
           <span className={`be-cancellation-pill ${cancellation.cls}`}>
             {cancellation.label}
           </span>
-        )}
+        )} */}
       </div>
 
       <div className="be-rate-card-inclusions-wrapper">
@@ -1069,6 +1069,8 @@ export function StayStep({ onRoomsSelected }) {
     selectedEndDate,
     searchRooms,
     isDayUse,
+    preselectRoomName,
+    setPreselectRoomName,
   } = useSearchContext();
   const { promoCodeContext } = useCartContext();
   const {
@@ -1336,7 +1338,17 @@ export function StayStep({ onRoomsSelected }) {
           !EXCLUDED_ROOM_NAMES_EXACT.includes(room?.RoomName) &&
           !(room?.RoomName || "").toLowerCase().includes("copy"),
       )
-      .filter((room) => getRoomMinRate(room) !== null);
+      .filter((room) => getRoomMinRate(room) !== null)
+      // getRoomMinRate above reads room.RatePlans raw (any rate plan on the
+      // room, day-use or not) — a room can pass that check yet have its
+      // only positive rate live on a rate plan whose Mapping row got
+      // filtered out by the isDayUse split above (e.g. a pure day-use room
+      // when Day Use is off, or vice versa). That leaves the room in the
+      // list with nothing for getRoomFromPrice/getStandardRateEntries to
+      // cross-reference, rendering a blank "—" price card instead of being
+      // hidden. Requiring a real cross-referenced price here closes that
+      // gap for both directions.
+      .filter((room) => getRoomFromPrice(property, room) != null);
 
     if (!property || availableRooms.length === 0) {
       setError(
@@ -1391,6 +1403,38 @@ export function StayStep({ onRoomsSelected }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoomIndex]);
+
+  // Accommodation section's per-room "Book Now" (only that one entry point
+  // — every other "Book Now" on the site doesn't set this) hands off a
+  // preselected room NAME — this page's own editorial content, not a STAAH
+  // id, so there's no guaranteed 1:1 relationship to STAAH's real room
+  // naming. Best-effort match against the real room list once it's loaded:
+  // exact case-insensitive match first, falling back to a substring match
+  // either direction (STAAH's own room name often carries a package/meal-
+  // plan suffix this page's plain name doesn't, e.g. "Executive Room" vs
+  // "Executive Room - CP"). Expanding the matched room's card is enough to
+  // bring it into view too — RoomRow's own isExpanded effect already
+  // scrolls it into view on expand, nothing extra needed here for that.
+  // Cleared regardless of whether anything matched, so it never re-applies
+  // itself against a later, unrelated room list (e.g. after changing
+  // dates/guests and re-searching from within the wizard).
+  useEffect(() => {
+    if (!preselectRoomName || filteredRooms.length === 0) return;
+    const target = preselectRoomName.trim().toLowerCase();
+    const matched =
+      filteredRooms.find(
+        (r) => (r?.RoomName || "").trim().toLowerCase() === target,
+      ) ||
+      filteredRooms.find((r) => {
+        const name = (r?.RoomName || "").trim().toLowerCase();
+        return name.includes(target) || target.includes(name);
+      });
+    if (matched) {
+      setExpandedRoomIds((prev) => new Set(prev).add(matched.RoomId));
+    }
+    setPreselectRoomName(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredRooms, preselectRoomName]);
 
   const handleSelectSlot = (index) => {
     setCurrentRoomIndex(index);
