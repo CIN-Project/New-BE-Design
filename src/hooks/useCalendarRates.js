@@ -88,8 +88,20 @@ export function useCalendarRates(
 
     if (!propertyId || selfFetchDisabled) return;
     fetchCalendarChunk("0-6", 0, 6, propertyId);
+    // Depends on the specific primitive config fields getDayRateCalendar
+    // actually reads (staahBaseUrl/staahSignatureSecret), not the whole
+    // `config` object — see StayStep.jsx's room/rate fetch effect for the
+    // full explanation of why (a consumer's config can carry other fields,
+    // e.g. a live-loaded properties list, that change after mount and are
+    // irrelevant to this fetch but would otherwise still re-trigger it).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, propertyId, selfFetchDisabled, isDayUse]);
+  }, [
+    config.staahBaseUrl,
+    config.staahSignatureSecret,
+    propertyId,
+    selfFetchDisabled,
+    isDayUse,
+  ]);
 
   // Calendar navigated forward: lazily load the 6-12 / 12-18 chunk the
   // newly-visible month falls into, if not already loaded.

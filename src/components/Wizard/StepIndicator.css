@@ -1,3 +1,25 @@
+.be-step-indicator-wrap {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0.5rem auto 1.5rem;
+  padding: 0;
+}
+
+.be-step-indicator-wrap--step1 {
+  margin: 1rem auto 1.5rem;
+}
+
+@media (max-width: 768px) {
+  /* The gap above this indicator (between it and whatever sits above it —
+     the wizard's compact search bar on step 1, "Back to Rooms" on step 2)
+     reads as too large on a small screen; not touching the 1.5rem bottom
+     margin, which still gives the room list below its own breathing room. */
+  .be-step-indicator-wrap,
+  .be-step-indicator-wrap--step1 {
+    margin-top: 0.4rem;
+  }
+}
+
 .be-back-to-rooms-btn {
   background: none;
   border: none;

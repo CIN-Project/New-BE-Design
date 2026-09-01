@@ -76,11 +76,16 @@
 
 .be-cal-grids {
   display: flex;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .be-cal-month-grid {
   flex: 1;
+  /* A flex item's default min-width is "auto" (its content's own min-
+     content size), not 0 — see .be-cal-day's own min-width:0 comment below
+     for the actual root cause this guards the same chain against at this
+     level too. */
+  min-width: 0;
 }
 
 .be-cal-weekdays {
@@ -95,7 +100,13 @@
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.45);
   font-weight: 500;
-  letter-spacing: 0.05em;
+  /* No letter-spacing here (unlike most other uppercase labels in this
+     package) — it adds space AFTER every character including the last
+     one, and centered text's box includes that trailing gap without a
+     matching leading one. That shifts the visible letters left of this
+     cell's true center, which reads as every date number below (centered
+     with no letter-spacing of its own) sitting shifted right of its
+     weekday header instead of directly under it. */
 }
 
 .be-cal-days {
@@ -110,6 +121,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* A 1fr grid track defaults to minmax(auto, 1fr) — "auto" means it won't
+     shrink below its item's own min-content size. .be-cal-day-rate's
+     white-space:nowrap (needed so a truncating price shows one line, not a
+     wrapped one) means a wide price's min-content width IS its full
+     unwrapped text width, which became this cell's own min-content
+     contribution — expanding its track past its fair 1/7 share and pushing
+     every column after it (ultimately the whole grid) out past the
+     calendar's right edge. min-width:0 caps that contribution at 0, so the
+     grid actually holds all 7 columns to equal 1fr widths regardless of
+     how wide any one day's price text naturally is; .be-cal-day-rate's own
+     max-width:92% + ellipsis (further down) is what then keeps that price
+     readable/truncated within its now-correctly-sized cell. */
+  min-width: 0;
   padding: 2px 0;
   font-size: 0.8rem;
   color: #1a1a1a;
@@ -145,8 +169,14 @@
      to the cell's own width and truncating (rather than reducing font-size
      further, which would make every other price harder to read for a case
      that's only ever a few characters over) keeps every pill inside its
-     cell regardless of how many digits the price has. */
-  max-width: 100%;
+     cell regardless of how many digits the price has.
+     92%, not a full 100%: .be-cal-days has no column-gap, so adjacent cells
+     touch with zero gutter between them — a pill capped at exactly 100% of
+     its own cell reaches that cell's true edge, which for the last (SA)
+     column IS the calendar card's own inner edge, reading as flush/
+     touching the card border instead of matching every other cell's own
+     implicit breathing room from its neighbors. */
+  max-width: 92%;
   box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
@@ -290,6 +320,7 @@
        own width further left, pushing it half off-screen instead of
        flush against the field. */
     transform: none;
+    padding: 1rem;
   }
   .be-cal-grids {
     flex-direction: column;

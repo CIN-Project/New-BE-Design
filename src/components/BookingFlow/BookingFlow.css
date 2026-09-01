@@ -33,7 +33,7 @@
   justify-content: flex-end;
   align-items: center;
   padding: 0.9rem 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  /* border-bottom: 1px solid rgba(0, 0, 0, 0.06); */
 }
 
 /* Same gold-gradient-ring-on-cream-fill recipe as every other circular nav

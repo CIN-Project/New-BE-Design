@@ -12,12 +12,7 @@ export function StepIndicator({ step, onBack }) {
 
   return (
     <div
-      style={{
-        maxWidth: 1280,
-        margin: step === 1 ? "1rem auto 1.5rem" : "0.5rem auto 1.5rem",
-        padding: "0 0rem",
-        width: "100%",
-      }}
+      className={`be-step-indicator-wrap ${step === 1 ? "be-step-indicator-wrap--step1" : ""}`}
     >
       {step === 2 && (
         <div style={{ marginBottom: "0.8rem" }}>

@@ -1094,6 +1094,14 @@ export function StayStep({ onRoomsSelected }) {
   const [error, setError] = useState(null);
   const [retryTick, setRetryTick] = useState(0);
   const [expandedRoomIds, setExpandedRoomIds] = useState(() => new Set());
+  // Set once a preselectRoomName match succeeds (see that effect below) and
+  // kept around afterwards — unlike expandedRoomIds, which accumulates
+  // every room a guest expands/collapses by hand, this exists purely so the
+  // room-list sort below can keep pinning THIS specific room to the top,
+  // the way real Amritara's own filteredRoomId sort does (see that sort's
+  // comment — this package didn't have an equivalent concept when it was
+  // first ported, since preselectRoomName didn't exist yet).
+  const [pinnedRoomId, setPinnedRoomId] = useState(null);
   const [activeTabMap, setActiveTabMap] = useState({});
   const [pendingMemberSelection, setPendingMemberSelection] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -1225,9 +1233,22 @@ export function StayStep({ onRoomsSelected }) {
     return () => {
       cancelled = true;
     };
+    // Depends on the specific primitive config fields this fetch actually
+    // reads (getRoomsRates/getInventory → cmsRoomRatesBaseUrl/
+    // apiKeyGetRate/staahBaseUrl/staahSignatureSecret), not the whole
+    // `config` object — a consumer's config commonly carries OTHER fields
+    // that legitimately change after mount and are irrelevant to this fetch
+    // (e.g. bawa-hotels-next's own config.properties, populated
+    // asynchronously from its own CMS call) — depending on the whole
+    // object re-triggered this fetch a second time whenever ANY such field
+    // changed, visible as the room list loading, then reloading again a
+    // moment later for no reason tied to the actual search criteria.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    config,
+    config.cmsRoomRatesBaseUrl,
+    config.apiKeyGetRate,
+    config.staahBaseUrl,
+    config.staahSignatureSecret,
     selectedPropertyId,
     checkInParam,
     checkOutParam,
@@ -1431,6 +1452,7 @@ export function StayStep({ onRoomsSelected }) {
       });
     if (matched) {
       setExpandedRoomIds((prev) => new Set(prev).add(matched.RoomId));
+      setPinnedRoomId(matched.RoomId);
     }
     setPreselectRoomName(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1712,12 +1734,16 @@ export function StayStep({ onRoomsSelected }) {
       Number(room?.MaxGuest) >= maxAdultsInRoom &&
       Number(room?.MaxAdult) >= maxAdultsOnly,
   );
-  // Real's price-ascending sort (~4801-4804) as the primary tie-break; its
-  // "target room on top" rule (~4796-4799) depends on a filteredRoomId
-  // concept (which room a guest arrived pre-targeting, e.g. from a search-
-  // suggestion deep link) this package doesn't track, so that part is
-  // skipped — everything else sorts the same way.
+  // Real's price-ascending sort (~4801-4804) as the primary tie-break, plus
+  // its "target room on top" rule (~4796-4799) — now backed by pinnedRoomId
+  // (set above once the Accommodation section's per-room "Book Now" match
+  // succeeds), the equivalent of real's filteredRoomId this package didn't
+  // have when this sort was first ported.
   rooms.sort((a, b) => {
+    if (pinnedRoomId) {
+      if (a?.RoomId === pinnedRoomId && b?.RoomId !== pinnedRoomId) return -1;
+      if (b?.RoomId === pinnedRoomId && a?.RoomId !== pinnedRoomId) return 1;
+    }
     const priceA = getRoomMinRate(a) ?? Infinity;
     const priceB = getRoomMinRate(b) ?? Infinity;
     if (priceA !== priceB) return priceA - priceB;

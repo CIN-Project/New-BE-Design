@@ -297,7 +297,40 @@ export function SearchBar({
     </div>
   );
 
-  return (
+  // Desktop reference design puts the back arrow as its own separate
+  // circle to the left of the pill, with visible page background between
+  // it and the pill's rounded edge — not fused into the same card the way
+  // it reads on mobile/tablet (unchanged there, still the one grouped with
+  // the Day Use switch inside .be-compact-leading-controls below). Rather
+  // than repositioning that one button across two very different layouts
+  // (which would also have to fight its own sticky/scroll behavior — see
+  // this button's own comment further down), this renders a second,
+  // genuinely separate DOM sibling before the pill, shown only at
+  // >=1025px (SearchBar.css's .be-search-back-btn--standalone), while the
+  // inside one is hidden at that width instead of removed, so mobile/
+  // tablet's markup and behavior stay exactly as they were.
+  const desktopBackButton = isCompact && onBack && (
+    <button
+      type="button"
+      className="be-search-back-btn be-search-back-btn--standalone"
+      onClick={onBack}
+      aria-label="Back"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      >
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+      </svg>
+    </button>
+  );
+
+  const widget = (
     <div
       ref={widgetRef}
       className={`be-booking-widget-wrap ${isCompact ? "be-booking-widget-wrap--compact" : ""} ${visible ? "be-visible" : ""} ${isCompact && mobileEditOpen ? "be-mobile-editing" : ""}`}
@@ -474,6 +507,19 @@ export function SearchBar({
       {!isCompact &&
         mounted &&
         createPortal(<Toaster position="top-center" />, document.body)}
+    </div>
+  );
+
+  if (!isCompact) return widget;
+
+  // .be-compact-bar-row only changes anything at >=1025px (see
+  // SearchBar.css) — below that it's a plain full-width wrapper with no
+  // layout effect of its own, so the pill's existing sticky/margin/shadow
+  // behavior on mobile/tablet is unaffected by this extra wrapping element.
+  return (
+    <div className="be-compact-bar-row">
+      {desktopBackButton}
+      {widget}
     </div>
   );
 }

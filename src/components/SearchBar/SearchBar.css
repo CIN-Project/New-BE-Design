@@ -146,6 +146,14 @@
   color: var(--be-color-primary, #5d4726);
   margin-bottom: 3px;
   font-weight: 600;
+  /* "Promo Code" (the widest label, thanks to the letter-spacing above) can
+     wrap onto two lines in a narrow field track — since every field sits in
+     one CSS Grid row with align-items:center, a single wrapped label
+     inflates the WHOLE bar's height to fit it, not just its own field. A
+     label wrapping was never an intentional design (every field here is
+     meant to be one short line), so this is a real bugfix, not just a
+     desktop tweak. */
+  white-space: nowrap;
 }
 
 .be-form-field-inputs input,
@@ -164,6 +172,22 @@
   font-weight: 400;
   display: flex;
   align-items: center;
+  /* Same wrapping bug as the field label (see .be-form-field-inputs
+     label's comment above) — a value like "02 Sep 26" wrapping to two
+     lines in a narrow field inflates the WHOLE shared grid row's height,
+     not just its own field. Every field's value here is meant to be one
+     line; .be-custom-guests-display used to carry this (plus the ellipsis/
+     min-width below) on its own for the same reason before it was
+     generalized to every value display here. min-width:0 is what actually
+     lets a flex child shrink below its own text's natural width in the
+     first place (it otherwise refuses to — same class of bug documented on
+     .be-detail-form-group elsewhere in this package), so text-overflow can
+     then kick in as a graceful fallback instead of visually overflowing
+     into the next field on a still-too-narrow width. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .be-form-field-inputs input::placeholder {
@@ -173,20 +197,6 @@
 .be-custom-select-display {
   justify-content: space-between;
   cursor: pointer;
-}
-
-/* "2 Adult, 0 Children - 1 Room" is long enough to wrap onto a second line
-   in this field's available width — the shared rule above has no
-   white-space rule at all, so it wrapped instead of ever truncating.
-   min-width:0 lets it actually shrink below its own text's natural width
-   in the first place (a flex child otherwise refuses to, same class of bug
-   documented on .be-detail-form-group elsewhere in this package) so
-   text-overflow can then kick in. */
-.be-custom-guests-display {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
 .be-truncate {
@@ -634,8 +644,13 @@
 .be-booking-widget-wrap--compact .be-booking-form {
   /* Check-in/check-out merged into one 1.7fr column (be-date-group-pair)
      instead of two separate 0.85fr ones — see .be-booking-form's own
-     comment above for why. */
-  grid-template-columns: auto 1.1fr 1.7fr 0.9fr 0.8fr auto;
+     comment above for why. Promo Code's own track (last fr value) is wider
+     than Travelers' despite showing shorter content, since "PROMO CODE" is
+     the widest label once its letter-spacing is factored in — too narrow
+     here and the label wraps to two lines, which (see .be-form-field-
+     inputs label's own nowrap fix) inflates the whole bar's height since
+     every field shares one grid row sized to its tallest item. */
+  grid-template-columns: auto 1.1fr 1.75fr 0.85fr 0.9fr auto;
 }
 
 /* Day Use: same "date field collapses, its wide track doesn't" fix as the
@@ -658,38 +673,45 @@
 
 .be-booking-widget-wrap--compact .be-form-group {
   padding: 0.35rem 1rem;
+  border-right: 1px solid rgba(0, 0, 0, .08);;
 }
 
-/* Desktop-only: full-bleed edge-to-edge strip (no card/pill look at all) —
-   matches a reference design where this recap bar is a plain white strip
-   touching the browser's left and right edges, not a centered, rounded,
-   margined card floating above the page. Replaces an earlier pill-shaped +
-   externally-placed-arrow version of this same bar (kept the arrow back
-   inline as this bar's first field, since there's no side margin left for
-   it to sit in once the bar spans the full width). Scoped to desktop
-   (min-width:1025px, the same threshold the tablet/mobile rules below key
-   off of) — mobile/tablet keep the existing rounded-card compact bar
-   unchanged. */
+/* Desktop-only: full rounded capsule (matches the reference booking-strip
+   design — a floating, centered, margined pill with a visible shadow, not a
+   flush edge-to-edge strip). Base rule above already gives every width the
+   floating-card treatment (margin/max-width/outline/box-shadow/sticky
+   top:12px); this only pushes the corner radius from the mobile/tablet
+   rounded-rectangle (16px, deliberately left alone — see that rule's own
+   comment) up to a full stadium/pill radius at desktop width, and pulls the
+   back arrow out to its own separate circle to the left of the pill (see
+   .be-search-back-btn's desktop override below) instead of living inside
+   it, matching the reference exactly. */
 @media (min-width: 1025px) {
   .be-booking-widget-wrap.be-booking-widget-wrap--compact {
-    max-width: none;
-    width: 100%;
-    margin: 0;
-    border-radius: 0;
-    outline: none;
-    box-shadow: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    /* Flush to the very top once stuck — no breathing-room gap to mask
-       (see the shield's top:0 override below), matching the reference's
-       flush-to-edge look. */
-    top: 0;
+    border-radius: 100px;
+    /* Trims the pill's own vertical padding (0.4rem base, shared with
+       mobile/tablet) further at this width only — combined with the
+       tighter .be-form-group/field-value sizing below, brings the whole
+       strip down closer to the reference's own lean height instead of the
+       taller floating-card proportions the base rule was tuned for. */
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
   }
 
   .be-booking-widget-wrap--compact::before {
-    /* No gap above the bar at this width (top:0 above) — nothing for this
-       shield to mask, so it collapses to matching the bar's own edges. */
-    top: 0;
-    border-radius: 0;
+    border-radius: 100px;
+  }
+
+  .be-booking-widget-wrap--compact .be-form-group {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+
+  .be-booking-widget-wrap--compact .be-form-field-inputs input,
+  .be-booking-widget-wrap--compact .be-custom-date-display,
+  .be-booking-widget-wrap--compact .be-custom-guests-display,
+  .be-booking-widget-wrap--compact .be-custom-select-display {
+    height: 1.4rem;
   }
 }
 
@@ -700,6 +722,17 @@
 .be-booking-widget-wrap--compact .be-btn-booking-pill {
   width: 2.6rem;
   height: 2.6rem;
+}
+
+@media (min-width: 1025px) {
+  /* Smaller than the 2.6rem mobile/tablet size, matching the leaner
+     desktop strip height trimmed above. Declared after the unscoped rule
+     above (same 2-class specificity) so it actually wins here instead of
+     being overridden by source order. */
+  .be-booking-widget-wrap--compact .be-btn-booking-pill {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
 }
 
 /* Mobile-only compact-bar summary card + its edit/close controls (see
@@ -790,6 +823,81 @@
   color: var(--be-color-primary-light, #c7a36a);
 }
 
+/* Desktop reference design: back arrow as its own separate plain circle to
+   the left of the pill, with visible page background between it and the
+   pill's rounded edge — not fused into the same card the way it reads on
+   mobile/tablet. SearchBar.jsx renders a second, genuinely separate
+   .be-search-back-btn--standalone sibling before the pill for this
+   (.be-compact-bar-row) instead of moving the original one, so mobile/
+   tablet's button — and everything that targets it, including the
+   .be-mobile-editing corner-overlay rules further down — is completely
+   unaffected. Hidden below 1025px; the original inside button (still
+   grouped with the Day Use switch) is hidden at 1025px+ instead, so
+   exactly one back button is ever visible at any width. */
+.be-search-back-btn--standalone {
+  display: none;
+}
+
+.be-compact-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+@media (min-width: 1025px) {
+  /* Full-bleed white header strip, edge-to-edge with the actual browser
+     viewport (not just this component's own nested/padded container) —
+     the reference's back button + pill sit on a plain white band, visibly
+     distinct from the page's own body background showing everywhere else.
+     The calc(50% - 50vw) pair is the standard block-level breakout: it
+     re-centers this element on the viewport regardless of how much
+     ancestor padding/max-width it's nested inside (bawa-hotels-next's own
+     page wrapper included), since it's computed off the viewport, not the
+     parent. Safe here — no ancestor between this and <body> sets
+     overflow:hidden/auto, which is the one thing that would clip it. */
+  .be-compact-bar-row {
+    position: sticky;
+    top: 0;
+    z-index: 150;
+    gap: 0.9rem;
+    background: #ffffff;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 0.35rem clamp(1rem, 4vw, 3rem);
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  /* The row's own padding above is now this bar's only outer spacing —
+     without zeroing the pill's own base-rule margin (1rem auto 1.5rem
+     auto, meant for the floating-card look without a strip behind it) the
+     strip ends up far taller than the reference, stacking both the row's
+     padding AND the pill's margin as dead vertical space. */
+  .be-booking-widget-wrap.be-booking-widget-wrap--compact {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .be-search-back-btn--standalone {
+    display: inline-flex;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    color: #bfa15f !important;
+    box-shadow: none;
+  }
+  .be-search-back-btn--standalone:hover {
+    background: var(--be-color-surface, #f8f5ef);
+    border-color: rgba(0, 0, 0, 0.22);
+    color: var(--be-color-text, #1d1d1d);
+  }
+
+  .be-booking-widget-wrap--compact .be-compact-leading-controls > .be-search-back-btn {
+    display: none;
+  }
+}
+
 @media (max-width: 1200px) {
   .be-booking-widget-wrap--compact .be-booking-form {
     grid-template-columns: auto 1fr 1fr;
@@ -837,6 +945,20 @@
   }
   .be-btn-booking-pill {
     grid-column: span 1;
+  }
+
+  /* Full variant only (the mobile full-screen search sheet) — every field
+     below it stacks left-aligned in the single-column grid above, but the
+     Day Use switch is the one exception: it's a standalone toggle, not a
+     labeled input matching the others, so it reads better centered on its
+     own row instead of pinned to the same left edge. .be-stay-mode-group
+     has no leading icon (unlike every other field), so its only child —
+     .be-form-field-inputs — already fills the full row width; centering
+     that flex item itself would be a no-op, since align-items:center is
+     what actually centers ITS OWN children (the label + switch) within
+     that full width instead. */
+  .be-stay-mode-group .be-form-field-inputs {
+    align-items: center;
   }
 
   /* The compact variant's own grid-template-columns override above
@@ -933,6 +1055,12 @@
   }
   .be-booking-widget-wrap.be-booking-widget-wrap--compact{
     padding: 0.6rem 0.7rem;
+    /* Base rule's 1.5rem bottom margin (tuned for the desktop floating-
+       pill's own breathing room) reads as a large dead gap between the
+       mobile summary card and the step indicator right below it — this is
+       the only thing separating them here, since StepIndicator itself has
+       no top margin of its own. */
+    margin: 0.6rem auto 0.6rem auto;
   }
 
   /* The 380px desktop width reads as nearly edge-to-edge on an actual
