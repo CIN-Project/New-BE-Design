@@ -5,6 +5,7 @@ import {
   cmsGet,
   cmsPost,
 } from "./client.js";
+import { signedHeaders } from "../utils/signature.js";
 
 /**
  * Search rooms/rates for a property + date range (CMS "GetRoomsRates" feed).
@@ -56,6 +57,48 @@ export function getInventory(
   );
 }
 
+// Filterbar.js's day-use calendar rate call is a hardcoded ABSOLUTE URL —
+// confirmed directly in Flatpicker.js (~284-306): `fetch("https://paylater.
+// cinuniverse.com/api/cin-api/rate-et-dayuse", ...)`, not a path built off
+// that consumer's own staahBaseUrl. It's a shared, centralized CIN-platform
+// endpoint every client's calendar hits directly, separate from each
+// client's own individually-provisioned STAAH gateway domain.
+//
+// Calling that absolute host directly from THIS browser is still a genuine
+// cross-origin request, though, and it CORS-failed exactly like the
+// staahBaseUrl-relative attempt before it — unless paylater.cinuniverse.com
+// explicitly allows this site's origin, a browser can't call it directly no
+// matter which path is used. Same fix as api/properties.js's
+// hotelsListApiUrl for the equivalent problem: proxy it server-side (no
+// CORS applies server-to-server) through a relative path this consumer's
+// own app exposes, instead of hitting the external host directly. The
+// signing (signedHeaders) still happens here, client-side, exactly as
+// before — the proxy is a plain passthrough forwarding the resulting
+// x-timestamp/x-signature headers and body untouched, not a re-signing step.
+const DAY_USE_RATE_PROXY_PATH = "/api/rate-et-dayuse";
+
+async function fetchDayUseRateCalendar(config, { propertyId, fromDate, toDate }) {
+  const secret = requireConfig(config, "staahSignatureSecret", "STAAH API calls");
+  const headers = await signedHeaders(JSON.stringify(propertyId), secret);
+  const res = await fetch(DAY_USE_RATE_PROXY_PATH, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      selectedPropertyId: propertyId,
+      fromDate,
+      toDate,
+      dayuse: "Y",
+    }),
+  });
+  if (!res.ok) {
+    const err = new Error(`STAAH request failed: rate-et-dayuse (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  return data?.PropertyList?.[0]?.DayRate || {};
+}
+
 /**
  * Fetch per-day calendar rates for a property over a date range — the price
  * shown under each date in the date-range picker, plus which dates are sold
@@ -63,11 +106,32 @@ export function getInventory(
  * signed-request pattern as getInventory (signature payload is also
  * JSON.stringify(propertyId), confirmed at Flatpicker.js ~162), response is
  * `PropertyList[0].DayRate`, a map of ISO date -> { Rate, MinInventory, ... }.
+ *
+ * `isDayUse: true` routes to fetchDayUseRateCalendar (the real dedicated
+ * endpoint) instead of the normal `/api/cin-api/rate-et`. Wrapped in a
+ * fallback to `rate-et` on failure rather than throwing — an earlier
+ * attempt at this called the day-use path relative to this consumer's own
+ * staahBaseUrl instead of the correct absolute host and hit a CORS/404
+ * failure; this fallback means if that host is ever unreachable again for
+ * any reason (network issue, this consumer's account not provisioned on
+ * that shared platform, etc.), the calendar still shows a price — an
+ * overnight-priced approximation rather than a blank one — instead of the
+ * whole calendar breaking.
  */
 export async function getDayRateCalendar(
   config,
-  { propertyId, fromDate, toDate },
+  { propertyId, fromDate, toDate, isDayUse = false },
 ) {
+  if (isDayUse) {
+    try {
+      return await fetchDayUseRateCalendar(config, { propertyId, fromDate, toDate });
+    } catch (err) {
+      console.warn(
+        "booking-engine-new: rate-et-dayuse failed, falling back to rate-et for calendar pricing",
+        err,
+      );
+    }
+  }
   const data = await staahSignedRequest(
     config,
     "/api/cin-api/rate-et",

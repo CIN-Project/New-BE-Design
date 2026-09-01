@@ -67,6 +67,7 @@ export function SearchBar({
   } = useCalendarRates(search.selectedPropertyId, {
     getDayRate,
     isDateSoldOut,
+    isDayUse: search.isDayUse,
   });
 
   const widgetRef = useRef(null);

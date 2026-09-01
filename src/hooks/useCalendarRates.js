@@ -25,7 +25,7 @@ const CALENDAR_RANGES = [
  */
 export function useCalendarRates(
   propertyId,
-  { getDayRate, isDateSoldOut } = {},
+  { getDayRate, isDateSoldOut, isDayUse = false } = {},
 ) {
   const config = useConfig();
   const dayRateMapRef = useRef({});
@@ -55,6 +55,7 @@ export function useCalendarRates(
       propertyId: pid,
       fromDate: formatIsoDate(from),
       toDate: formatIsoDate(to),
+      isDayUse,
     })
       .then((data) => {
         if (pid !== currentPropertyIdRef.current) return;
@@ -73,7 +74,11 @@ export function useCalendarRates(
       });
   };
 
-  // Property changed: reset everything and fetch the initial 0-6 month chunk.
+  // Property changed (or Day Use mode toggled — its rates aren't the same
+  // as overnight's for the same dates, and loadedRangesRef tracks fetched
+  // chunks by range key alone, not by mode, so without this a chunk already
+  // fetched in one mode would silently skip re-fetching after switching to
+  // the other): reset everything and fetch the initial 0-6 month chunk.
   useEffect(() => {
     currentPropertyIdRef.current = propertyId;
     dayRateMapRef.current = {};
@@ -84,7 +89,7 @@ export function useCalendarRates(
     if (!propertyId || selfFetchDisabled) return;
     fetchCalendarChunk("0-6", 0, 6, propertyId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, propertyId, selfFetchDisabled]);
+  }, [config, propertyId, selfFetchDisabled, isDayUse]);
 
   // Calendar navigated forward: lazily load the 6-12 / 12-18 chunk the
   // newly-visible month falls into, if not already loaded.

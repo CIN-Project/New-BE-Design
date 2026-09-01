@@ -22,7 +22,8 @@ function nightsBetween(start, end) {
 export function DateRangeModal({ isOpen, onClose }) {
   const search = useSearchContext();
   const { getDayRate, isDateSoldOut, isDateRateLoading, handleCalendarMonthChange } = useCalendarRates(
-    search.selectedPropertyId
+    search.selectedPropertyId,
+    { isDayUse: search.isDayUse },
   );
   const nights = nightsBetween(search.selectedStartDate, search.selectedEndDate);
 
@@ -68,6 +69,7 @@ export function DateRangeModal({ isOpen, onClose }) {
         isDateSoldOut={isDateSoldOut}
         isDateRateLoading={isDateRateLoading}
         onMonthChange={handleCalendarMonthChange}
+        isDayUse={search.isDayUse}
       />
     </Modal>
   );

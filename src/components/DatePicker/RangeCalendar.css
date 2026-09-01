@@ -76,7 +76,7 @@
 
 .be-cal-grids {
   display: flex;
-  gap: 2.5rem;
+  gap: 2rem;
 }
 
 .be-cal-month-grid {
@@ -137,6 +137,20 @@
   padding: 2px 4px;
   border-radius: 100px;
   display: inline-block;
+  /* A 5-digit price ("₹10,000") is naturally wider than this pill's cell
+     (inline-block sizes purely to its own text, with nothing here capping
+     it) — it just spilled out symmetrically on both sides, and for the
+     calendar's last column that overflow extends straight past the
+     calendar's own edge with no adjacent cell to absorb it into. Capping
+     to the cell's own width and truncating (rather than reducing font-size
+     further, which would make every other price harder to read for a case
+     that's only ever a few characters over) keeps every pill inside its
+     cell regardless of how many digits the price has. */
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Shown in place of .be-cal-day-rate while rate-et's 6-month chunk for this
