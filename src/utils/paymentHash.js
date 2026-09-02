@@ -25,6 +25,7 @@ export function encryptHash(partnerKey, data) {
 
 export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
   const baseUrl = `${staahBaseUrl}/api/th-payment-redirect`;
+  console.log("[PAYMENT-FLOW] paymentHash.js: submitting hidden form to STAAH", { baseUrl, currentUrlBeforeReplace: window.location.href });
   window.history.replaceState({}, "", "/?pay-now");
 
   const form = document.createElement("form");
@@ -44,5 +45,6 @@ export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
   form.appendChild(input1);
   form.appendChild(input2);
   document.body.appendChild(form);
+  console.log("[PAYMENT-FLOW] paymentHash.js: form.submit() called — browser should now navigate to STAAH");
   form.submit();
 }

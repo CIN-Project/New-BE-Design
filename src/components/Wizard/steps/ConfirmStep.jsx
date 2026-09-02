@@ -5,7 +5,6 @@ import { useConfig } from "../../../config/configContext.js";
 import { verifyToken } from "../../../api/rates.js";
 import { confirmPayment } from "../../../api/payment.js";
 import { postBookingWidged } from "../../../api/tracking.js";
-import { Button } from "../../shared/Button.js";
 import "./ConfirmStep.css";
 
 const PAYMENT_RESPONSE_KEY = "be_paymentResponse";
@@ -79,6 +78,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     let cancelled = false;
 
     async function resolvePaymentResult() {
+      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: mounted, resolving payment result", { fullUrl: window.location.href });
+
       let rawResponse = null;
 
       try {
@@ -86,12 +87,16 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       } catch {
         rawResponse = null;
       }
+      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: existing sessionStorage payment response", { hadRawResponse: Boolean(rawResponse), rawResponse });
 
       const tokenKey = new URLSearchParams(window.location.search).get("tokenKey");
+      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: tokenKey from URL", { tokenKey });
 
       if (tokenKey) {
         try {
+          console.log("[PAYMENT-FLOW] ConfirmStep.jsx: calling verifyToken (/api/verify-token)...");
           const result = await verifyToken(config, tokenKey);
+          console.log("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken SUCCEEDED", { result });
           rawResponse = JSON.stringify(result);
           try {
             window.sessionStorage.setItem(PAYMENT_RESPONSE_KEY, rawResponse);
@@ -99,7 +104,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
             // sessionStorage unavailable (private mode, SSR edge cases) - non-fatal.
           }
         } catch (err) {
-          console.error("[booking-engine-new] verifyToken failed:", err);
+          console.error("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken FAILED — will fall back to any stored response, or show pending/failure state", err);
         }
       }
 
@@ -107,6 +112,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
 
       const parsedResponseJson = parsePaymentResponse(rawResponse);
       const parsedBookingData = parseBookingData(safeSessionStorageGet(BOOKING_DATA_KEY));
+      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: parsed gateway response + booking data", { parsedResponseJson, hasBookingData: Boolean(parsedBookingData) });
 
       setResponseJson(parsedResponseJson);
       setBookingData(parsedBookingData);
@@ -117,18 +123,24 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       // gateway response, not gated on its raw status already looking like
       // "success" — the gateway's own status flag isn't authoritative here,
       // this call is.
-      if (!parsedResponseJson) return;
+      if (!parsedResponseJson) {
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: NO gateway response resolved (no tokenKey AND no stored session data) — showing pending/failure state, confirmPayment never called");
+        return;
+      }
 
       setConfirming(true);
       try {
         const keyData = config?.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "";
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: calling confirmPayment (/api/payment/confirm)...", { rawStatus: parsedResponseJson?.status });
         const confirmResp = await confirmPayment(config, {
           responseObject: parsedResponseJson,
           keyData,
         });
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment result", { confirmResp });
         if (cancelled) return;
 
         const confirmedSuccess = confirmResp?.errorMessage === "success";
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: FINAL reservationStatus decided", { confirmedSuccess, errorMessage: confirmResp?.errorMessage });
         setReservationStatus(confirmedSuccess ? "success" : "failed");
 
         const details = parseBookingData(confirmResp?.result?.[0]?.bookingDetailsJson);
@@ -153,7 +165,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
           postBookingResponse(config, parsedResponseJson, details || parsedBookingData);
         }
       } catch (err) {
-        console.error("[booking-engine-new] confirmPayment failed:", err);
+        console.error("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment call THREW — treating as failed", err);
         if (!cancelled) setReservationStatus("failed");
         // postBookingWidged(config, {
         //   ctaName: "Reservation post",
@@ -198,12 +210,21 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // a fallback for when confirm hasn't run or didn't echo it back.
   const effectiveBookingData = confirmedBookingData || bookingData;
 
+  console.log("[PAYMENT-FLOW] ConfirmStep.jsx: rendering final result", {
+    isSuccess,
+    reservationStatus,
+    hadStoredData,
+    hasResponseJson: Boolean(responseJson),
+    hasBookingData: Boolean(effectiveBookingData),
+  });
+
   if (isSuccess) {
     return (
       <SuccessReceipt
         responseJson={responseJson}
         bookingData={effectiveBookingData}
         homeUrl={homeUrl}
+        siteName={config?.siteName}
       />
     );
   }
@@ -214,184 +235,255 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       hadStoredData={hadStoredData}
       homeUrl={homeUrl}
       onRetry={onRetry}
+      siteName={config?.siteName}
+      bookingData={effectiveBookingData}
     />
   );
 }
 
-function SuccessReceipt({ responseJson, bookingData, homeUrl }) {
+function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
   const reservationId = responseJson?.reservation_id || "N/A";
   const amount = responseJson?.amount ?? bookingData?.totalPrice;
   const currency = responseJson?.currency || "INR";
+  // STAAH's own "paylater" status (see this file's top doc comment on the
+  // expected be_paymentResponse shape) IS specifically the pay-at-hotel/
+  // guaranteed-reservation flow, as distinct from a prepaid gateway charge
+  // — there's no separate payment-method field in the gateway response to
+  // read this off directly.
+  const isPayAtHotel = responseJson?.status === "paylater";
+  const transactionRef = responseJson?.pg_transaction_id;
 
   const formData = bookingData?.formData;
   const rooms = bookingData?.selectedRoom || [];
-  const roomsText = formatList(rooms, (room) => room?.roomName || "");
-  const packageText = formatList(rooms, (room) => room?.roomPackage || "");
   const addonsText = formatList(bookingData?.selectedAddonList, (addon) =>
     typeof addon === "string" ? addon : addon?.AddonName || addon?.name || ""
   );
   const guestName = [formData?.title, formData?.firstName, formData?.lastName].filter(Boolean).join(" ");
-  const guestContact = [formData?.email, formData?.phone].filter(Boolean).join(" | ");
-  const totalAdults = rooms.reduce((sum, r) => sum + (parseInt(r?.adults, 10) || 0), 0);
-  const totalChildren = rooms.reduce((sum, r) => sum + (parseInt(r?.children, 10) || 0), 0);
-  const guestsSummary = `${totalAdults} Adult${totalAdults === 1 ? "" : "s"}${
-    totalChildren > 0 ? `, ${totalChildren} Child${totalChildren === 1 ? "" : "ren"}` : ""
-  }, ${rooms.length} Room${rooms.length === 1 ? "" : "s"}`;
-
-  const propertyAddress = bookingData?.property?.Address;
-  const addressText = [
-    propertyAddress?.AddressLine,
-    propertyAddress?.City,
-    propertyAddress?.State,
-    propertyAddress?.Country,
-    propertyAddress?.PostalCode,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  const cancellationPolicyText = stripHtml(bookingData?.cancellationPolicyState);
-  const roomImage = rooms?.[0]?.roomImage;
+  const guestEmail = formData?.email || "";
+  const guestPhone = formData?.phone || "";
+  const nights = calcNights(bookingData?.selectedStartDate, bookingData?.selectedEndDate);
 
   const handlePrint = () => window.print();
 
   return (
-    <div className="be-success-card">
-      <div className="be-success-icon-badge">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+    <div className="be-voucher-card">
+      <div className="be-voucher-header">
+        <h1 className="be-voucher-brand">{siteName || bookingData?.property?.PropertyName || "Hotel Booking"}</h1>
+        <p className="be-voucher-subtitle">Luxury Accommodation Voucher</p>
       </div>
-      <h1 className="be-success-title">Stay Secured</h1>
-      <p className="be-success-desc">Thank you for booking direct. Your accommodation has been reserved.</p>
-      <div className="be-booking-id-tag">CONFIRMATION ID: {reservationId}</div>
 
-      <div className="be-success-receipt-details">
-        <h3
-          style={{
-            fontFamily: "var(--be-font-serif, 'Cormorant Garamond', serif)",
-            fontSize: "1.3rem",
-            marginBottom: "1.2rem",
-            borderBottom: "1px solid #e8e6e2",
-            paddingBottom: "0.8rem",
-          }}
-        >
-          Reservation Receipt
-        </h3>
-        {roomImage && (
-          <img
-            src={roomImage}
-            alt=""
-            style={{ width: "100%", maxHeight: "220px", objectFit: "cover", borderRadius: "6px", marginBottom: "1rem" }}
-          />
-        )}
-        <div className="be-receipt-grid">
-          <div className="be-receipt-item">
-            <span>Destination Property</span>
-            <p>{bookingData?.property?.PropertyName || "—"}</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Reserved Room</span>
-            <p>{roomsText || "—"}</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Package</span>
-            <p>{packageText || "—"}</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Check-In</span>
-            <p>{formatDate(bookingData?.selectedStartDate)} (14:00 onwards)</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Check-Out</span>
-            <p>{formatDate(bookingData?.selectedEndDate)} (12:00 noon)</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Guests</span>
-            <p>{guestsSummary}</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Guest Details</span>
-            <p>{guestName || "—"}</p>
-          </div>
-          <div className="be-receipt-item">
-            <span>Contact Coordinates</span>
-            <p>{guestContact || "—"}</p>
-          </div>
-          {addonsText && (
-            <div className="be-receipt-item" style={{ gridColumn: "1 / -1" }}>
-              <span>Curated Add-ons</span>
-              <p>{addonsText}</p>
-            </div>
-          )}
-          {addressText && (
-            <div className="be-receipt-item" style={{ gridColumn: "1 / -1" }}>
-              <span>Hotel Details</span>
-              <p>{addressText}</p>
-              {propertyAddress?.Phone && <p>{propertyAddress.Phone}</p>}
-              {propertyAddress?.Email && <p>{propertyAddress.Email}</p>}
-            </div>
-          )}
-          {cancellationPolicyText && (
-            <div className="be-receipt-item" style={{ gridColumn: "1 / -1" }}>
-              <span>Cancellation Policy</span>
-              <p>{cancellationPolicyText}</p>
-            </div>
-          )}
-          <div className="be-receipt-item" style={{ gridColumn: "1 / -1" }}>
-            <span>Total Amount Paid (GST Inc.)</span>
-            <p style={{ fontSize: "1.4rem", fontWeight: 600, color: "var(--be-color-primary, #846836)" }}>
-              {formatCurrency(amount, currency)}
-            </p>
-          </div>
+      <div className="be-voucher-status-banner">
+        <div>
+          <span className="be-voucher-label">Booking Status</span>
+          <p className="be-voucher-status-value">Reservation Secured</p>
+        </div>
+        <div className="be-voucher-status-right">
+          <span className="be-voucher-label">Confirmation ID</span>
+          <p className="be-voucher-confirmation-id">{reservationId}</p>
         </div>
       </div>
 
-      <div className="be-success-actions">
-        <button onClick={handlePrint} className="be-btn-success-secondary">
-          Print Receipt
+      <div className="be-voucher-divider" />
+
+      <div className="be-voucher-grid-2">
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Property</span>
+          <p className="be-voucher-value">{bookingData?.property?.PropertyName || "—"}</p>
+        </div>
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Primary Guest</span>
+          <p className="be-voucher-value">{guestName || "—"}</p>
+        </div>
+      </div>
+
+      <div className="be-voucher-field">
+        <span className="be-voucher-label">Reserved Accommodation</span>
+        {rooms.length > 0 ? (
+          rooms.map((room, i) => (
+            <div key={i}>
+              <p className="be-voucher-value be-voucher-value--strong">
+                Room {i + 1}: {room?.roomName || "—"}
+                {room?.roomPackage ? ` (${room.roomPackage})` : ""}
+              </p>
+              <p className="be-voucher-sub">
+                Room {i + 1}: {room?.adults || 0} Adults, {room?.children || 0} Children
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="be-voucher-value">—</p>
+        )}
+      </div>
+
+      <div className="be-voucher-dates-box">
+        <div>
+          <span className="be-voucher-label">Arrival Check-In</span>
+          <p className="be-voucher-value">{formatIsoDateOnly(bookingData?.selectedStartDate)}</p>
+          <p className="be-voucher-sub">From 14:00 (2:00 PM)</p>
+        </div>
+        <div>
+          <span className="be-voucher-label">Departure Check-Out</span>
+          <p className="be-voucher-value">{formatIsoDateOnly(bookingData?.selectedEndDate)}</p>
+          <p className="be-voucher-sub">Prior to 12:00 (12:00 Noon)</p>
+        </div>
+      </div>
+
+      <div className="be-voucher-grid-2">
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Stay Duration</span>
+          <p className="be-voucher-value">{nights} Night{nights === 1 ? "" : "s"}</p>
+        </div>
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Curated Add-ons</span>
+          <p className="be-voucher-value">{addonsText || "None"}</p>
+        </div>
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Contact Coordinates</span>
+          <p className="be-voucher-value">{guestPhone || "—"}</p>
+          {guestEmail && <p className="be-voucher-value">{guestEmail}</p>}
+        </div>
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Applied Code</span>
+          <p className="be-voucher-value">{bookingData?.promoCode || "None"}</p>
+        </div>
+      </div>
+
+      <div className="be-voucher-divider" />
+
+      <div className="be-voucher-payment-row">
+        <div className="be-voucher-field">
+          <span className="be-voucher-label">Payment Method</span>
+          <p className="be-voucher-value">{isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}</p>
+        </div>
+        <div className="be-voucher-field be-voucher-field--right">
+          <span className="be-voucher-label">Total Amount (GST Inc.)</span>
+          <p className="be-voucher-total-amount">{formatCurrency(amount, currency)}</p>
+        </div>
+      </div>
+
+      {transactionRef && (
+        <div className="be-voucher-barcode">
+          <Barcode seed={transactionRef} />
+          <p className="be-voucher-barcode-ref">Transaction Ref: {transactionRef}</p>
+        </div>
+      )}
+
+      <div className="be-voucher-actions">
+        <button onClick={handlePrint} className="be-voucher-btn-print">
+          <PrintIcon /> Print Voucher
         </button>
-        <a href={homeUrl} className="be-btn-success-primary" style={{ display: "inline-block", textDecoration: "none", lineHeight: "2.5" }}>
-          Return Home
+        <a href={homeUrl} className="be-voucher-btn-done">
+          Done &amp; Return Home
         </a>
       </div>
     </div>
   );
 }
 
-function FailureState({ responseJson, hadStoredData, homeUrl, onRetry }) {
+/** Purely decorative — not a real scannable barcode, just a visual echo of
+ * one on the voucher. Bar widths are derived from `seed` (the transaction
+ * ref) via a small deterministic hash so it looks stable/consistent for a
+ * given booking rather than reshuffling on every re-render. */
+function Barcode({ seed }) {
+  const bars = [];
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  for (let i = 0; i < 48; i++) {
+    hash = (hash * 1103515245 + 12345) >>> 0;
+    bars.push((hash % 3) + 1);
+  }
+  return (
+    <div className="be-voucher-barcode-bars" aria-hidden="true">
+      {bars.map((w, i) => (
+        <span key={i} style={{ width: `${w}px` }} />
+      ))}
+    </div>
+  );
+}
+
+function PrintIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="6 9 6 2 18 2 18 9" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <rect x="6" y="14" width="12" height="8" />
+    </svg>
+  );
+}
+
+function calcNights(start, end) {
+  if (!start || !end) return 0;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+  const diff = Math.round((e.getTime() - s.getTime()) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+
+function formatIsoDateOnly(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().split("T")[0];
+}
+
+/** Same .be-voucher-card shell as SuccessReceipt (a red status banner
+ * instead of green, and a short status message instead of the full
+ * reservation grid, since there's no confirmed booking to itemize) — a
+ * failed/pending payment reads as a status update on the same voucher,
+ * not a completely different page. */
+function FailureState({ responseJson, hadStoredData, homeUrl, onRetry, siteName, bookingData }) {
   const hasErrorMessage = Boolean(responseJson?.error_msg);
-  const title = hasErrorMessage
-    ? "We Couldn't Confirm Your Booking"
-    : hadStoredData
-      ? "We Couldn't Confirm Your Booking"
-      : "Booking Pending";
+  const isPending = !hasErrorMessage && !hadStoredData;
+
+  const statusLabel = isPending ? "Booking Pending" : "Payment Unsuccessful";
+  const title = isPending
+    ? "Booking Pending"
+    : "We Couldn't Confirm Your Booking";
 
   const description = hasErrorMessage
     ? `${responseJson.error_msg} If the amount was deducted, please check your email or contact us and we'll sort it out.`
-    : "We haven't received a confirmation for this booking yet. Please check your email for a confirmation, or contact us if you don't hear back soon.";
+    : isPending
+      ? "We haven't received a confirmation for this booking yet. Please check your email for a confirmation, or contact us if you don't hear back soon."
+      : "We couldn't confirm your booking. Please try again or contact support.";
 
   return (
-    <div className="be-success-card">
-      <div className="be-success-icon-badge be-success-icon-badge--alert">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="13" />
-          <line x1="12" y1="16.5" x2="12" y2="16.5" />
-        </svg>
+    <div className="be-voucher-card">
+      <div className="be-voucher-header">
+        <h1 className="be-voucher-brand">{siteName || bookingData?.property?.PropertyName || "Hotel Booking"}</h1>
+        <p className="be-voucher-subtitle">Reservation Status</p>
       </div>
-      <h1 className="be-success-title">{title}</h1>
-      <p className="be-success-desc">{description}</p>
 
-      <div className="be-success-actions">
-        {onRetry ? (
-          <Button variant="outline" onClick={onRetry}>
-            Try Again
-          </Button>
-        ) : (
-          <a href={homeUrl} className="be-btn-success-secondary" style={{ display: "inline-block", textDecoration: "none", lineHeight: "2.5" }}>
-            Try Again
-          </a>
+      <div className="be-voucher-status-banner be-voucher-status-banner--error">
+        <div>
+          <span className="be-voucher-label">Booking Status</span>
+          <p className="be-voucher-status-value be-voucher-status-value--error">{statusLabel}</p>
+        </div>
+        {responseJson?.reservation_id && (
+          <div className="be-voucher-status-right">
+            <span className="be-voucher-label">Reference ID</span>
+            <p className="be-voucher-confirmation-id">{responseJson.reservation_id}</p>
+          </div>
         )}
-        <a href={homeUrl} className="be-btn-success-primary" style={{ display: "inline-block", textDecoration: "none", lineHeight: "2.5" }}>
+      </div>
+
+      <div className="be-voucher-divider" />
+
+      <h2 className="be-voucher-failure-title">{title}</h2>
+      <p className="be-voucher-failure-desc">{description}</p>
+
+      <div className="be-voucher-actions">
+        <button
+          type="button"
+          onClick={onRetry || (() => { window.location.href = homeUrl; })}
+          className="be-voucher-btn-print"
+        >
+          Try Again
+        </button>
+        <a href={homeUrl} className="be-voucher-btn-done">
           Return Home
         </a>
       </div>
@@ -448,13 +540,6 @@ function formatList(list, getLabel) {
     .map(getLabel)
     .filter(Boolean)
     .join(", ");
-}
-
-function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatCurrency(amount, currency) {

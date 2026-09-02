@@ -169,3 +169,269 @@
     width: 100%;
   }
 }
+
+/* Voucher (SuccessReceipt) — a distinct card shell from .be-success-card
+   above (still used by the loading/failure states), built fresh to match a
+   specific reference design: branded header, a green status banner, boxed
+   check-in/out, and a decorative barcode footer. */
+.be-voucher-card {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.2rem 2rem 2rem;
+  text-align: left;
+}
+
+.be-voucher-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.be-voucher-brand {
+  font-family: var(--be-font-serif, "Cormorant Garamond", serif);
+  font-size: 1.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  margin: 0 0 0.3rem;
+}
+
+.be-voucher-subtitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--be-color-primary-hover, #bfa15f);
+  margin: 0;
+}
+
+.be-voucher-status-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(46, 125, 50, 0.08);
+  border: 1px solid rgba(46, 125, 50, 0.18);
+  border-radius: 6px;
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.be-voucher-status-right {
+  text-align: right;
+}
+
+.be-voucher-status-value {
+  color: #2e7d32;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.be-voucher-confirmation-id {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.be-voucher-status-banner--error {
+  background: rgba(198, 40, 40, 0.06);
+  border-color: rgba(198, 40, 40, 0.18);
+}
+
+.be-voucher-status-value--error {
+  color: #c62828;
+}
+
+.be-voucher-failure-title {
+  font-family: var(--be-font-serif, "Cormorant Garamond", serif);
+  font-size: 1.4rem;
+  color: #1a1a1a;
+  margin: 0 0 0.6rem;
+}
+
+.be-voucher-failure-desc {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.6;
+  margin: 0 0 1.8rem;
+}
+
+.be-voucher-divider {
+  border-top: 1px solid #ece7dd;
+  margin: 1.2rem 0;
+}
+
+.be-voucher-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--be-color-primary-hover, #bfa15f);
+  margin-bottom: 0.3rem;
+}
+
+.be-voucher-value {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin: 0 0 0.2rem;
+}
+
+.be-voucher-value--strong {
+  font-weight: 700;
+}
+
+.be-voucher-sub {
+  font-size: 0.78rem;
+  color: #8c8c8c;
+  margin: 0 0 0.4rem;
+}
+
+.be-voucher-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.be-voucher-field {
+  margin-bottom: 1.2rem;
+}
+
+.be-voucher-field--right {
+  text-align: right;
+}
+
+.be-voucher-dates-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  background: #faf7f0;
+  border: 1px solid #ece0c8;
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.2rem;
+}
+
+.be-voucher-payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.be-voucher-total-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--be-color-primary-hover, #bfa15f);
+  margin: 0;
+}
+
+.be-voucher-barcode {
+  border: 1px dashed #d8d2c4;
+  border-radius: 6px;
+  background: #faf9f7;
+  padding: 1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.be-voucher-barcode-bars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 42px;
+  margin-bottom: 0.5rem;
+}
+
+.be-voucher-barcode-bars span {
+  display: inline-block;
+  height: 100%;
+  background: #1a1a1a;
+}
+
+.be-voucher-barcode-ref {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.be-voucher-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.be-voucher-btn-print,
+.be-voucher-btn-done {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.be-voucher-btn-print {
+  background: #1a1a1a;
+  color: #ffffff !important;
+}
+
+.be-voucher-btn-done {
+  background: var(--be-color-primary-hover, #bfa15f);
+  color: #ffffff;
+}
+
+.be-voucher-btn-print:hover,
+.be-voucher-btn-done:hover {
+  opacity: 0.88;
+}
+
+@media print {
+  .be-voucher-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .be-voucher-card {
+    padding: 1.6rem 1.2rem 1.4rem;
+  }
+
+  .be-voucher-grid-2,
+  .be-voucher-dates-box {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .be-voucher-payment-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .be-voucher-field--right {
+    text-align: left;
+  }
+
+  .be-voucher-actions {
+    flex-direction: column;
+  }
+}

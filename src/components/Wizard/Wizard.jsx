@@ -34,6 +34,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   useRepriceSelectedRooms();
 
   const changeStep = (next) => {
+    console.log("[PAYMENT-FLOW] Wizard.jsx: changeStep", { from: step, to: next });
     setStep(next);
     if (syncStepToUrl && typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -45,11 +46,53 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     }
   };
 
+  // On mount only (not popstate — that's the effect below, for back/forward
+  // navigation once already here): jump straight to the confirmation step
+  // if STAAH just redirected the browser back with `?tokenKey=...`. Ported
+  // from real Amritara's Filterbar.js (~2011-2027) — `if (tokenKey) {
+  // setCurrentStep(4); ... }` fires unconditionally on mount there too,
+  // since ConfirmStep.jsx's own verifyToken/confirmPayment calls are what
+  // actually resolve success vs failure from here; the wizard's own step
+  // state has no other way to know a payment redirect just landed.
+  // Without this, a fresh mount (any real payment redirect always is one)
+  // always started at step 1 regardless of the URL — ConfirmStep never
+  // rendered at all, so its whole verify/confirm flow never ran.
+  //
+  // Bonus fix, same root cause: a direct/shared `?step=N` link (not just a
+  // payment redirect) previously only worked via browser back/forward
+  // (the popstate effect below) — a fresh load of that same URL ignored it
+  // and always opened on step 1.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenKey = params.get("tokenKey");
+    console.log("[PAYMENT-FLOW] Wizard.jsx: mount-time step check", {
+      fullUrl: window.location.href,
+      tokenKeyPresent: Boolean(tokenKey),
+      urlStepParam: params.get("step"),
+      syncStepToUrl,
+    });
+    if (tokenKey) {
+      console.log("[PAYMENT-FLOW] Wizard.jsx: tokenKey present on mount -> jumping to step 4 (ConfirmStep)");
+      setStep(4);
+      return;
+    }
+    if (!syncStepToUrl) return;
+    const urlStep = parseInt(params.get("step"), 10);
+    if (urlStep === 3) setStep(2);
+    else if (urlStep >= 1 && urlStep <= 4) {
+      console.log("[PAYMENT-FLOW] Wizard.jsx: restoring step from URL on mount", { urlStep });
+      setStep(urlStep);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!syncStepToUrl || typeof window === "undefined") return;
     const onPopState = () => {
       const url = new URL(window.location.href);
       const urlStep = parseInt(url.searchParams.get("step"), 10);
+      console.log("[PAYMENT-FLOW] Wizard.jsx: popstate (back/forward) step change", { urlStep });
       if (urlStep === 3) setStep(2);
       else if (urlStep >= 1 && urlStep <= 4) setStep(urlStep);
     };

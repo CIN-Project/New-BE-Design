@@ -400,8 +400,15 @@ export function GuestDetailsForm({ onComplete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (proceedToPay(selectedRoom) !== "success") return;
-    if (!validate()) return;
+    console.log("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (Pay Now clicked)", { selectedPropertyId });
+    if (proceedToPay(selectedRoom) !== "success") {
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — proceedToPay check failed (room/guest mismatch)");
+      return;
+    }
+    if (!validate()) {
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — form validation failed", { errors });
+      return;
+    }
     updateUserDetails({ ...formData });
 
     setIsProcessing(true);
@@ -411,6 +418,7 @@ export function GuestDetailsForm({ onComplete }) {
         selectedPropertyId,
       );
       const reservationId = reservationResp?.reservation_id;
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: generateReservationId result", { reservationResp, reservationId });
       if (!reservationId)
         throw new Error(
           "Could not generate a reservation ID. Please try again.",
@@ -717,11 +725,13 @@ export function GuestDetailsForm({ onComplete }) {
           .join(", "),
       };
 
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: calling postPaymentRequest (/api/th-payment-request)", { reservationId, amount: finalRequestData2.amount });
       const paymentResp = await postPaymentRequest(config, {
         finalRequestData2,
         reservationPayload: payload,
         keyData: finalKeyData,
       });
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: postPaymentRequest result", { paymentResp });
       // Ported from DetailStep.js's th-payment-request success/failure
       // beacons (~505-506,579-580 pattern — ApiName "reservation post" on
       // this call, ApiErrorCode "1166" on any non-success result).
@@ -793,9 +803,11 @@ export function GuestDetailsForm({ onComplete }) {
       });
 
       onComplete?.();
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, staahBaseUrl: config?.staahBaseUrl, paramvalues });
       // Navigates away from the app (STAAH hosted payment page) — call last.
       redirectToPayment(config, paramvalues, resolvedKeyData);
     } catch (err) {
+      console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);
       setIsProcessing(false);
       toast.error(err?.message || "Payment failed. Please try again.");
       // postBookingWidged(config, {
