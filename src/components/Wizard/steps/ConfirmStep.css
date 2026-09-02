@@ -1,3 +1,41 @@
+/* Full-screen popup shell — see ConfirmStep.jsx's own comment on why this
+   step renders as an overlay (portaled to document.body) instead of inline
+   step content. Dimmed + blurred backdrop, its own scroll (not the page's)
+   so a tall card on a short viewport scrolls within the overlay rather
+   than pushing the backdrop itself off-screen. */
+.be-voucher-overlay {
+  position: fixed;
+  inset: 0;
+  /* Matches BookingFlow.css's own mobile full-screen search sheet — the
+     highest z-index elsewhere in this package — so the confirmation
+     overlay is guaranteed to sit above it if that sheet somehow hasn't
+     closed yet by the time payment resolves. */
+  z-index: 9999999;
+  background: rgba(20, 18, 14, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 3rem 1rem;
+}
+
+@media print {
+  /* The backdrop itself has no content worth printing, and without this
+     its own dimmed fill would otherwise still paint behind the isolated
+     .be-voucher-card (see that rule's own @media print block) instead of
+     a clean white page. */
+  .be-voucher-overlay {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+    overflow: visible;
+  }
+}
+
 .be-success-card {
   background: white;
   border: 1px solid rgba(191, 161, 95, 0.3);
@@ -404,7 +442,38 @@
   opacity: 0.88;
 }
 
+/* "Print Voucher" (window.print(), ConfirmStep.jsx's handlePrint) is a
+   real browser print — with no scoping it prints the ENTIRE page (site
+   header/nav, the wizard chrome, everything else on the page), not just
+   this card. The standard fix for isolating one element for print without
+   a separate print window/library: hide every element via
+   visibility:hidden (not display:none — that would let the layout reflow
+   and lose this card's own position), then make just the card and its
+   descendants visible again and pull it out of that hidden document flow
+   via position:absolute at the page's top-left so it prints as if it were
+   the only thing on the page.
+   Scoped under body.be-printing-voucher (added by handlePrint right before
+   calling window.print(), removed on the browser's `afterprint` event) —
+   NOT a bare `body *` — since this CSS is global once bundled, an
+   unscoped version would blank out the print output of every OTHER page
+   on the site the moment a guest ever prints anything, any time after
+   this component's styles had loaded at all. */
 @media print {
+  body.be-printing-voucher * {
+    visibility: hidden;
+  }
+  body.be-printing-voucher .be-voucher-card,
+  body.be-printing-voucher .be-voucher-card * {
+    visibility: visible;
+  }
+  body.be-printing-voucher .be-voucher-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: none;
+    margin: 0;
+  }
   .be-voucher-actions {
     display: none;
   }

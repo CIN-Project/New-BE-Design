@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useConfig } from "../../../config/configContext.js";
 import { verifyToken } from "../../../api/rates.js";
 import { confirmPayment } from "../../../api/payment.js";
@@ -73,6 +74,11 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // reports success — never derived from the raw gateway echo alone.
   const [reservationStatus, setReservationStatus] = useState(null);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+  // createPortal needs a real document to exist first — false during SSR
+  // and the very first client render, true from the next tick onward
+  // (matches SearchBar.jsx's own Toaster portal, same reasoning).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,8 +194,9 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  let content;
   if (loading || confirming) {
-    return (
+    content = (
       <div className="be-success-card">
         <div className="be-success-icon-badge be-success-icon-badge--pending">
           <SpinnerIcon />
@@ -202,42 +209,52 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         </p>
       </div>
     );
-  }
+  } else {
+    const isSuccess = reservationStatus === "success";
+    // The confirm call's own bookingDetailsJson (the authoritative, backend-
+    // enriched version) wins when present; the pre-payment snapshot is only
+    // a fallback for when confirm hasn't run or didn't echo it back.
+    const effectiveBookingData = confirmedBookingData || bookingData;
 
-  const isSuccess = reservationStatus === "success";
-  // The confirm call's own bookingDetailsJson (the authoritative, backend-
-  // enriched version) wins when present; the pre-payment snapshot is only
-  // a fallback for when confirm hasn't run or didn't echo it back.
-  const effectiveBookingData = confirmedBookingData || bookingData;
+    console.log("[PAYMENT-FLOW] ConfirmStep.jsx: rendering final result", {
+      isSuccess,
+      reservationStatus,
+      hadStoredData,
+      hasResponseJson: Boolean(responseJson),
+      hasBookingData: Boolean(effectiveBookingData),
+    });
 
-  console.log("[PAYMENT-FLOW] ConfirmStep.jsx: rendering final result", {
-    isSuccess,
-    reservationStatus,
-    hadStoredData,
-    hasResponseJson: Boolean(responseJson),
-    hasBookingData: Boolean(effectiveBookingData),
-  });
-
-  if (isSuccess) {
-    return (
+    content = isSuccess ? (
       <SuccessReceipt
         responseJson={responseJson}
         bookingData={effectiveBookingData}
         homeUrl={homeUrl}
         siteName={config?.siteName}
       />
+    ) : (
+      <FailureState
+        responseJson={responseJson}
+        hadStoredData={hadStoredData}
+        homeUrl={homeUrl}
+        onRetry={onRetry}
+        siteName={config?.siteName}
+        bookingData={effectiveBookingData}
+      />
     );
   }
 
-  return (
-    <FailureState
-      responseJson={responseJson}
-      hadStoredData={hadStoredData}
-      homeUrl={homeUrl}
-      onRetry={onRetry}
-      siteName={config?.siteName}
-      bookingData={effectiveBookingData}
-    />
+  // Full-screen popup over whatever page/step is behind it (a dimmed,
+  // blurred backdrop with the voucher centered on top) rather than
+  // rendering inline as this step's own page content — matches a reference
+  // design. Portaled to document.body for the same reason every other
+  // full-screen overlay in this package is (BookingFlow's mobile search
+  // sheet, DropdownModal's dropdowns): so it isn't constrained by this
+  // step's own position:relative/overflow ancestors in the wizard layout.
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="be-voucher-overlay">{content}</div>,
+    document.body,
   );
 }
 
@@ -263,7 +280,20 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
   const guestPhone = formData?.phone || "";
   const nights = calcNights(bookingData?.selectedStartDate, bookingData?.selectedEndDate);
 
-  const handlePrint = () => window.print();
+  // The "be-printing-voucher" class (see ConfirmStep.css's own comment on
+  // its @media print rules) is what actually confines the print output to
+  // just this card instead of the whole page — added right before printing,
+  // removed once the print dialog closes (`afterprint`) so it never lingers
+  // and affects some later, unrelated print action on this same page.
+  const handlePrint = () => {
+    document.body.classList.add("be-printing-voucher");
+    const cleanup = () => {
+      document.body.classList.remove("be-printing-voucher");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
 
   return (
     <div className="be-voucher-card">
