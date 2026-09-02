@@ -838,46 +838,50 @@
   display: none;
 }
 
+/* Full-bleed white header strip, edge-to-edge with the actual browser
+   viewport (not just this component's own nested/padded container), at
+   every width — mobile's summary card used to just float over whatever
+   page background/content was underneath it; this gives it the same solid
+   white band the desktop pill sits on. The calc(50% - 50vw) pair is the
+   standard block-level breakout: it re-centers this element on the
+   viewport regardless of how much ancestor padding/max-width it's nested
+   inside (bawa-hotels-next's own page wrapper included), since it's
+   computed off the viewport, not the parent. Safe here — no ancestor
+   between this and <body> sets overflow:hidden/auto, which is the one
+   thing that would clip it. */
 .be-compact-bar-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 150;
+  background: #ffffff;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 0.35rem clamp(1rem, 4vw, 3rem);
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* The row's own padding above is now this bar's only outer spacing — at
+   every width, not just desktop — without zeroing the pill/card's own
+   margin (1rem auto 1.5rem auto from the base rule, meant for a floating-
+   card look with no strip behind it) the strip ends up far taller than
+   intended, stacking both the row's padding AND the card's margin as dead
+   vertical space. */
+.be-booking-widget-wrap.be-booking-widget-wrap--compact {
+  margin: 0;
 }
 
 @media (min-width: 1025px) {
-  /* Full-bleed white header strip, edge-to-edge with the actual browser
-     viewport (not just this component's own nested/padded container) —
-     the reference's back button + pill sit on a plain white band, visibly
-     distinct from the page's own body background showing everywhere else.
-     The calc(50% - 50vw) pair is the standard block-level breakout: it
-     re-centers this element on the viewport regardless of how much
-     ancestor padding/max-width it's nested inside (bawa-hotels-next's own
-     page wrapper included), since it's computed off the viewport, not the
-     parent. Safe here — no ancestor between this and <body> sets
-     overflow:hidden/auto, which is the one thing that would clip it. */
   .be-compact-bar-row {
-    position: sticky;
-    top: 0;
-    z-index: 150;
     gap: 0.9rem;
-    background: #ffffff;
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    padding: 0.35rem clamp(1rem, 4vw, 3rem);
-    box-sizing: border-box;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   }
 
-  /* The row's own padding above is now this bar's only outer spacing —
-     without zeroing the pill's own base-rule margin (1rem auto 1.5rem
-     auto, meant for the floating-card look without a strip behind it) the
-     strip ends up far taller than the reference, stacking both the row's
-     padding AND the pill's margin as dead vertical space. */
   .be-booking-widget-wrap.be-booking-widget-wrap--compact {
     min-width: 0;
-    margin: 0;
   }
 
   .be-search-back-btn--standalone {
@@ -1049,18 +1053,33 @@
     z-index: 1;
   }
 
+  /* Once the back button above is lifted out to the corner, .be-compact-
+     leading-controls' only remaining child is the Day Use field — but the
+     container itself is still display:inline-flex (shrink-to-fit, sized
+     just for back-button + toggle side by side), so it stays pinned at the
+     grid row's left edge instead of the toggle reading as centered like it
+     does in the full/desktop variants. Stretching it to the full row width
+     and centering its (now sole) child recenters the toggle the same way. */
+  .be-booking-widget-wrap--compact.be-mobile-editing .be-compact-leading-controls {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+  }
+
   .be-booking-widget-wrap--compact.be-mobile-editing .be-booking-form {
     position: relative;
     padding-top: 3rem;
   }
   .be-booking-widget-wrap.be-booking-widget-wrap--compact{
     padding: 0.6rem 0.7rem;
-    /* Base rule's 1.5rem bottom margin (tuned for the desktop floating-
-       pill's own breathing room) reads as a large dead gap between the
-       mobile summary card and the step indicator right below it — this is
-       the only thing separating them here, since StepIndicator itself has
-       no top margin of its own. */
-    margin: 0.6rem auto 0.6rem auto;
+    /* .be-compact-bar-row (the white strip this card now sits inside on
+       every width) supplies its own top/bottom padding as breathing room —
+       this card no longer needs its own margin on top of that. Used to be
+       0.6rem here specifically to close a large dead gap before the step
+       indicator (StepIndicator itself has no top margin of its own); the
+       strip's padding plus StepIndicator's own mobile margin-top now cover
+       that same gap without stacking a second margin on top of it. */
+    margin: 0;
   }
 
   /* The 380px desktop width reads as nearly edge-to-edge on an actual
