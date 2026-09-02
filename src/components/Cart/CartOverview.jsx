@@ -80,6 +80,7 @@ export function CartOverview({ onModifyRooms }) {
     selectedStartDate,
     selectedEndDate,
     searchRooms,
+    isDayUse,
   } = useSearchContext();
   const { selectedRoom, cancellationPolicyState } = useStayContext();
   const { addonAmountTotal, addonTaxTotal, selectedAddOns, promoCodeContext } =
@@ -359,7 +360,7 @@ export function CartOverview({ onModifyRooms }) {
             onClick={() => setIsBaseCostOpen((v) => !v)}
           >
             <span className="cart-accordion-label">
-              Base Stay Cost ({nights} night{nights === 1 ? "" : "s"}){" "}
+              Base Stay Cost{!isDayUse && ` (${nights} night${nights === 1 ? "" : "s"})`}{" "}
               <ChevronIcon open={isBaseCostOpen} />
             </span>
             <span className="cart-accordion-value">

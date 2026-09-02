@@ -101,18 +101,39 @@ function stripHtmlTags(html = "") {
     .trim();
 }
 
+// A source item is often already numbered ("1. 15% discount...") — stripped
+// here since the render always generates its own sequential "N." prefix
+// (see .be-rate-card-inclusion-item below), so an already-numbered source
+// item doesn't end up double-numbered ("1. 1. 15% discount...").
+function stripLeadingNumber(text) {
+  return text.replace(/^\d+[.)]\s*/, "").trim();
+}
+
 function extractInclusionItems(rate, cancellationText) {
   const html = rate?.RateDescription || "";
   const liMatches = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
-    .map((m) => stripHtmlTags(m[1]))
+    .map((m) => stripLeadingNumber(stripHtmlTags(m[1])))
     .filter(Boolean);
   if (liMatches.length) return liMatches.slice(0, 10);
+
+  // Real STAAH descriptions are often numbered <p> paragraphs rather than
+  // an actual <ul>/<li> list ("<p>1. 15% discount...</p><p>2. Free
+  // Wi-Fi</p>") — matched here as its own case, before falling through to
+  // the generic plain-text splitter below. That splitter breaks on ANY
+  // sentence-ending period (`(?<=[.;])\s+`), which a leading "1." itself
+  // satisfies — splitting "1." off as its own 2-character fragment that
+  // the length>2 filter then silently drops, stripping the numbering from
+  // every item and leaving unnumbered fragments instead.
+  const pMatches = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((m) => stripLeadingNumber(stripHtmlTags(m[1])))
+    .filter(Boolean);
+  if (pMatches.length) return pMatches.slice(0, 10);
 
   const plain = stripHtmlTags(html);
   if (plain) {
     const parts = plain
       .split(/(?<=[.;])\s+|\n+/)
-      .map((s) => s.trim())
+      .map((s) => stripLeadingNumber(s.trim()))
       .filter((s) => s.length > 2);
     if (parts.length) return parts.slice(0, 8);
   }
@@ -517,6 +538,7 @@ function RateCard({
   ratePlan,
   adults,
   nights,
+  isDayUse,
   cancellationPolicyPackage,
   activeTab,
   onSetActiveTab,
@@ -588,9 +610,7 @@ function RateCard({
         <div className="be-rate-card-inclusions">
           {inclusionItems.map((item, i) => (
             <div className="be-rate-card-inclusion-item" key={i}>
-              <span className="be-inclusion-check-wrap">
-                <CheckIcon />
-              </span>
+              <span className="be-inclusion-number">{i + 1}.</span>
               <span>{item}</span>
             </div>
           ))}
@@ -617,9 +637,11 @@ function RateCard({
             </div>
             <span className="be-rate-option-price">
               &#8377;{formatMoney(standardTotals.totalCartValue)}
-              <div className="be-rate-unit">
-                for {nights} night{nights > 1 ? "s" : ""}
-              </div>
+              {!isDayUse && (
+                <div className="be-rate-unit">
+                  for {nights} night{nights > 1 ? "s" : ""}
+                </div>
+              )}
             </span>
           </div>
 
@@ -654,9 +676,11 @@ function RateCard({
                 className={`be-rate-option-price be-member-price${animating ? " be-unlocking-flash" : ""}`}
               >
                 &#8377;{formatMoney(memberTotals.totalCartValue)}
-                <div className="be-rate-unit">
-                  for {nights} night{nights > 1 ? "s" : ""}
-                </div>
+                {!isDayUse && (
+                  <div className="be-rate-unit">
+                    for {nights} night{nights > 1 ? "s" : ""}
+                  </div>
+                )}
               </span>
             </div>
           )}
@@ -714,6 +738,7 @@ function RoomRow({
   animatingUnlockKey,
   user,
   onOpenDetails,
+  isDayUse,
 }) {
   const gridRef = useRef(null);
   const expandWrapperRef = useRef(null);
@@ -805,7 +830,7 @@ function RoomRow({
               </span>
               <span className="be-room-row-price">
                 {fromPrice != null ? `₹${formatMoney(fromPrice)}` : "—"}
-                <span> / night</span>
+                {!isDayUse && <span> / night</span>}
                 {fromPrice != null && fromPriceIsMemberRate && (
                   <span className="be-member-rate-badge">Member Rate</span>
                 )}
@@ -899,6 +924,7 @@ function RoomRow({
                         ratePlan={ratePlan}
                         adults={adults}
                         nights={nights}
+                        isDayUse={isDayUse}
                         cancellationPolicyPackage={cancellationPolicyPackage}
                         activeTab={activeTabMap[cardKey]}
                         onSetActiveTab={(tab) => onSetActiveTab(cardKey, tab)}
@@ -1834,6 +1860,7 @@ export function StayStep({ onRoomsSelected }) {
               onSelectMember={handleSelectMember}
               animatingUnlockKey={animatingUnlockKey}
               user={user}
+              isDayUse={isDayUse}
               onOpenDetails={setDetailsRoom}
             />
           );

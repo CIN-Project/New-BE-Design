@@ -15,6 +15,7 @@ function DayCell({
   isDateSoldOut,
   isDateDisabled,
   isDateRateLoading,
+  isDayUse,
 }) {
   if (!day) return <span className="be-cal-day be-cal-day--empty" />;
 
@@ -42,8 +43,17 @@ function DayCell({
   // true, so an already-selected date could silently lose its selected
   // background/white text to the disabled/sold-out styling instead —
   // exactly the "faded, hard to see it's selected" bug this fixes.
+  // Day Use: handleDayClick sets rangeEnd to the very next day internally
+  // (the API/rate lookup still needs a 1-night range under the hood), but
+  // there's only ever ONE date a guest is actually picking here — without
+  // this branch, the general range logic below reads that internal
+  // rangeEnd as a real second endpoint and paints both days as a start/end
+  // pair (two half-pills), looking like a 2-night stay was selected
+  // instead of a single date.
   let variant = "";
-  if (startTime && time === startTime) {
+  if (isDayUse) {
+    if (startTime && time === startTime) variant = "selected-single";
+  } else if (startTime && time === startTime) {
     variant = endTime ? "selected-start" : "selected-single";
   } else if (endTime && time === endTime) {
     variant = "selected-end";
@@ -229,6 +239,7 @@ export function RangeCalendar({
                   isDateSoldOut={isDateSoldOut}
                   isDateDisabled={isDateDisabled}
                   isDateRateLoading={isDateRateLoading}
+                  isDayUse={isDayUse}
                 />
               ))}
             </div>

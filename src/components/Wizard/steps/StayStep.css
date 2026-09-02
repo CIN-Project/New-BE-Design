@@ -550,6 +550,24 @@
   margin-top: 1px;
 }
 
+/* Rate inclusions (extractInclusionItems) are a numbered list in the
+   source data itself ("1. 15% discount...", "2. Free Wi-Fi") — a generic
+   checkmark bullet per item (.be-inclusion-check-wrap above, still used
+   elsewhere for genuinely unordered lists) read as if every rate plan had
+   the same handful of generic perks, losing the source's own explicit
+   ordering. This mirrors that width/spacing so the list still aligns the
+   same way, just showing the item's number instead of an icon. */
+.be-inclusion-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-weight: 600;
+  color: var(--be-color-primary, #846836);
+}
+
 .be-rate-card-inclusion-item {
   display: flex;
   align-items: flex-start;
