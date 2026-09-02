@@ -128,7 +128,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
                 CartOverview's sidebar, wired to this form via the `form`
                 attribute. */}
             <DetailStep.GuestDetailsForm onComplete={onComplete} />
-            <AddOnsStep />
+            {/* <AddOnsStep /> */}
           </div>
           <CartOverview
             onModifyRooms={(slotIndex) => {
