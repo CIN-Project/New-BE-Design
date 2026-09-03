@@ -3,6 +3,7 @@
 import { Modal } from "../shared/Modal.js";
 import { GuestsPicker } from "./GuestsPicker.js";
 import { useSearchContext } from "../../context/SearchContext.js";
+import { useStayContext } from "../../context/StayContext.js";
 
 /**
  * "Modify Guests" — reached from the cart sidebar's "Modify Guests" link.
@@ -12,6 +13,21 @@ import { useSearchContext } from "../../context/SearchContext.js";
  */
 export function GuestsModal({ isOpen, onClose }) {
   const search = useSearchContext();
+  const { selectedRoom } = useStayContext();
+
+  // Position-matched to searchRooms, same index pairing DetailStep.jsx uses
+  // between searchRooms and selectedRoom — a slot with no room picked yet
+  // (selectedRoom[idx] undefined, e.g. a freshly added room) gets undefined
+  // here too, so GuestsPicker falls back to its generic 4/3 ceiling with no
+  // message/disabling for that slot specifically.
+  const roomLimits = search.searchRooms.map((_, idx) =>
+    selectedRoom?.[idx]
+      ? {
+          maxAdult: selectedRoom[idx].maxAdult,
+          maxChildren: selectedRoom[idx].maxChildren,
+        }
+      : undefined,
+  );
 
   return (
     <Modal
@@ -29,6 +45,7 @@ export function GuestsModal({ isOpen, onClose }) {
     >
       <GuestsPicker
         rooms={search.searchRooms}
+        roomLimits={roomLimits}
         onAddRoom={search.addSearchRoom}
         onRemoveRoom={search.removeSearchRoom}
         onUpdateGuests={search.updateSearchRoomGuests}

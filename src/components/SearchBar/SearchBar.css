@@ -370,7 +370,7 @@
 .be-remove-room-btn {
   background: transparent;
   border: none;
-  color: #ff5252;
+  color: #1a1a1a;
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -393,6 +393,17 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
+}
+
+/* Shown under a counter the moment it hits its real room-specific max/min
+   (GuestsPicker.jsx, "Modify Guests" popup only — the +/- button is
+   disabled at the same time). Was previously a `*  Maximum N ... allowed`
+   warning on the cart summary page instead, only visible after the guest
+   had already gone over. */
+.be-counter-limit-msg {
+  font-size: 0.68rem;
+  color: #ff5252;
+  line-height: 1.3;
 }
 
 .be-counter-label {

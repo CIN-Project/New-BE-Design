@@ -256,33 +256,18 @@ export function CartOverview({ onModifyRooms }) {
                   // same key since roomId+rateId was all it was keyed on.
                   key={room?.id ?? index}
                 >
-                  {/* Ported from real Amritara's CartOverview.js (~598-622)
-                      — a room picked before a "Modify Dates"/"Modify Guests"
-                      edit can end up over that room's own capacity (e.g. the
-                      guest count went up but the room selection didn't
-                      change, or useRepriceSelectedRooms.js's same-room
-                      reprice kept a room that no longer fits). Purely
-                      informational here; DetailStep.jsx's proceedToPay
-                      enforces the same three limits at submit time so this
-                      can't silently reach payment. */}
-                  {(room?.adults || 0) + (room?.children || 0) > room?.maxGuest && (
-                    <p className="cart-room-limit-warning">
-                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
-                      {room?.maxGuest} guests are allowed
-                    </p>
-                  )}
-                  {room?.adults > room?.maxAdult && (
-                    <p className="cart-room-limit-warning">
-                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
-                      {room?.maxAdult} adults are allowed
-                    </p>
-                  )}
-                  {room?.children > room?.maxChildren && (
-                    <p className="cart-room-limit-warning">
-                      <span className="cart-room-limit-warning-mark">*</span> Maximum{" "}
-                      {room?.maxChildren} children are allowed
-                    </p>
-                  )}
+                  {/* This used to also render a "Maximum N guests/adults/
+                      children are allowed" warning right here whenever a
+                      room ended up over its own capacity (ported from real
+                      Amritara's CartOverview.js ~598-622) — moved to
+                      GuestsPicker.jsx instead (shown inline under the actual
+                      +/- counter, with the button disabled once at the
+                      limit) so the guest sees it at the moment they'd go
+                      over, not as an after-the-fact notice back on this
+                      summary page. DetailStep.jsx's proceedToPay still
+                      enforces the same three limits at submit time
+                      regardless, so an over-capacity room still can't
+                      silently reach payment even if this slipped through. */}
                   <div className="cart-room-row">
                     <div>
                       <p className="cart-room-name">

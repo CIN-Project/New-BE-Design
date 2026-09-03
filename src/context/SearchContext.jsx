@@ -79,16 +79,25 @@ export function useSearchContext() {
     );
   };
 
-  const updateSearchRoomGuests = (id, field, operation) => {
+  // `maxOverride` lets a caller that actually knows this specific room's
+  // real MaxAdult/MaxChildren (GuestsPicker.jsx, only once a real room has
+  // been picked for this slot — see its own roomLimits doc comment) use
+  // that instead of the generic 4/3 ceiling below, which otherwise applies
+  // regardless of what the room actually allows. Without this, a room whose
+  // real max is HIGHER than the generic ceiling (e.g. maxAdult: 6) would
+  // silently refuse to go past 4 even while GuestsPicker's own + button
+  // still showed as enabled (its disabled state is driven by the same real
+  // limit, not this generic one) — clicking it would look like it did
+  // nothing.
+  const updateSearchRoomGuests = (id, field, operation, maxOverride) => {
     ctx.setSearchRooms((rooms) =>
       rooms.map((r) => {
         if (r.id !== id) return r;
         const current = r[field];
+        const max = maxOverride ?? (field === "adults" ? 4 : 3);
         const next =
           operation === "inc"
-            ? field === "adults"
-              ? Math.min(4, current + 1)
-              : Math.min(3, current + 1)
+            ? Math.min(max, current + 1)
             : field === "adults"
               ? Math.max(1, current - 1)
               : Math.max(0, current - 1);
