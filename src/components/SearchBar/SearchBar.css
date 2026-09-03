@@ -217,7 +217,10 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(199, 163, 106, 0.05);
-  z-index: 220;
+  /* See RangeCalendar.css's .be-calendar-modal comment — needs to clear a
+     host page's own fixed header (e.g. bawa-hotels-next's z-index:99999),
+     not just this package's own internal 100-220 layers. */
+  z-index: 100220;
   text-align: left;
   /* Unbounded before — with enough cities/properties this grew taller than
      the viewport and, positioned top:115% off a trigger near the top of a
@@ -307,7 +310,10 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12), 0 0 15px rgba(199, 163, 106, 0.05);
-  z-index: 200;
+  /* See RangeCalendar.css's .be-calendar-modal comment — needs to clear a
+     host page's own fixed header (e.g. bawa-hotels-next's z-index:99999),
+     not just this package's own internal 100-220 layers. */
+  z-index: 100200;
   text-align: left;
   /* Capped so "+ Add More Rooms" (up to 4 rooms) can't grow this past a
      sane height / off the bottom of the viewport — the room list scrolls

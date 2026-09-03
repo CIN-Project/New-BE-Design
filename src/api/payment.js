@@ -76,14 +76,29 @@ export function postUserEnrollment(config, { payload, keyData }) {
  *   shape passed to generateReservationId's caller) — used ONLY for the
  *   signature, not sent as the body.
  * @param {string} keyData - `dbKey=${config.tokenDbKey}`.
+ * @param {string} [formOfPayment] - "pay_now" (default) or "pay_later". The
+ *   one place this package's Pay Now/Pay Later flows (DetailStep.jsx's
+ *   handleSubmit) actually hit a DIFFERENT backend endpoint rather than
+ *   just a different field value: real Amritara's only working Pay Later
+ *   implementation (the newer, currently-active codebase has since disabled
+ *   it entirely) posted reservations to /api/th-payment-request2 — not
+ *   plain /api/th-payment-request, which is what every Pay Now booking
+ *   (both there and here) uses. Whether "2" is a genuinely distinct
+ *   pay-later-aware endpoint or a since-abandoned staging variant isn't
+ *   verifiable from source alone; this matches the one reference
+ *   implementation that actually worked rather than guessing.
  */
 export function postPaymentRequest(
   config,
-  { finalRequestData2, reservationPayload, keyData },
+  { finalRequestData2, reservationPayload, keyData, formOfPayment },
 ) {
+  const path =
+    formOfPayment === "pay_later"
+      ? "/api/th-payment-request2"
+      : "/api/th-payment-request";
   return staahSignedRequest(
     config,
-    "/api/th-payment-request",
+    path,
     { finalRequestData2, keyData },
     { signaturePayload: JSON.stringify(JSON.stringify(reservationPayload)) },
   );

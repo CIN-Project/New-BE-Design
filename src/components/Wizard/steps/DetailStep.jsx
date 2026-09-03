@@ -400,7 +400,26 @@ export function GuestDetailsForm({ onComplete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (Pay Now clicked)", { selectedPropertyId });
+    // CartOverview.jsx renders two submit buttons for this same form (Pay
+    // Now / Pay Later), distinguished only by their name/value pair — the
+    // submit event's `submitter` (the actual <button> that triggered it,
+    // even though both live outside the <form> via the HTML form="..."
+    // attribute) is how a single onSubmit handler tells which one was
+    // clicked. Read off e.nativeEvent rather than e directly — React's
+    // SyntheticEvent doesn't reliably forward this newer DOM property.
+    // Real Amritara's two flows (DetailStep.js's handleSubmit vs
+    // openPayLater) are identical up through reservation creation —
+    // payment_type is "Channel Collect" and payment_required "0" either
+    // way — and diverge only in the one form_of_payment value sent to the
+    // payment-redirect step below, which is exactly what this does too.
+    const formOfPayment =
+      e.nativeEvent?.submitter?.value === "pay_later"
+        ? "pay_later"
+        : "pay_now";
+    console.log(
+      `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
+      { selectedPropertyId },
+    );
     if (proceedToPay(selectedRoom) !== "success") {
       console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — proceedToPay check failed (room/guest mismatch)");
       return;
@@ -725,11 +744,15 @@ export function GuestDetailsForm({ onComplete }) {
           .join(", "),
       };
 
-      console.log("[PAYMENT-FLOW] DetailStep.jsx: calling postPaymentRequest (/api/th-payment-request)", { reservationId, amount: finalRequestData2.amount });
+      console.log(
+        `[PAYMENT-FLOW] DetailStep.jsx: calling postPaymentRequest (${formOfPayment === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"})`,
+        { reservationId, amount: finalRequestData2.amount, formOfPayment },
+      );
       const paymentResp = await postPaymentRequest(config, {
         finalRequestData2,
         reservationPayload: payload,
         keyData: finalKeyData,
+        formOfPayment,
       });
       console.log("[PAYMENT-FLOW] DetailStep.jsx: postPaymentRequest result", { paymentResp });
       // Ported from DetailStep.js's th-payment-request success/failure
@@ -800,10 +823,17 @@ export function GuestDetailsForm({ onComplete }) {
         reservation_id: reservationId,
         amount: grandTotal,
         keyData: resolvedKeyData,
+        // The one field that actually distinguishes the two flows for the
+        // backend — see this function's top comment. Ported from real
+        // Amritara's finalRequestData.form_of_payment (DetailStep.js's
+        // handleSubmit/openPayLater), which this package's paramvalues
+        // never carried at all until now (both buttons would otherwise be
+        // indistinguishable to the payment-redirect endpoint).
+        form_of_payment: formOfPayment,
       });
 
       onComplete?.();
-      console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, staahBaseUrl: config?.staahBaseUrl, paramvalues });
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, formOfPayment, staahBaseUrl: config?.staahBaseUrl, paramvalues });
       // Navigates away from the app (STAAH hosted payment page) — call last.
       redirectToPayment(config, paramvalues, resolvedKeyData);
     } catch (err) {

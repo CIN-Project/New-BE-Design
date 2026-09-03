@@ -498,13 +498,31 @@ export function CartOverview({ onModifyRooms }) {
         {/* Submits the guest-details form (Wizard.jsx's step 2) from outside
             it via the HTML form attribute — there's no separate card-entry
             step to navigate to first, matching real Amritara's "Confirm &
-            Pay" flow (see DetailStep.jsx). */}
+            Pay" flow (see DetailStep.jsx). Both buttons share the same
+            form/handler; DetailStep.jsx's handleSubmit tells them apart via
+            e.submitter (the actual button clicked), keyed off name/value —
+            same reservation-creation call either way, only the
+            form_of_payment sent to the payment redirect differs. */}
         <button
           type="submit"
           form="be-guest-details-form"
+          name="formOfPayment"
+          value="pay_now"
           className="cart-pay-btn"
         >
           Pay &amp; Confirm Booking <span aria-hidden="true">&rarr;</span>
+        </button>
+        <div className="cart-pay-divider" role="separator">
+          <span>OR</span>
+        </div>
+        <button
+          type="submit"
+          form="be-guest-details-form"
+          name="formOfPayment"
+          value="pay_later"
+          className="cart-pay-later-btn"
+        >
+          Pay Later
         </button>
       </div>
 

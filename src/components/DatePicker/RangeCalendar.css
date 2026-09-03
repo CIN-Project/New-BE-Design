@@ -13,7 +13,13 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), 0 0 25px rgba(199, 163, 106, 0.05);
-  z-index: 210;
+  /* Needs to clear a host page's own fixed header, which can sit at a very
+     high z-index of its own (e.g. bawa-hotels-next's is 99999) — 210 was
+     only ever high enough relative to this package's own internal layers
+     (see the 100-220 scheme in SearchBar.css), never against a consuming
+     site's chrome. Matches the tier BookingFlow.css/ConfirmStep.css already
+     use for the same reason. */
+  z-index: 100210;
   text-align: left;
 }
 
@@ -60,11 +66,20 @@
   cursor: pointer;
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   transition: all 0.3s ease;
+}
+
+/* The chevron polyline has fill:none, so most of its 16x16 box is
+   unpainted — without this, some browsers only register a click on the
+   drawn stroke itself and let clicks on the rest of the circle fall
+   through, instead of the whole button being clickable. */
+.be-cal-nav-btn svg {
+  pointer-events: none;
 }
 
 .be-cal-nav-btn:hover {
