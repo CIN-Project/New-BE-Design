@@ -742,6 +742,11 @@ export function GuestDetailsForm({ onComplete }) {
         Package: (selectedRoom || [])
           .map((room) => room?.roomPackage)
           .join(", "),
+        // Ported from DetailStep.js:1556 — real Amritara's only working Pay
+        // Later implementation sends this on finalRequestData2 itself (the
+        // body actually posted to th-payment-request2), not just on the
+        // later redirect-step paramvalues.
+        form_of_payment: formOfPayment,
       };
 
       console.log(
