@@ -987,6 +987,7 @@ function RoomSlotStepper({
   activeIndex,
   onSelectSlot,
   isAdvancing,
+  onContinue,
 }) {
   const rooms = selectedRoom || [];
   if (rooms.length < 2) return null;
@@ -1027,6 +1028,26 @@ function RoomSlotStepper({
             </button>
           );
         })}
+        {/* Only reachable in this "editing an existing booking" branch —
+            arrived here via the cart sidebar's "Modify Rooms"/per-room
+            "Modify" link (Wizard.jsx's onModifyRooms), so every room slot
+            already has a real pick from before. Lets the guest bail back
+            out to the booking summary without being forced through
+            onRoomsSelected's normal "every slot filled" completion path —
+            whether they changed zero rooms (changed their mind) or just one
+            of several, this is the same changeStep(2) Wizard.jsx already
+            calls once selection naturally completes, so the summary always
+            reflects whatever's currently picked, updated or not. */}
+        {onContinue && (
+          <button
+            type="button"
+            className="be-room-slot-continue-btn"
+            onClick={onContinue}
+          >
+            CONTINUE
+            <span className="be-arrow">&#8594;</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -1786,6 +1807,7 @@ export function StayStep({ onRoomsSelected }) {
           activeIndex={currentRoomIndex}
           onSelectSlot={handleSelectSlot}
           isAdvancing={advancingToIndex !== null}
+          onContinue={onRoomsSelected}
         />
       )}
 

@@ -842,6 +842,37 @@
   background: rgba(132, 104, 54, 0.06);
 }
 
+/* Sits at the far right of the same flex row as the room tabs (.be-room-
+   slot-tabs' own gap handles spacing from the last tab; this just pushes it
+   off to the end instead of sitting inline right after them). */
+.be-room-slot-continue-btn {
+  margin-left: auto;
+  padding: 0.55rem 1.3rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--be-color-primary, #846836);
+  background: var(--be-color-primary, #846836);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: 0.12em;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.be-room-slot-continue-btn:hover {
+  background: var(--be-color-primary-hover, #bfa15f);
+  border-color: var(--be-color-primary-hover, #bfa15f);
+}
+
+.be-room-slot-continue-btn .be-arrow {
+  margin-left: 8px;
+  display: inline-block;
+}
+
 .be-room-slot-step-wrap {
   display: flex;
   align-items: center;
