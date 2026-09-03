@@ -54,7 +54,7 @@ export function GuestsPicker({ rooms, onAddRoom, onRemoveRoom, onUpdateGuests })
           </div>
         </div>
       ))}
-      <button type="button" className="be-add-room-btn" onClick={onAddRoom} disabled={rooms.length >= 4}>
+      <button type="button" className="be-add-room-btn" onClick={onAddRoom}>
         + Add More Rooms
       </button>
     </>

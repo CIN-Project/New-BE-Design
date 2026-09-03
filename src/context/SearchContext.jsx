@@ -67,11 +67,10 @@ export function useSearchContext() {
   };
 
   const addSearchRoom = () => {
-    ctx.setSearchRooms((rooms) =>
-      rooms.length >= 4
-        ? rooms
-        : [...rooms, { id: Date.now(), adults: 2, children: 0 }],
-    );
+    ctx.setSearchRooms((rooms) => [
+      ...rooms,
+      { id: Date.now(), adults: 2, children: 0 },
+    ]);
   };
 
   const removeSearchRoom = (id) => {

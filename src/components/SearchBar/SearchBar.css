@@ -315,11 +315,12 @@
      not just this package's own internal 100-220 layers. */
   z-index: 100200;
   text-align: left;
-  /* Capped so "+ Add More Rooms" (up to 4 rooms) can't grow this past a
-     sane height / off the bottom of the viewport — the room list scrolls
-     internally instead, while the Done footer below stays pinned and
-     always visible, same layout pattern as the cart sidebar
-     (CartOverview.css's .cart-sidebar / .cart-body-scroll / footer). */
+  /* "+ Add More Rooms" has no cap on room count — capped here instead so
+     an arbitrarily long room list can't grow this past a sane height / off
+     the bottom of the viewport. The room list scrolls internally, while the
+     Done footer below stays pinned and always visible, same layout pattern
+     as the cart sidebar (CartOverview.css's .cart-sidebar /
+     .cart-body-scroll / footer). */
   max-height: min(480px, 50vh);
   display: flex;
   flex-direction: column;
