@@ -1118,6 +1118,8 @@ export function StayStep({ onRoomsSelected }) {
     isDayUse,
     preselectRoomName,
     setPreselectRoomName,
+    searchTrigger,
+    commitSearch,
   } = useSearchContext();
   const { promoCodeContext } = useCartContext();
   const {
@@ -1230,8 +1232,38 @@ export function StayStep({ onRoomsSelected }) {
   const inventoryRoomsRef = useRef(null);
   const hasSearchedRef = useRef(false);
 
-  // Fetch room content + live rates for the current property/date
-  // range/promo code (two separate APIs — see the merge note above).
+  // Converts "valid search criteria first became available" (direct URL
+  // hydration with a propertyId/dates already in the query string, or
+  // landing here right after a homepage search) into the same explicit
+  // commitSearch() signal an actual Search-button click sends — the only
+  // thing the fetch effect below actually listens for. Without this, the
+  // very first room list would never load at all (nothing else ever calls
+  // commitSearch() before the guest has anything to search FOR yet).
+  // hasSearchedRef guards it to fire only once: after that first real
+  // fetch runs, this effect keeps re-running on every subsequent live edit
+  // (it depends on the same live values SearchBar.jsx writes to
+  // immediately) but no longer does anything, since that's exactly the
+  // guest-still-mid-edit state that must NOT re-trigger a fetch on its own.
+  useEffect(() => {
+    if (hasSearchedRef.current) return;
+    if (!selectedPropertyId || !checkInParam || !checkOutParam) return;
+    commitSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPropertyId, checkInParam, checkOutParam]);
+
+  // Fetch room content + live rates — runs ONLY off searchTrigger (bumped
+  // by commitSearch(), see its own doc comment and the bootstrap effect
+  // above), not directly off selectedPropertyId/checkInParam/checkOutParam/
+  // promoCodeContext even though it reads all of them below: the wizard's
+  // own compact recap SearchBar writes every one of those into context
+  // immediately as the guest picks each field, well before they've clicked
+  // Search — depending on them directly used to silently swap out the room
+  // list the guest was already looking at mid-edit, e.g. the instant a
+  // different location was picked. Whatever's live in context at the
+  // moment searchTrigger actually changes is what gets used here, which is
+  // correct either way: on the bootstrap fire, that's whatever just
+  // hydrated in; on a real Search click, that's whatever the guest just
+  // confirmed.
   useEffect(() => {
     if (!selectedPropertyId || !checkInParam || !checkOutParam) return;
     let cancelled = false;
@@ -1296,10 +1328,7 @@ export function StayStep({ onRoomsSelected }) {
     config.apiKeyGetRate,
     config.staahBaseUrl,
     config.staahSignatureSecret,
-    selectedPropertyId,
-    checkInParam,
-    checkOutParam,
-    promoCodeContext,
+    searchTrigger,
     retryTick,
   ]);
 

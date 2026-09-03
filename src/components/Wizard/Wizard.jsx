@@ -24,6 +24,15 @@ import "./Wizard.css";
 export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
   const { setActiveRoomSlotIndex } = useStayContext();
+  // Bumped by CartOverview's "Modify Property" link, consumed once by
+  // SearchBar's own autoOpenDestinationSignal effect to open specifically
+  // the Location dropdown once step 1 mounts — not the calendar or guests,
+  // both of which already have their own dedicated modals reachable
+  // straight from the cart sidebar ("Modify Dates"/"Modify Guests") without
+  // ever needing to land back on step 1 at all. A counter (not a boolean)
+  // so clicking "Modify Property" again after already being on step 1
+  // still re-fires the effect even though the signal was never "reset".
+  const [modifyPropertySignal, setModifyPropertySignal] = useState(0);
   // Active across every step (not just step 1) — the cart sidebar's own
   // "Modify Dates"/"Modify Guests"/promo controls render on step 2 too.
   // Sync must run for the guest-limit warnings (CartOverview.jsx) and the
@@ -110,7 +119,12 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
           internal step and stayed visible on every step — moved here so it
           can actually hide itself past step 1. */}
       {step === 1 && (onSearch || onBack) && (
-        <SearchBar variant="compact" onSearch={onSearch} onBack={onBack} />
+        <SearchBar
+          variant="compact"
+          onSearch={onSearch}
+          onBack={onBack}
+          autoOpenDestinationSignal={modifyPropertySignal}
+        />
       )}
 
       <StepIndicator step={step} onBack={() => changeStep(1)} />
@@ -137,6 +151,10 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
               // room, mirroring Filterbar.js's openPropertyPage(room.id).
               if (typeof slotIndex === "number")
                 setActiveRoomSlotIndex(slotIndex);
+              changeStep(1);
+            }}
+            onModifyProperty={() => {
+              setModifyPropertySignal((n) => n + 1);
               changeStep(1);
             }}
           />

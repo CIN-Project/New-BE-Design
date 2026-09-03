@@ -9,7 +9,7 @@ export function PromoField({ value, onChange }) {
       </svg>
       <div className="be-form-field-inputs">
         <label>Promo Code</label>
-        <input type="text" placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
+        <input id="be-promo-input" type="text" placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );

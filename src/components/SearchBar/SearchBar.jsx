@@ -51,6 +51,13 @@ export function SearchBar({
   // every dropdown open-down here (same override isCompact already gets)
   // fixes it without touching the desktop/inline-mobile checkSpace logic.
   alwaysOpenDown = false,
+  // Bumped by Wizard.jsx whenever CartOverview's "Modify Property" link is
+  // clicked — see Wizard.jsx's own doc comment on modifyPropertySignal. A
+  // counter, not a boolean, specifically so a second "Modify Property"
+  // click while already sitting on step 1 still re-opens the dropdown (a
+  // boolean that's already `true` wouldn't change, so the effect below
+  // wouldn't re-fire).
+  autoOpenDestinationSignal,
 }) {
   const config = useConfig();
   const search = useSearchContext();
@@ -74,6 +81,23 @@ export function SearchBar({
   const destModalRef = useRef(null);
   const calModalRef = useRef(null);
   const guestsModalRef = useRef(null);
+  // Set by openOnly right before it opens a dropdown, consumed once by the
+  // very next handleClickOutside run. Needed because handleClickOutside is
+  // a raw `document.addEventListener` listener, not a React handler — it
+  // fires AFTER React's own onClick (and the synchronous re-render/commit
+  // that follows it) as the SAME click event keeps bubbling up to
+  // `document`. Without this, any dropdown opened as a side effect of
+  // clicking something that ISN'T that dropdown's own trigger (e.g.
+  // handleSelectProperty opening the calendar off a destination-option
+  // click, or handleChangeRange opening guests off a calendar-day click)
+  // gets immediately closed again by this same click: the click target
+  // doesn't match the newly-opened dropdown's own trigger id, so
+  // handleClickOutside reads it as an outside click and closes it right
+  // back down before the guest ever sees it open. A plain trigger click
+  // (e.g. clicking the Location field itself) doesn't need this — its own
+  // trigger-id check in handleClickOutside already exempts it — but it's
+  // harmless to set unconditionally on every openOnly call regardless.
+  const suppressNextOutsideCloseRef = useRef(false);
 
   const [showDestModal, setShowDestModal] = useState(false);
   const [showCalModal, setShowCalModal] = useState(false);
@@ -100,6 +124,10 @@ export function SearchBar({
 
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (suppressNextOutsideCloseRef.current) {
+        suppressNextOutsideCloseRef.current = false;
+        return;
+      }
       if (
         destModalRef.current &&
         !destModalRef.current.contains(e.target) &&
@@ -148,7 +176,27 @@ export function SearchBar({
     setShowCalModal(false);
     setShowGuestsModal(false);
     setter(true);
+    suppressNextOutsideCloseRef.current = true;
   };
+
+  // "Modify Property" (CartOverview.jsx, via Wizard.jsx's
+  // modifyPropertySignal) — auto-opens ONLY the Location dropdown once step
+  // 1 mounts, not the calendar or guests, both of which already have their
+  // own direct "Modify Dates"/"Modify Guests" entry points from the cart
+  // sidebar without ever routing back through here. Guarded so the initial
+  // render (signal starts at 0/undefined) never auto-opens anything on its
+  // own — only an actual increment does.
+  const isFirstAutoOpenRender = useRef(true);
+  useEffect(() => {
+    if (isFirstAutoOpenRender.current) {
+      isFirstAutoOpenRender.current = false;
+      return;
+    }
+    if (autoOpenDestinationSignal) {
+      openOnly(setShowDestModal, 350);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenDestinationSignal]);
 
   const handleSelectProperty = (property) => {
     // staahPropertyId (not the CMS propertyId) is what every rate/room/
@@ -161,7 +209,16 @@ export function SearchBar({
     search.setSelectedPropertyName(property.propertyName ?? property.name);
     search.setSelectedPropertyPhone(property.phone ?? null);
     search.setSelectedCityId(property.cityId ?? null);
-    setShowDestModal(false);
+    // Guided flow: picking a location advances straight into the calendar
+    // instead of leaving the guest to notice and open it themselves —
+    // openOnly already closes every other dropdown (including this one)
+    // before opening the target, so this is the same "close everything,
+    // open just this" used everywhere else (e.g. the calendar trigger's own
+    // onOpen). Unconditional on every call means picking a *different*
+    // location later — even mid-flow, with the calendar already open and
+    // dates half-picked — closes whatever's open and restarts this same
+    // hand-off from scratch, exactly like a fresh location pick would.
+    openOnly(setShowCalModal, 460);
   };
 
   // Day Use / Overnight Stay toggle — ported from Filterbar.js's day-use
@@ -187,7 +244,12 @@ export function SearchBar({
   const handleChangeRange = (start, end) => {
     if (end) {
       search.setSelectedDates(start, end);
-      setShowCalModal(false);
+      // Continues the same guided hand-off handleSelectProperty starts
+      // (location -> calendar) one step further: a completed date range
+      // advances straight into the guests/rooms picker instead of leaving
+      // the guest to open it themselves. openOnly closes the calendar (and
+      // everything else) before opening this, same as every other step.
+      openOnly(setShowGuestsModal, 350);
     } else {
       search.setSelectedStartDate(start);
       search.setSelectedEndDate(null);
@@ -240,6 +302,12 @@ export function SearchBar({
       isDayUse: search.isDayUse,
       dayUseArrivalTime: search.dayUseArrivalTime,
     });
+    // The one explicit "run the search now" signal StayStep.jsx's room
+    // fetch actually waits for — see SearchContext's searchTrigger doc
+    // comment. Without this, this button wouldn't even need to exist for
+    // the wizard's own compact recap bar: every field write already lands
+    // in context immediately regardless.
+    search.commitSearch();
     // Every search click starts room selection over from scratch — clears
     // whatever room/rate was picked on every slot (keeping only the slot's
     // id/adults/children, i.e. the same empty shape
@@ -469,7 +537,15 @@ export function SearchBar({
           onUpdateGuests={search.updateSearchRoomGuests}
           isOpen={showGuestsModal}
           onToggle={() => openOnly(setShowGuestsModal, 350)}
-          onDone={() => setShowGuestsModal(false)}
+          onDone={() => {
+            setShowGuestsModal(false);
+            // Last leg of the guided hand-off (location -> calendar ->
+            // guests -> here): closing the guests picker moves keyboard
+            // focus into Promo Code, the one field left before Search — the
+            // guest doesn't have to click into it themselves, just type or
+            // move straight to Search. See PromoField.jsx's id.
+            document.getElementById("be-promo-input")?.focus();
+          }}
           modalRef={guestsModalRef}
           openUpwards={openUpwards}
         />

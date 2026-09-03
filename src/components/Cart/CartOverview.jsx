@@ -74,7 +74,7 @@ function ChevronIcon({ open }) {
  * function DetailStep.jsx's real payment submission uses, so what's shown
  * here and what actually gets charged can never drift apart.
  */
-export function CartOverview({ onModifyRooms }) {
+export function CartOverview({ onModifyRooms, onModifyProperty }) {
   const {
     selectedPropertyName,
     selectedStartDate,
@@ -168,7 +168,7 @@ export function CartOverview({ onModifyRooms }) {
         <div className="cart-section">
           <div className="cart-section-header">
             <h5 className="cart-section-title">Selected Property</h5>
-            <span style={modifyLinkStyle} onClick={onModifyRooms}>
+            <span style={modifyLinkStyle} onClick={onModifyProperty}>
               Modify
             </span>
           </div>

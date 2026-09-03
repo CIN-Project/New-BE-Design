@@ -34,6 +34,20 @@ const initialState = {
   // StayStep once it's acted on it (matched or not), so it never re-applies
   // itself against a later, unrelated room list.
   preselectRoomName: null,
+  // Bumped only by commitSearch() — StayStep.jsx's room-content/rate fetch
+  // depends on THIS, not on selectedPropertyId/selectedStartDate/
+  // selectedEndDate directly, specifically so that live-editing the wizard's
+  // own compact recap SearchBar (picking a different location/dates there)
+  // no longer silently refetches and swaps out the room list the guest is
+  // already looking at. Those context fields still update immediately as
+  // each field is picked (CartOverview, DetailStep, the field displays
+  // themselves, etc. all need that live value) — this only decouples WHEN
+  // the room list itself refreshes: automatically the first time valid
+  // criteria appear (initial URL hydration or a completed homepage search,
+  // both funneled through here via StayStep's own bootstrap effect — see
+  // its hasSearchedRef comment), and after that, only again on an explicit
+  // Search click (SearchBar.jsx's handleSubmit calls commitSearch()).
+  searchTrigger: 0,
 };
 
 const { Provider, useDomainContext } = createDomainContext(
@@ -106,6 +120,12 @@ export function useSearchContext() {
     );
   };
 
+  // See searchTrigger's own doc comment on initialState above — the one
+  // explicit "the guest actually wants this search to run now" signal.
+  const commitSearch = () => {
+    ctx.setSearchTrigger((prev) => prev + 1);
+  };
+
   // Matches real Amritara's RoomManager.js (~162) exactly — always
   // "Adult"/"Room" singular regardless of count, and children always shown
   // (never hidden at 0) rather than folded into a combined "Guests" figure.
@@ -123,5 +143,6 @@ export function useSearchContext() {
     removeSearchRoom,
     updateSearchRoomGuests,
     getSearchGuestsSummary,
+    commitSearch,
   };
 }
