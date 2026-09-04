@@ -4,6 +4,8 @@ import {
   redirectToPayment as redirectToPaymentRaw,
   encrypt,
   encryptHash,
+  decrypt,
+  decryptHashFunction,
 } from "../utils/paymentHash.js";
 
 /**
@@ -148,4 +150,4 @@ export function redirectToPayment(config, paramvalues, keydata) {
   return redirectToPaymentRaw(paramvalues, keydata, staahBaseUrl);
 }
 
-export { encrypt, encryptHash };
+export { encrypt, encryptHash, decrypt, decryptHashFunction };

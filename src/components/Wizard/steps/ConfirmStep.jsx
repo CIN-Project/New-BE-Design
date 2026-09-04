@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useConfig } from "../../../config/configContext.js";
 import { verifyToken } from "../../../api/rates.js";
-import { confirmPayment } from "../../../api/payment.js";
+import { confirmPayment, decryptHashFunction } from "../../../api/payment.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./ConfirmStep.css";
 
@@ -31,11 +31,14 @@ const BOOKING_DATA_KEY = "be_bookingData";
  *     the raw gateway echo from step 2/3 alone.
  *
  * Expected be_paymentResponse shape (verified against the real app):
- *   { result: [ { responseJson: {
+ *   { result: [ { form_of_payment: "pay_now" | "pay_later", responseJson: {
  *       status: "success" | "error" | "paylater" | ...,
- *       reservation_id, amount, currency, partner_id,
+ *       reservation_id, amount, currency, partner_id, hash_key,
  *       pg_transaction_id, ipn_flag, error_msg
  *   } } ] }
+ * For pay_later, responseJson.hash_key is decrypted (config.partnerKey)
+ * into card_name/card_type/card_exp and merged onto responseJson — see the
+ * pay_later branch below.
  *
  * Expected be_bookingData shape (agreed with DetailStep.GuestDetailsForm —
  * matches real ConfirmStep.js's own BookingDetails field access exactly):
@@ -74,6 +77,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // reports success — never derived from the raw gateway echo alone.
   const [reservationStatus, setReservationStatus] = useState(null);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+  const [formOfPayment, setFormOfPayment] = useState("")
   // createPortal needs a real document to exist first — false during SSR
   // and the very first client render, true from the next tick onward
   // (matches SearchBar.jsx's own Toaster portal, same reasoning).
@@ -84,7 +88,10 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     let cancelled = false;
 
     async function resolvePaymentResult() {
-      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: mounted, resolving payment result", { fullUrl: window.location.href });
+      console.log(
+        "[PAYMENT-FLOW] ConfirmStep.jsx: mounted, resolving payment result",
+        { fullUrl: window.location.href },
+      );
 
       let rawResponse = null;
 
@@ -93,16 +100,27 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       } catch {
         rawResponse = null;
       }
-      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: existing sessionStorage payment response", { hadRawResponse: Boolean(rawResponse), rawResponse });
+      console.log(
+        "[PAYMENT-FLOW] ConfirmStep.jsx: existing sessionStorage payment response",
+        { hadRawResponse: Boolean(rawResponse), rawResponse },
+      );
 
-      const tokenKey = new URLSearchParams(window.location.search).get("tokenKey");
-      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: tokenKey from URL", { tokenKey });
+      const tokenKey = new URLSearchParams(window.location.search).get(
+        "tokenKey",
+      );
+      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: tokenKey from URL", {
+        tokenKey,
+      });
 
       if (tokenKey) {
         try {
-          console.log("[PAYMENT-FLOW] ConfirmStep.jsx: calling verifyToken (/api/verify-token)...");
+          console.log(
+            "[PAYMENT-FLOW] ConfirmStep.jsx: calling verifyToken (/api/verify-token)...",
+          );
           const result = await verifyToken(config, tokenKey);
-          console.log("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken SUCCEEDED", { result });
+          console.log("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken SUCCEEDED", {
+            result,
+          });
           rawResponse = JSON.stringify(result);
           try {
             window.sessionStorage.setItem(PAYMENT_RESPONSE_KEY, rawResponse);
@@ -110,15 +128,89 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
             // sessionStorage unavailable (private mode, SSR edge cases) - non-fatal.
           }
         } catch (err) {
-          console.error("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken FAILED — will fall back to any stored response, or show pending/failure state", err);
+          console.error(
+            "[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken FAILED — will fall back to any stored response, or show pending/failure state",
+            err,
+          );
         }
       }
 
       if (cancelled) return;
 
-      const parsedResponseJson = parsePaymentResponse(rawResponse);
-      const parsedBookingData = parseBookingData(safeSessionStorageGet(BOOKING_DATA_KEY));
-      console.log("[PAYMENT-FLOW] ConfirmStep.jsx: parsed gateway response + booking data", { parsedResponseJson, hasBookingData: Boolean(parsedBookingData) });
+      const parsedResponseJsonResp = parsePaymentResponse(rawResponse);
+      const resultEntry = parsedResponseJsonResp?.[0] || null;
+      const parsedResponseJson = resultEntry?.responseJson || null;
+      setFormOfPayment(resultEntry?.form_of_payment);
+
+      // Pay-later bookings never go through the real gateway, so STAAH
+      // doesn't return real card details — instead it echoes them back
+      // encrypted on responseJson.hash_key. Pay-now bookings already have
+      // real paymentcarddetail from the gateway itself, so this only ever
+      // runs for pay_later. Ported from Amritara's ConfirmStep.js
+      // (~196-219): decrypt via config.partnerKey and merge the result
+      // both onto responseJson (card_name/card_type/card_exp — what this
+      // package's own state/receipt/CMS-persist below all read) and, when
+      // present, onto the nested reservationJson.reservations.reservation[0]
+      // .paymentcarddetail (kept defensive/optional since this package's
+      // verify-token response hasn't been confirmed to carry that nested
+      // shape the way Amritara's does).
+      if (
+        resultEntry?.form_of_payment === "pay_later" &&
+        parsedResponseJson?.partner_id &&
+        parsedResponseJson?.hash_key
+      ) {
+        if (config?.partnerKey) {
+          try {
+            const decryptedData = decryptHashFunction(
+              parsedResponseJson.partner_id,
+              config.partnerKey,
+              parsedResponseJson.hash_key,
+            );
+            console.log(
+              "[PAYMENT-FLOW] ConfirmStep.jsx: pay_later card details decrypted",
+              { decryptedData },
+            );
+            if (decryptedData) {
+              parsedResponseJson.card_name = decryptedData?.card_name;
+              parsedResponseJson.card_type = decryptedData?.card_type;
+              parsedResponseJson.card_exp = decryptedData?.card_exp;
+
+              const reservation =
+                resultEntry?.reservationJson?.reservations?.reservation?.[0];
+              if (reservation) {
+                reservation.paymentcarddetail =
+                  reservation.paymentcarddetail || {};
+                reservation.paymentcarddetail.CardHolderName =
+                  decryptedData?.card_name;
+                reservation.paymentcarddetail.CardType =
+                  decryptedData?.card_type;
+                reservation.paymentcarddetail.ExpireDate =
+                  decryptedData?.card_exp;
+              }
+            }
+          } catch (err) {
+            console.error(
+              "[PAYMENT-FLOW] ConfirmStep.jsx: pay_later card detail decrypt FAILED (non-fatal)",
+              err,
+            );
+          }
+        } else {
+          console.warn(
+            "[booking-engine-new] pay_later card details not decrypted — config.partnerKey is not set. Pass it via <BookingEngineProvider config={{ partnerKey: \"...\" }}>.",
+          );
+        }
+      }
+
+      const parsedBookingData = parseBookingData(
+        safeSessionStorageGet(BOOKING_DATA_KEY),
+      );
+      console.log("parsedBookingData", parsedBookingData);
+      console.log(
+        "[PAYMENT-FLOW] ConfirmStep.jsx: parsed gateway response + booking data",
+        { parsedResponseJson, hasBookingData: Boolean(parsedBookingData) },
+      );
+
+      // setFormOfPayment
 
       setResponseJson(parsedResponseJson);
       setBookingData(parsedBookingData);
@@ -130,26 +222,40 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       // "success" — the gateway's own status flag isn't authoritative here,
       // this call is.
       if (!parsedResponseJson) {
-        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: NO gateway response resolved (no tokenKey AND no stored session data) — showing pending/failure state, confirmPayment never called");
+        console.log(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: NO gateway response resolved (no tokenKey AND no stored session data) — showing pending/failure state, confirmPayment never called",
+        );
         return;
       }
 
       setConfirming(true);
       try {
         const keyData = config?.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "";
-        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: calling confirmPayment (/api/payment/confirm)...", { rawStatus: parsedResponseJson?.status });
+        console.log(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: calling confirmPayment (/api/payment/confirm)...",
+          { rawStatus: parsedResponseJson?.status },
+        );
         const confirmResp = await confirmPayment(config, {
           responseObject: parsedResponseJson,
           keyData,
         });
-        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment result", { confirmResp });
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment result", {
+          confirmResp,
+        });
         if (cancelled) return;
 
-        const confirmedSuccess = confirmResp?.errorMessage === "success";
-        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: FINAL reservationStatus decided", { confirmedSuccess, errorMessage: confirmResp?.errorMessage });
+        const confirmedSuccess =
+          confirmResp?.result?.[0]?.confirmData?.errorMessage === "success";
+        console.log(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: FINAL reservationStatus decided",
+          { confirmedSuccess, errorMessage: confirmResp?.errorMessage },
+        );
         setReservationStatus(confirmedSuccess ? "success" : "failed");
 
-        const details = parseBookingData(confirmResp?.result?.[0]?.bookingDetailsJson);
+        const details = parseBookingData(
+          confirmResp?.result?.[0]?.confirmData?.result?.[0]
+            ?.bookingDetailsJson,
+        );
         setConfirmedBookingData(details);
 
         // Ported from ConfirmStep.js's handleConfirm (~251-329) — real's
@@ -168,10 +274,17 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
           // Optional/secondary: persist the confirmed booking server-side.
           // Fire-and-forget — the receipt is already sourced from the
           // verified confirm response, so a failure here shouldn't block it.
-          postBookingResponse(config, parsedResponseJson, details || parsedBookingData);
+          postBookingResponse(
+            config,
+            parsedResponseJson,
+            details || parsedBookingData,
+          );
         }
       } catch (err) {
-        console.error("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment call THREW — treating as failed", err);
+        console.error(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment call THREW — treating as failed",
+          err,
+        );
         if (!cancelled) setReservationStatus("failed");
         // postBookingWidged(config, {
         //   ctaName: "Reservation post",
@@ -226,6 +339,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
 
     content = isSuccess ? (
       <SuccessReceipt
+        formOfPayment={formOfPayment}
         responseJson={responseJson}
         bookingData={effectiveBookingData}
         homeUrl={homeUrl}
@@ -258,7 +372,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   );
 }
 
-function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
+function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPayment }) {
   const reservationId = responseJson?.reservation_id || "N/A";
   const amount = responseJson?.amount ?? bookingData?.totalPrice;
   const currency = responseJson?.currency || "INR";
@@ -267,18 +381,23 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
   // guaranteed-reservation flow, as distinct from a prepaid gateway charge
   // — there's no separate payment-method field in the gateway response to
   // read this off directly.
-  const isPayAtHotel = responseJson?.status === "paylater";
+  const isPayAtHotel = formOfPayment === "pay_later";
   const transactionRef = responseJson?.pg_transaction_id;
 
   const formData = bookingData?.formData;
   const rooms = bookingData?.selectedRoom || [];
   const addonsText = formatList(bookingData?.selectedAddonList, (addon) =>
-    typeof addon === "string" ? addon : addon?.AddonName || addon?.name || ""
+    typeof addon === "string" ? addon : addon?.AddonName || addon?.name || "",
   );
-  const guestName = [formData?.title, formData?.firstName, formData?.lastName].filter(Boolean).join(" ");
+  const guestName = [formData?.title, formData?.firstName, formData?.lastName]
+    .filter(Boolean)
+    .join(" ");
   const guestEmail = formData?.email || "";
   const guestPhone = formData?.phone || "";
-  const nights = calcNights(bookingData?.selectedStartDate, bookingData?.selectedEndDate);
+  const nights = calcNights(
+    bookingData?.selectedStartDate,
+    bookingData?.selectedEndDate,
+  );
 
   // The "be-printing-voucher" class (see ConfirmStep.css's own comment on
   // its @media print rules) is what actually confines the print output to
@@ -298,7 +417,9 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
   return (
     <div className="be-voucher-card">
       <div className="be-voucher-header">
-        <h1 className="be-voucher-brand">{siteName || bookingData?.property?.PropertyName || "Hotel Booking"}</h1>
+        <h1 className="be-voucher-brand">
+          {siteName || bookingData?.property?.PropertyName || "Hotel Booking"}
+        </h1>
         <p className="be-voucher-subtitle">Luxury Accommodation Voucher</p>
       </div>
 
@@ -318,7 +439,9 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
       <div className="be-voucher-grid-2">
         <div className="be-voucher-field">
           <span className="be-voucher-label">Property</span>
-          <p className="be-voucher-value">{bookingData?.property?.PropertyName || "—"}</p>
+          <p className="be-voucher-value">
+            {bookingData?.property?.PropertyName || "—"}
+          </p>
         </div>
         <div className="be-voucher-field">
           <span className="be-voucher-label">Primary Guest</span>
@@ -336,7 +459,8 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
                 {room?.roomPackage ? ` (${room.roomPackage})` : ""}
               </p>
               <p className="be-voucher-sub">
-                Room {i + 1}: {room?.adults || 0} Adults, {room?.children || 0} Children
+                Room {i + 1}: {room?.adults || 0} Adults, {room?.children || 0}{" "}
+                Children
               </p>
             </div>
           ))
@@ -348,12 +472,16 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
       <div className="be-voucher-dates-box">
         <div>
           <span className="be-voucher-label">Arrival Check-In</span>
-          <p className="be-voucher-value">{formatIsoDateOnly(bookingData?.selectedStartDate)}</p>
+          <p className="be-voucher-value">
+            {formatIsoDateOnly(bookingData?.selectedStartDate)}
+          </p>
           <p className="be-voucher-sub">From 14:00 (2:00 PM)</p>
         </div>
         <div>
           <span className="be-voucher-label">Departure Check-Out</span>
-          <p className="be-voucher-value">{formatIsoDateOnly(bookingData?.selectedEndDate)}</p>
+          <p className="be-voucher-value">
+            {formatIsoDateOnly(bookingData?.selectedEndDate)}
+          </p>
           <p className="be-voucher-sub">Prior to 12:00 (12:00 Noon)</p>
         </div>
       </div>
@@ -361,7 +489,9 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
       <div className="be-voucher-grid-2">
         <div className="be-voucher-field">
           <span className="be-voucher-label">Stay Duration</span>
-          <p className="be-voucher-value">{nights} Night{nights === 1 ? "" : "s"}</p>
+          <p className="be-voucher-value">
+            {nights} Night{nights === 1 ? "" : "s"}
+          </p>
         </div>
         <div className="be-voucher-field">
           <span className="be-voucher-label">Curated Add-ons</span>
@@ -383,20 +513,26 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName }) {
       <div className="be-voucher-payment-row">
         <div className="be-voucher-field">
           <span className="be-voucher-label">Payment Method</span>
-          <p className="be-voucher-value">{isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}</p>
+          <p className="be-voucher-value">
+            {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
+          </p>
         </div>
         <div className="be-voucher-field be-voucher-field--right">
           <span className="be-voucher-label">Total Amount (GST Inc.)</span>
-          <p className="be-voucher-total-amount">{formatCurrency(amount, currency)}</p>
+          <p className="be-voucher-total-amount">
+            {formatCurrency(amount, currency)}
+          </p>
         </div>
       </div>
 
-      {transactionRef && (
+      {/* {transactionRef && (
         <div className="be-voucher-barcode">
           <Barcode seed={transactionRef} />
-          <p className="be-voucher-barcode-ref">Transaction Ref: {transactionRef}</p>
+          <p className="be-voucher-barcode-ref">
+            Transaction Ref: {transactionRef}
+          </p>
         </div>
-      )}
+      )} */}
 
       <div className="be-voucher-actions">
         <button onClick={handlePrint} className="be-voucher-btn-print">
@@ -436,7 +572,14 @@ function Barcode({ seed }) {
 
 function PrintIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <polyline points="6 9 6 2 18 2 18 9" />
       <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
       <rect x="6" y="14" width="12" height="8" />
@@ -465,7 +608,14 @@ function formatIsoDateOnly(value) {
  * reservation grid, since there's no confirmed booking to itemize) — a
  * failed/pending payment reads as a status update on the same voucher,
  * not a completely different page. */
-function FailureState({ responseJson, hadStoredData, homeUrl, onRetry, siteName, bookingData }) {
+function FailureState({
+  responseJson,
+  hadStoredData,
+  homeUrl,
+  onRetry,
+  siteName,
+  bookingData,
+}) {
   const hasErrorMessage = Boolean(responseJson?.error_msg);
   const isPending = !hasErrorMessage && !hadStoredData;
 
@@ -483,19 +633,25 @@ function FailureState({ responseJson, hadStoredData, homeUrl, onRetry, siteName,
   return (
     <div className="be-voucher-card">
       <div className="be-voucher-header">
-        <h1 className="be-voucher-brand">{siteName || bookingData?.property?.PropertyName || "Hotel Booking"}</h1>
+        <h1 className="be-voucher-brand">
+          {siteName || bookingData?.property?.PropertyName || "Hotel Booking"}
+        </h1>
         <p className="be-voucher-subtitle">Reservation Status</p>
       </div>
 
       <div className="be-voucher-status-banner be-voucher-status-banner--error">
         <div>
           <span className="be-voucher-label">Booking Status</span>
-          <p className="be-voucher-status-value be-voucher-status-value--error">{statusLabel}</p>
+          <p className="be-voucher-status-value be-voucher-status-value--error">
+            {statusLabel}
+          </p>
         </div>
         {responseJson?.reservation_id && (
           <div className="be-voucher-status-right">
             <span className="be-voucher-label">Reference ID</span>
-            <p className="be-voucher-confirmation-id">{responseJson.reservation_id}</p>
+            <p className="be-voucher-confirmation-id">
+              {responseJson.reservation_id}
+            </p>
           </div>
         )}
       </div>
@@ -508,7 +664,12 @@ function FailureState({ responseJson, hadStoredData, homeUrl, onRetry, siteName,
       <div className="be-voucher-actions">
         <button
           type="button"
-          onClick={onRetry || (() => { window.location.href = homeUrl; })}
+          onClick={
+            onRetry ||
+            (() => {
+              window.location.href = homeUrl;
+            })
+          }
           className="be-voucher-btn-print"
         >
           Try Again
@@ -528,7 +689,15 @@ function stripHtml(value) {
 
 function SpinnerIcon() {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="be-spinner-icon">
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="be-spinner-icon"
+    >
       <circle cx="12" cy="12" r="9" strokeOpacity="0.25" />
       <path d="M21 12a9 9 0 0 0-9-9" />
     </svg>
@@ -547,7 +716,7 @@ function parsePaymentResponse(raw) {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return parsed?.result?.[0]?.responseJson || null;
+    return parsed?.result;
   } catch (err) {
     console.error("[booking-engine-new] Malformed be_paymentResponse:", err);
     return null;
@@ -566,17 +735,17 @@ function parseBookingData(raw) {
 
 function formatList(list, getLabel) {
   if (!Array.isArray(list) || list.length === 0) return "";
-  return list
-    .map(getLabel)
-    .filter(Boolean)
-    .join(", ");
+  return list.map(getLabel).filter(Boolean).join(", ");
 }
 
 function formatCurrency(amount, currency) {
   const numeric = Number(amount);
   if (Number.isNaN(numeric)) return "—";
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: currency || "INR" }).format(numeric);
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "INR",
+    }).format(numeric);
   } catch {
     return `${currency || ""} ${numeric}`.trim();
   }
@@ -602,6 +771,9 @@ function postBookingResponse(config, responseJson, bookingData) {
       bookingDetailsJson: JSON.stringify(bookingData || {}),
     }),
   }).catch((err) => {
-    console.error("[booking-engine-new] BookingResponse persist failed (non-fatal):", err);
+    console.error(
+      "[booking-engine-new] BookingResponse persist failed (non-fatal):",
+      err,
+    );
   });
 }
