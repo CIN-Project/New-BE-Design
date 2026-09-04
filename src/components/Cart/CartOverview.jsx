@@ -168,9 +168,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
         <div className="cart-section">
           <div className="cart-section-header">
             <h5 className="cart-section-title">Selected Property</h5>
-            <span style={modifyLinkStyle} onClick={onModifyProperty}>
+            {/* <span style={modifyLinkStyle} onClick={onModifyProperty}>
               Modify
-            </span>
+            </span> */}
           </div>
           <p className="cart-line">{selectedPropertyName || "—"}</p>
         </div>

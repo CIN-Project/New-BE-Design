@@ -1,14 +1,30 @@
 import CryptoJS from "crypto-js";
 import md5 from "md5";
 
+// MD5(key)-derived AES-128 key + this fixed IV, CBC/PKCS7 — matches
+// Amritara's Node `crypto` implementation byte-for-byte (verified via a
+// Node<->crypto-js cross-encrypt/decrypt test against the real partner
+// key). IMPORTANT: build the IV via Hex.parse, NOT
+// `WordArray.create([0,1,2,...,15], 16)` — crypto-js treats each array
+// element as a full 32-bit word, not a single byte, so that construction
+// silently produces a completely different 16-byte IV. Since AES-CBC only
+// XORs the IV into the FIRST block (subsequent blocks chain off the
+// previous ciphertext block instead), that bug corrupts exactly the first
+// AES block of every decrypt while later blocks still come out looking
+// right — which is exactly the "failing" symptom this replaced.
+const FIXED_IV_HEX = "000102030405060708090a0b0c0d0e0f";
+
+function deriveKey(key) {
+  return CryptoJS.enc.Hex.parse(md5(key));
+}
+
+function fixedIv() {
+  return CryptoJS.enc.Hex.parse(FIXED_IV_HEX);
+}
+
 export function encrypt(plainText, key) {
-  const keyHex = CryptoJS.enc.Hex.parse(md5(key));
-  const iv = CryptoJS.lib.WordArray.create(
-    [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f],
-    16
-  );
-  return CryptoJS.AES.encrypt(plainText, keyHex, {
-    iv,
+  return CryptoJS.AES.encrypt(plainText, deriveKey(key), {
+    iv: fixedIv(),
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7,
   }).ciphertext.toString(CryptoJS.enc.Hex);
@@ -24,23 +40,19 @@ export function encryptHash(partnerKey, data) {
 }
 
 /**
- * Inverse of encrypt() above — same MD5(key)-derived key + fixed IV,
- * AES-128-CBC. Ported from Amritara's decryptHash.js, which does the
- * equivalent with Node's `crypto` (server-side); this runs client-side in
- * ConfirmStep.jsx so it's built on crypto-js/md5 instead (already deps of
- * this file) rather than Node's crypto module.
+ * Inverse of encrypt() above. Ported from Amritara's decryptHash.js (which
+ * does the equivalent with Node's `crypto`) — this runs client-side in
+ * ConfirmStep.jsx (a "use client" component bundled for the browser by the
+ * consuming Next.js app), so it's built on crypto-js/md5 (already deps of
+ * this file) instead of Node's `crypto` module, which isn't available/
+ * polyfilled in a browser bundle.
  */
 export function decrypt(encryptedHex, key) {
-  const keyHex = CryptoJS.enc.Hex.parse(md5(key));
-  const iv = CryptoJS.lib.WordArray.create(
-    [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f],
-    16
-  );
   const cipherParams = CryptoJS.lib.CipherParams.create({
     ciphertext: CryptoJS.enc.Hex.parse(encryptedHex),
   });
-  return CryptoJS.AES.decrypt(cipherParams, keyHex, {
-    iv,
+  return CryptoJS.AES.decrypt(cipherParams, deriveKey(key), {
+    iv: fixedIv(),
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7,
   }).toString(CryptoJS.enc.Utf8);

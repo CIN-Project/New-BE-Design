@@ -160,6 +160,14 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         parsedResponseJson?.hash_key
       ) {
         if (config?.partnerKey) {
+          console.log(
+            "[PAYMENT-FLOW] ConfirmStep.jsx: attempting pay_later card detail decrypt",
+            {
+              partner_id: parsedResponseJson.partner_id,
+              hash_key: parsedResponseJson.hash_key,
+              partnerKeyBeingUsed: config.partnerKey,
+            },
+          );
           try {
             const decryptedData = decryptHashFunction(
               parsedResponseJson.partner_id,
@@ -189,8 +197,14 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
               }
             }
           } catch (err) {
-            console.error(
-              "[PAYMENT-FLOW] ConfirmStep.jsx: pay_later card detail decrypt FAILED (non-fatal)",
+            // Non-fatal by design (booking already succeeded — this only
+            // fills in the receipt's card display) — console.warn, not
+            // .error, so Next's dev overlay doesn't treat an already-
+            // handled failure as a crash. A throw here almost always means
+            // config.partnerKey doesn't match the key STAAH actually
+            // encrypted hash_key with, not a bug in decrypt() itself.
+            console.warn(
+              "[booking-engine-new] pay_later card detail decrypt FAILED (non-fatal — receipt just won't show card details). This usually means config.partnerKey doesn't match the key STAAH used to encrypt hash_key.",
               err,
             );
           }
