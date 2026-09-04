@@ -1251,6 +1251,25 @@ export function StayStep({ onRoomsSelected }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPropertyId, checkInParam, checkOutParam]);
 
+  // Location is the one field that auto-refreshes the room list even after
+  // the first search — every other live edit (dates, guests, promo) still
+  // waits for an explicit Search click (see the fetch effect's own doc
+  // comment below). Guarded on hasSearchedRef so this only reacts to a
+  // genuine property CHANGE post-bootstrap, not the same
+  // selectedPropertyId the bootstrap effect above already searched with.
+  const prevPropertyIdRef = useRef(selectedPropertyId);
+  useEffect(() => {
+    if (!hasSearchedRef.current) {
+      prevPropertyIdRef.current = selectedPropertyId;
+      return;
+    }
+    if (selectedPropertyId && selectedPropertyId !== prevPropertyIdRef.current) {
+      prevPropertyIdRef.current = selectedPropertyId;
+      if (checkInParam && checkOutParam) commitSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPropertyId]);
+
   // Fetch room content + live rates — runs ONLY off searchTrigger (bumped
   // by commitSearch(), see its own doc comment and the bootstrap effect
   // above), not directly off selectedPropertyId/checkInParam/checkOutParam/
@@ -1258,12 +1277,17 @@ export function StayStep({ onRoomsSelected }) {
   // own compact recap SearchBar writes every one of those into context
   // immediately as the guest picks each field, well before they've clicked
   // Search — depending on them directly used to silently swap out the room
-  // list the guest was already looking at mid-edit, e.g. the instant a
-  // different location was picked. Whatever's live in context at the
-  // moment searchTrigger actually changes is what gets used here, which is
-  // correct either way: on the bootstrap fire, that's whatever just
-  // hydrated in; on a real Search click, that's whatever the guest just
-  // confirmed.
+  // list the guest was already looking at mid-edit, e.g. mid-drag on the
+  // date range picker before a full range is even chosen. Location is the
+  // one exception (see the property-change effect just above this one),
+  // since picking a different property is only ever a deliberate, complete
+  // edit on its own — never a partial/mid-gesture state the way a date
+  // range or guest count can be — so it commitSearch()s on its own the
+  // moment it changes, without waiting for a full re-Search. Whatever's
+  // live in context at the moment searchTrigger actually changes is what
+  // gets used here, which is correct either way: on the bootstrap fire,
+  // that's whatever just hydrated in; on a real Search click or a location
+  // change, that's whatever the guest just confirmed.
   useEffect(() => {
     if (!selectedPropertyId || !checkInParam || !checkOutParam) return;
     let cancelled = false;
