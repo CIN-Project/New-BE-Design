@@ -642,12 +642,12 @@ export function GuestDetailsForm({ onComplete }) {
               // 905-906) — only totaltax below is rounded there. Rounding
               // every monetary field the same way is a small but real
               // discrepancy against what real Amritara actually submits.
-              deposit: grandTotal.toString(),
+              deposit: formOfPayment === "pay_later"? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),
               totaltax: Math.round(totalTaxAmount).toString(),
               promocode,
-              payment_required: "0",
-              payment_type: "Channel Collect",
+              payment_required: formOfPayment === "pay_later"? grandTotal.toString() : "0" ,
+              payment_type: formOfPayment === "pay_later"? "Hotel Collect":"Channel Collect",
               currencycode: "INR",
               status: "Confirm",
               is_subscribed: false,
