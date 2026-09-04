@@ -35,7 +35,7 @@ export function ImageSlider({ images, className = "", style }) {
   return (
     <div
       className={`be-img-slider ${className}`}
-      style={{ backgroundImage: `url(${list[index]})`, ...style }}
+      style={{ backgroundImage: `url("${list[index]}")`, ...style }}
     >
       {list.length > 1 && (
         <>
