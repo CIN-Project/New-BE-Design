@@ -582,7 +582,13 @@ export function SearchBar({
 
       {!isCompact &&
         mounted &&
-        createPortal(<Toaster position="top-center" />, document.body)}
+        createPortal(
+          <Toaster
+            position="top-center"
+            containerStyle={{ top: 100 }}
+          />,
+          document.body,
+        )}
     </div>
   );
 
