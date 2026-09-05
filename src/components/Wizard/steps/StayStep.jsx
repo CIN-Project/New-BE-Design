@@ -1332,7 +1332,10 @@ export function StayStep({ onRoomsSelected }) {
             propertyId: selectedPropertyId,
             fromDate: checkInParam,
             toDate: checkOutParam,
-            guId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            // Matches Amritara's own Filterbar.js (~1537: `crypto.randomUUID()`
+            // right before its inventory POST) — a real UUID v4, not the
+            // Date.now()+random-suffix string this used before.
+            guId: crypto.randomUUID(),
             promoCodeContext: promoCodeContext,
           }),
         ]);
@@ -1484,15 +1487,6 @@ export function StayStep({ onRoomsSelected }) {
           !(room?.RoomName || "").toLowerCase().includes("copy"),
       )
       .filter((room) => getRoomMinRate(room) !== null)
-      // getRoomMinRate above reads room.RatePlans raw (any rate plan on the
-      // room, day-use or not) — a room can pass that check yet have its
-      // only positive rate live on a rate plan whose Mapping row got
-      // filtered out by the isDayUse split above (e.g. a pure day-use room
-      // when Day Use is off, or vice versa). That leaves the room in the
-      // list with nothing for getRoomFromPrice/getStandardRateEntries to
-      // cross-reference, rendering a blank "—" price card instead of being
-      // hidden. Requiring a real cross-referenced price here closes that
-      // gap for both directions.
       .filter((room) => getRoomFromPrice(property, room) != null);
 
     if (!property || availableRooms.length === 0) {
@@ -1929,6 +1923,7 @@ export function StayStep({ onRoomsSelected }) {
               : "Select a destination and dates above to see available rooms."}
           </div>
         )}
+        {console.log("Prem rooms",rooms)}
 
       {!loading &&
         advancingToIndex === null &&

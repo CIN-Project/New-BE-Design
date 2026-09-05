@@ -111,7 +111,9 @@ export function useRepriceSelectedRooms() {
             propertyId: selectedPropertyId,
             fromDate: checkInParam,
             toDate: checkOutParam,
-            guId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            // Matches Amritara's own Filterbar.js (~1537: `crypto.randomUUID()`
+            // right before its inventory POST).
+            guId: crypto.randomUUID(),
             promoCodeContext,
           }),
         ]);
