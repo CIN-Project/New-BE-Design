@@ -990,7 +990,6 @@ function RoomSlotStepper({
   onContinue,
 }) {
   const rooms = selectedRoom || [];
-  if (rooms.length < 2) return null;
 
   // Once the guest is reviewing/editing an already-picked room (arrived via
   // the cart sidebar's "Modify" link, or clicking back into a slot they'd
@@ -1009,6 +1008,13 @@ function RoomSlotStepper({
   // pill design flashes on screen for that instant before flipping back to
   // the checkmark stepper once activeIndex actually advances.
   const isEditing = !isAdvancing && Boolean(rooms[activeIndex]?.roomId);
+
+  // A single room slot doesn't need a stepper while it's still being
+  // picked (nothing to step between yet) — but if the guest already picked
+  // it and THEN dropped the guest count from 2 rooms to 1, keep showing it
+  // (as the pill/tab "editing" view below) instead of the whole component
+  // vanishing with no trace that Room 1 is still selected.
+  if (rooms.length < 2 && !isEditing) return null;
 
   if (isEditing) {
     return (
@@ -1265,6 +1271,24 @@ export function StayStep({ onRoomsSelected }) {
     }
     if (selectedPropertyId && selectedPropertyId !== prevPropertyIdRef.current) {
       prevPropertyIdRef.current = selectedPropertyId;
+      // Any room already picked in a slot belongs to the OLD property —
+      // its roomId/roomName/rate fields mean nothing (and can't even be
+      // matched against) once the room list refetches for the new one.
+      // Without this, the sync-with-searchRooms effect above only clears a
+      // slot's selection when the room COUNT changes (it matches slots by
+      // their stable `id`, which a property change never touches), so a
+      // stale selection from the previous property just kept showing.
+      setSelectedRoom((prev) =>
+        (prev || []).map((r) => ({
+          id: r.id,
+          adults: r.adults,
+          children: r.children,
+          roomId: "",
+          roomName: "",
+          roomImage: null,
+        })),
+      );
+      setCurrentRoomIndex(0);
       if (checkInParam && checkOutParam) commitSearch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

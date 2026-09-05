@@ -127,7 +127,23 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         />
       )}
 
-      <StepIndicator step={step} onBack={() => changeStep(1)} />
+      <StepIndicator
+        step={step}
+        onBack={() => {
+          // This is the OTHER way back to step 1 (the plain back arrow),
+          // distinct from CartOverview's "Modify Property" link below —
+          // that one bumps modifyPropertySignal specifically so the
+          // re-mounted compact SearchBar auto-opens the Location dropdown.
+          // Without resetting it back to 0 here, a signal left over from an
+          // earlier "Modify Property" click (still non-zero — it only ever
+          // increments) leaks into this unrelated path: the SearchBar that
+          // remounts on THIS step-1 re-entry sees the same already-elevated
+          // value and reopens the dropdown even though the guest never
+          // clicked Modify this time.
+          setModifyPropertySignal(0);
+          changeStep(1);
+        }}
+      />
 
       {step === 1 && <StayStep onRoomsSelected={() => changeStep(2)} />}
 
@@ -151,6 +167,11 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
               // room, mirroring Filterbar.js's openPropertyPage(room.id).
               if (typeof slotIndex === "number")
                 setActiveRoomSlotIndex(slotIndex);
+              // Same leftover-signal leak as StepIndicator's onBack above —
+              // this re-enters step 1 to modify ROOMS, not the property, so
+              // a signal left over from an earlier "Modify Property" click
+              // must not reopen the Location dropdown here either.
+              setModifyPropertySignal(0);
               changeStep(1);
             }}
             onModifyProperty={() => {
