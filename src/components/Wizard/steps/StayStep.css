@@ -209,6 +209,20 @@
   vertical-align: middle;
 }
 
+.be-room-sold-out-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.1rem;
+  border-radius: 4px;
+  background: var(--be-color-surface, #f4f2eb);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #888;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
 .be-btn-select-room {
   background: var(--be-color-primary, #846836);
   border: 1px solid var(--be-color-primary, #846836);

@@ -836,18 +836,28 @@ function RoomRow({
                 )}
               </span>
             </div>
-            <button
-              type="button"
-              className={`be-btn-select-room${isExpanded ? " be-expanded" : ""}`}
-              onClick={onToggleExpand}
-            >
-              {isExpanded ? "Hide Rates" : "View Rates"}
-              <span className="be-arrow">&#8594;</span>
-            </button>
+            {room?.MinInventory > 0 ? (
+              <button
+                type="button"
+                className={`be-btn-select-room${isExpanded ? " be-expanded" : ""}`}
+                onClick={onToggleExpand}
+              >
+                {isExpanded ? "Hide Rates" : "View Rates"}
+                <span className="be-arrow">&#8594;</span>
+              </button>
+            ) : (
+              <span className="be-room-sold-out-badge">Sold Out</span>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Ported from Filterbar.js ~4409 (`{rooms?.MinInventory > 0 &&
+          rooms?.RoomId && (<div className="offers-container">...)}`) — a
+          sold-out room still shows the card above (image, name, meta,
+          description, "Sold Out" badge in place of "View Rates"), it just
+          never gets a rate-plan/package section to expand into. */}
+      {room?.MinInventory > 0 && (
       <div
         ref={expandWrapperRef}
         className={`be-rate-plans-expand-wrapper${isExpanded ? " be-expanded" : ""}`}
@@ -972,6 +982,7 @@ function RoomRow({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -1453,19 +1464,21 @@ export function StayStep({ onRoomsSelected }) {
       };
     }
 
-    // Real Amritara only ever shows rooms with live inventory (Filterbar.js's
-    // checkIfBothReady: `availableRooms = RoomData.filter(r => r.MinInventory > 0)`,
-    // ~886-889) — the merged RoomData list also includes every STAAH "room"
-    // entry that exists for the property regardless of current availability,
-    // including meal-plan/package variants of the same physical room
-    // (e.g. "Executive Room with Balcony", its "... CP", "... MAP
-    // Staycation", "... AP" siblings — separate STAAH room ids for the same
-    // room, each with 0 inventory unless that specific package is bookable
-    // for the selected dates). Without this filter every variant renders as
-    // its own room card.
+    // Real Amritara's actual room-list builder (Filterbar.js's "✅ NEW
+    // FILTER (IMPORTANT FIX)" block, ~4696-4757) does NOT filter by
+    // MinInventory at all — a sold-out room (MinInventory === 0) still
+    // renders its own card, just with no bookable rate-plan/package section
+    // (Filterbar.js ~4409: `{rooms?.MinInventory > 0 && rooms?.RoomId && (
+    // <div className="offers-container">...)}`). RoomRow below reproduces
+    // that: it still receives every room that passes day-use/name/rate
+    // filtering, sold out or not, and hides its own "View Rates" section
+    // when MinInventory <= 0. (checkIfBothReady's own separate
+    // `RoomData.filter(r => r.MinInventory > 0)`, ~886-889, feeds a
+    // completely different `availableRooms` state used only for that
+    // function's own "find the cheapest room" cart total — not this list.)
     //
-    // Two more real-source filters were missing entirely here (Filterbar.js
-    // ~4696-4757, the "✅ NEW FILTER (IMPORTANT FIX)" block):
+    // Two other real-source filters that WERE missing here (same "✅ NEW
+    // FILTER" block):
     //  - internal/test rooms named EXACTLY "B2B"/"b2b"/"B2b"/"b2B" (a literal
     //    equality check, not a substring match — a real room whose name
     //    merely contains "b2b" would NOT be excluded by this list), plus any
@@ -1473,14 +1486,14 @@ export function StayStep({ onRoomsSelected }) {
     //    one IS a substring check) — Filterbar.js's own two separate
     //    conditions, `!excludeRoomNames.includes(room.RoomName)` and
     //    `!room.RoomName.toLowerCase().includes("copy")`.
-    //  - a room with MinInventory > 0 but NO actual computable rate for
-    //    these dates (every rate plan's 1-adult OBP entry is 0/missing) is
-    //    still effectively unbookable — real Amritara drops it from the
-    //    list rather than showing a room with a blank/zero starting price.
+    //  - a room with NO actual computable rate for these dates (every rate
+    //    plan's 1-adult OBP entry is 0/missing) is still effectively
+    //    unbookable regardless of MinInventory — real Amritara drops it from
+    //    the list rather than showing a room with a blank/zero starting
+    //    price.
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
     const availableRooms = (property?.RoomData || [])
       .filter((room) => !dayUseExcludedRoomIds.has(String(room?.RoomId)))
-      .filter((room) => Number(room?.MinInventory) > 0)
       .filter(
         (room) =>
           !EXCLUDED_ROOM_NAMES_EXACT.includes(room?.RoomName) &&
