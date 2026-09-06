@@ -1421,6 +1421,7 @@ export function StayStep({ onRoomsSelected }) {
       inventoryRoomsRef.current,
       guestSlotsOnly,
     );
+    console.log("Prem property",mergedProperty)
 
     // Day Use filtering — ported from Filterbar.js's checkIfBothReady
     // (~789-809). property.Mapping[] entries (from the CMS content
@@ -1492,6 +1493,7 @@ export function StayStep({ onRoomsSelected }) {
     //    the list rather than showing a room with a blank/zero starting
     //    price.
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
+    console.log("Prem property?.RoomData",property?.RoomData)
     const availableRooms = (property?.RoomData || [])
       .filter((room) => !dayUseExcludedRoomIds.has(String(room?.RoomId)))
       .filter(
@@ -1870,13 +1872,24 @@ export function StayStep({ onRoomsSelected }) {
   // (set above once the Accommodation section's per-room "Book Now" match
   // succeeds), the equivalent of real's filteredRoomId this package didn't
   // have when this sort was first ported.
+  //
+  // Sorts by getRoomFromPrice (the same Mapping-cross-referenced, mode-
+  // restricted price the card actually displays as "Rates Starting From"),
+  // not getRoomMinRate (which scans every RatePlan on the room regardless
+  // of day-use/normal mode). Real's own minRate has the same mode-blind
+  // scan real's own list-builder does — but this package additionally
+  // restricts the displayed price via Mapping (getRoomFromPrice's own doc
+  // comment), so sorting by the mode-blind figure instead could rank a
+  // room using a rate plan its card never shows, e.g. in day-use mode a
+  // room mixing day-use and normal plans sorting by its (hidden) cheaper
+  // normal-mode rate instead of the day-use price actually on the card.
   rooms.sort((a, b) => {
     if (pinnedRoomId) {
       if (a?.RoomId === pinnedRoomId && b?.RoomId !== pinnedRoomId) return -1;
       if (b?.RoomId === pinnedRoomId && a?.RoomId !== pinnedRoomId) return 1;
     }
-    const priceA = getRoomMinRate(a) ?? Infinity;
-    const priceB = getRoomMinRate(b) ?? Infinity;
+    const priceA = getRoomFromPrice(rateResponse, a)?.price ?? Infinity;
+    const priceB = getRoomFromPrice(rateResponse, b)?.price ?? Infinity;
     if (priceA !== priceB) return priceA - priceB;
     return (a?.RoomName || "").localeCompare(b?.RoomName || "");
   });

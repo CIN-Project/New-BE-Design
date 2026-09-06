@@ -51,12 +51,18 @@ export function DateRangeModal({ isOpen, onClose }) {
           <div className="be-date-modal-value">{formatDisplayDate(search.selectedStartDate) || "Select date"}</div>
         </div>
         <div className="be-date-modal-nights">
-          {nights > 0 && <span>{nights} Night{nights === 1 ? "" : "s"}</span>}
+          {!search.isDayUse && nights > 0 && (
+            <span>{nights} Night{nights === 1 ? "" : "s"}</span>
+          )}
           <span className="be-date-modal-arrow" aria-hidden="true">&rarr;</span>
         </div>
         <div className="be-date-modal-col be-date-modal-col-right">
           <span className="be-date-modal-label">Check-out</span>
-          <div className="be-date-modal-value">{formatDisplayDate(search.selectedEndDate) || "Select date"}</div>
+          <div className="be-date-modal-value">
+            {formatDisplayDate(
+              search.isDayUse ? search.selectedStartDate : search.selectedEndDate,
+            ) || "Select date"}
+          </div>
         </div>
       </div>
 

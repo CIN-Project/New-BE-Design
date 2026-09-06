@@ -187,15 +187,19 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
               <span className="cart-stay-date-label">Check-in</span>
             </div>
             <div className="cart-stay-middle">
-              <span className="cart-stay-nights">
-                {nights} Night{nights === 1 ? "" : "s"}
-              </span>
+              {!isDayUse && (
+                <span className="cart-stay-nights">
+                  {nights} Night{nights === 1 ? "" : "s"}
+                </span>
+              )}
               <span className="cart-stay-line" aria-hidden="true" />
               <span className="cart-stay-guests">{guestsSummary}</span>
             </div>
             <div className="cart-stay-date cart-stay-date-right">
               <span className="cart-stay-date-value">
-                {formatDisplayDate(selectedEndDate) || "—"}
+                {formatDisplayDate(
+                  isDayUse ? selectedStartDate : selectedEndDate,
+                ) || "—"}
               </span>
               <span className="cart-stay-date-label">Check-out</span>
             </div>
