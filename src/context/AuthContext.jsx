@@ -50,7 +50,20 @@ export function BookingEngineAuthProvider({ children }) {
       }
     }
 
-    const handleUnload = () => sessionStorage.clear();
+    // Scoped to just the auth keys — NOT a blanket sessionStorage.clear().
+    // `beforeunload` fires on ANY page unload, including the browser
+    // navigating away to STAAH's hosted payment page (DetailStep.jsx's
+    // redirectToPayment is a real full-page form POST). A blanket clear()
+    // wiped out be_bookingData/be_paymentResponse (ConfirmStep.jsx's own
+    // sessionStorage keys) at the exact moment the guest left for payment —
+    // by the time they came back (bfcache miss, or via browser Back), there
+    // was nothing left to resume the booking from, no matter how correct
+    // the resume/retry logic itself was.
+    const handleUnload = () => {
+      Object.values(SESSION_KEYS).forEach((key) =>
+        sessionStorage.removeItem(key),
+      );
+    };
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,7 +257,15 @@ export function BookingEngineAuthProvider({ children }) {
   };
 
   const logout = () => {
-    sessionStorage.clear();
+    // Scoped to just the auth keys — see the beforeunload handler above for
+    // why a blanket clear() is unsafe here too: logout() also runs
+    // automatically (the session-timeout interval effect below) if the
+    // guest's auth session happens to expire while they're away on STAAH's
+    // payment page for longer than sessionTimeoutMs, which would otherwise
+    // wipe an in-progress booking's be_bookingData right as they return.
+    Object.values(SESSION_KEYS).forEach((key) =>
+      sessionStorage.removeItem(key),
+    );
     setUser(null);
     setToken(null);
   };
