@@ -97,7 +97,25 @@ export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
   // paths starting with "/be-booking". Since pushState doesn't actually
   // unmount the wizard, that mismatch showed the site header rendering
   // again, overlapping the still-mounted booking wizard underneath it.
-  window.history.pushState({}, "", `${window.location.pathname}?pay-now`);
+  //
+  // APPENDS to the existing query string — does NOT replace it. This host
+  // app's checkout page (be-booking/page.js's HydrateFromQueryParams) reads
+  // propertyId/startDate/endDate/rooms straight off the URL to rebuild
+  // SearchContext on mount; real Amritara doesn't have this problem because
+  // its equivalent restores everything from sessionStorage instead of the
+  // URL. Dropping those params here (a bare "?pay-now" discards the whole
+  // existing search string) is exactly what left the guest on an empty
+  // "Select a destination..." step 1 after coming back — Wizard.jsx's own
+  // sessionStorage fallback correctly jumped the step to 4, but
+  // HydrateFromQueryParams had nothing left to hydrate SearchContext with,
+  // so ConfirmStep rendered on top of a property/date-less search state.
+  const marker = new URLSearchParams(window.location.search);
+  marker.set("pay-now", "1");
+  window.history.pushState(
+    {},
+    "",
+    `${window.location.pathname}?${marker.toString()}`,
+  );
 
   const form = document.createElement("form");
   form.method = "POST";
