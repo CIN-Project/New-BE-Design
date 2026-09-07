@@ -776,7 +776,7 @@ function postBookingResponse(config, responseJson, bookingData) {
   const base = config?.cmsBaseUrl;
   if (!base) return;
 
-  fetch(`${base}/cmsapi/booking/BookingResponse`, {
+  fetch(`${base}/api/booking/BookingResponse`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
