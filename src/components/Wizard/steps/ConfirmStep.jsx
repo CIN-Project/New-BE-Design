@@ -434,16 +434,16 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
         <h1 className="be-voucher-brand">
           {siteName || bookingData?.property?.PropertyName || "Hotel Booking"}
         </h1>
-        <p className="be-voucher-subtitle">Luxury Accommodation Voucher</p>
+        <p className="be-voucher-subtitle">Booking Confirmation Voucher</p>
       </div>
 
       <div className="be-voucher-status-banner">
         <div>
-          <span className="be-voucher-label">Booking Status</span>
+          <span className="be-voucher-label labeltext">Booking Status</span>
           <p className="be-voucher-status-value">Reservation Secured</p>
         </div>
         <div className="be-voucher-status-right">
-          <span className="be-voucher-label">Confirmation ID</span>
+          <span className="be-voucher-label labeltext">Confirmation ID</span>
           <p className="be-voucher-confirmation-id">{reservationId}</p>
         </div>
       </div>
@@ -472,7 +472,7 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
                 Room {i + 1}: {room?.roomName || "—"}
                 {room?.roomPackage ? ` (${room.roomPackage})` : ""}
               </p>
-              <p className="be-voucher-sub">
+              <p className="be-voucher-sub labeltext">
                 Room {i + 1}: {room?.adults || 0} Adults, {room?.children || 0}{" "}
                 Children
               </p>
@@ -489,14 +489,14 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
           <p className="be-voucher-value">
             {formatIsoDateOnly(bookingData?.selectedStartDate)}
           </p>
-          <p className="be-voucher-sub">From 14:00 (2:00 PM)</p>
+          <p className="be-voucher-sub labeltext">From 14:00 (2:00 PM)</p>
         </div>
         <div>
           <span className="be-voucher-label">Departure Check-Out</span>
           <p className="be-voucher-value">
             {formatIsoDateOnly(bookingData?.selectedEndDate)}
           </p>
-          <p className="be-voucher-sub">Prior to 12:00 (12:00 Noon)</p>
+          <p className="be-voucher-sub labeltext">Prior to 12:00 (12:00 Noon)</p>
         </div>
       </div>
 
@@ -526,7 +526,7 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
 
       <div className="be-voucher-payment-row">
         <div className="be-voucher-field">
-          <span className="be-voucher-label">Payment Method</span>
+          <span className="be-voucher-label labeltext">Payment Method</span>
           <p className="be-voucher-value">
             {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
           </p>

@@ -368,7 +368,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   <div className="cart-night-block" key={i}>
                     <div className="cart-night-header">
                       <span>
-                        Night {i + 1}: {formatNightLabel(night.date)}
+                        {isDayUse
+                          ? formatNightLabel(night.date)
+                          : `Night ${i + 1}: ${formatNightLabel(night.date)}`}
                       </span>
                       <span>{formatCurrency(nightTotal)}</span>
                     </div>
@@ -436,7 +438,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   <div className="cart-night-block" key={i}>
                     <div className="cart-night-header">
                       <span>
-                        Night {i + 1}: {formatNightLabel(night.date)} GST
+                        {isDayUse
+                          ? `${formatNightLabel(night.date)} GST`
+                          : `Night ${i + 1}: ${formatNightLabel(night.date)} GST`}
                       </span>
                       <span>{formatCurrency(nightTax)}</span>
                     </div>

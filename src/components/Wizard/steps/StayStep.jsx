@@ -335,6 +335,8 @@ function classifyCancellation(text = "") {
 /** Standard (non-member) rate plans mapped to a room, mirroring the
  * RateData.filter(...).map(...) block in Filterbar.js (~5400-5456). */
 function getStandardRateEntries(property, room) {
+  console.log("Prem property",property)
+  console.log("Prem room",room)
   const rateData = property?.RateData || [];
   const mapping = property?.Mapping || [];
 
@@ -379,24 +381,13 @@ function getRoomMinRate(room) {
       minRate = rate;
     }
   });
+  console.log("Prem minRate",minRate)
   return minRate;
 }
 
-/** Room-card "starting from" price: cheapest 1-adult rate across all of the
- * room's standard rate plans (mirrors Filterbar.js's `minRate` ~5457-5461) —
- * AND, if any of those rate plans has a member-rate sibling (see
- * findMemberRatePlan), the member price too, since a member rate is always
- * the cheaper of the pair. Real Amritara's own `minRate` never considers
- * member rates for this card-level figure (it's shown pre-expand, before a
- * guest has picked a specific rate) — this is a deliberate addition beyond
- * that, so the card can advertise the lower member price (with a "Member
- * Rate" badge) up front rather than only revealing it once the card is
- * expanded, the same way the expanded rate cards already show a locked
- * member row alongside the standard one regardless of login state.
- * Returns null when no rate exists at all, otherwise
- * { price: number, isMemberRate: boolean }. */
 function getRoomFromPrice(property, room) {
   const entries = getStandardRateEntries(property, room);
+  console.log('Prem getStandardRateEntries',entries)
   let min = Infinity;
   let minIsMemberRate = false;
 
@@ -405,6 +396,7 @@ function getRoomFromPrice(property, room) {
     const obp = ratePlan?.Rates?.[firstKey]?.OBP;
     const guestRate = getGuestRateFromObp(obp, 1);
     const val = parseFloat(guestRate?.RateBeforeTax || "0");
+    
     if (val > 0 && val < min) {
       min = val;
       minIsMemberRate = false;
@@ -1305,6 +1297,34 @@ export function StayStep({ onRoomsSelected }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPropertyId]);
 
+  // Same stale-selection problem as the property-change reset above, but for
+  // the Day Use toggle: switching modes re-filters the room Mapping (see the
+  // isDayUse branch in applyMerge) so a room picked under the old mode may
+  // not even exist in the new one's list. Without clearing it, the stepper
+  // tabs kept showing the previous mode's room name/count after a toggle.
+  const prevIsDayUseRef = useRef(isDayUse);
+  useEffect(() => {
+    if (!hasSearchedRef.current) {
+      prevIsDayUseRef.current = isDayUse;
+      return;
+    }
+    if (isDayUse !== prevIsDayUseRef.current) {
+      prevIsDayUseRef.current = isDayUse;
+      setSelectedRoom((prev) =>
+        (prev || []).map((r) => ({
+          id: r.id,
+          adults: r.adults,
+          children: r.children,
+          roomId: "",
+          roomName: "",
+          roomImage: null,
+        })),
+      );
+      setCurrentRoomIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDayUse]);
+
   // Fetch room content + live rates — runs ONLY off searchTrigger (bumped
   // by commitSearch(), see its own doc comment and the bootstrap effect
   // above), not directly off selectedPropertyId/checkInParam/checkOutParam/
@@ -1422,23 +1442,6 @@ export function StayStep({ onRoomsSelected }) {
       guestSlotsOnly,
     );
     console.log("Prem property",mergedProperty)
-
-    // Day Use filtering — ported from Filterbar.js's checkIfBothReady
-    // (~789-809). property.Mapping[] entries (from the CMS content
-    // response, preserved as-is through mergeRoomContentWithRates) carry a
-    // DayusePackage boolean marking which room+rate combinations are
-    // day-use packages. A room is excluded when NONE of its mappings match
-    // the current mode — a room mixing both day-use and overnight rate
-    // plans stays in the list, but property.Mapping is filtered down to
-    // only the current mode's entries so getStandardRateEntries/
-    // getRoomFromPrice (both cross-reference Mapping by RoomId+RateId)
-    // only ever price/show the relevant rate plans for it.
-    //
-    // getRoomMinRate below does NOT consult Mapping at all (it reads
-    // room.RatePlans directly from the raw STAAH inventory data) — so
-    // without this explicit exclusion set, a room whose only rate plans
-    // are the wrong mode would still pass the "has a computable rate"
-    // check further down and incorrectly stay in the list.
     const dayUseExcludedRoomIds = new Set();
     let property = mergedProperty;
     if (mergedProperty) {
@@ -1465,33 +1468,6 @@ export function StayStep({ onRoomsSelected }) {
       };
     }
 
-    // Real Amritara's actual room-list builder (Filterbar.js's "✅ NEW
-    // FILTER (IMPORTANT FIX)" block, ~4696-4757) does NOT filter by
-    // MinInventory at all — a sold-out room (MinInventory === 0) still
-    // renders its own card, just with no bookable rate-plan/package section
-    // (Filterbar.js ~4409: `{rooms?.MinInventory > 0 && rooms?.RoomId && (
-    // <div className="offers-container">...)}`). RoomRow below reproduces
-    // that: it still receives every room that passes day-use/name/rate
-    // filtering, sold out or not, and hides its own "View Rates" section
-    // when MinInventory <= 0. (checkIfBothReady's own separate
-    // `RoomData.filter(r => r.MinInventory > 0)`, ~886-889, feeds a
-    // completely different `availableRooms` state used only for that
-    // function's own "find the cheapest room" cart total — not this list.)
-    //
-    // Two other real-source filters that WERE missing here (same "✅ NEW
-    // FILTER" block):
-    //  - internal/test rooms named EXACTLY "B2B"/"b2b"/"B2b"/"b2B" (a literal
-    //    equality check, not a substring match — a real room whose name
-    //    merely contains "b2b" would NOT be excluded by this list), plus any
-    //    room whose name contains "copy" anywhere (case-insensitively, this
-    //    one IS a substring check) — Filterbar.js's own two separate
-    //    conditions, `!excludeRoomNames.includes(room.RoomName)` and
-    //    `!room.RoomName.toLowerCase().includes("copy")`.
-    //  - a room with NO actual computable rate for these dates (every rate
-    //    plan's 1-adult OBP entry is 0/missing) is still effectively
-    //    unbookable regardless of MinInventory — real Amritara drops it from
-    //    the list rather than showing a room with a blank/zero starting
-    //    price.
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
     console.log("Prem property?.RoomData",property?.RoomData)
     const availableRooms = (property?.RoomData || [])

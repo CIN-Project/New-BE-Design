@@ -216,7 +216,7 @@
   background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
-  max-width: 560px;
+  max-width: 680px;
   width: 100%;
   margin: 0 auto;
   padding: 2.2rem 2rem 2rem;
@@ -231,6 +231,7 @@
 .be-voucher-brand {
   font-family: var(--be-font-serif, "Cormorant Garamond", serif);
   font-size: 1.7rem;
+  font-weight: 700 !important;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #1a1a1a;
@@ -250,8 +251,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(46, 125, 50, 0.08);
-  border: 1px solid rgba(46, 125, 50, 0.18);
+  background: rgba(39, 174, 96, 0.06);
+  border: 1px solid rgba(39, 174, 96, 0.2);
   border-radius: 6px;
   padding: 0.9rem 1.2rem;
   margin-bottom: 1.5rem;
@@ -266,6 +267,7 @@
   font-weight: 700;
   font-size: 0.95rem;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .be-voucher-confirmation-id {
@@ -314,6 +316,10 @@
   margin-bottom: 0.3rem;
 }
 
+.labeltext{
+  color: rgb(102, 102, 102) !important;
+}
+
 .be-voucher-value {
   font-size: 0.92rem;
   font-weight: 500;
@@ -327,7 +333,7 @@
 
 .be-voucher-sub {
   font-size: 0.78rem;
-  color: #8c8c8c;
+  color: rgb(102, 102, 102) !important;;
   margin: 0 0 0.4rem;
 }
 
@@ -335,7 +341,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.2rem 1.5rem;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.5rem;
 }
 
 .be-voucher-field {
@@ -350,7 +356,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  background: #faf7f0;
+  background: rgb(252, 251, 250);;
   border: 1px solid #ece0c8;
   border-radius: 6px;
   padding: 1rem 1.2rem;

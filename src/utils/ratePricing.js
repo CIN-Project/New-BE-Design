@@ -324,6 +324,7 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
                   Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
                 )
               : 0;
+              console.log("Prem extraChildren",extraChildren)
 
           let guestRate = {};
           const obpKeys = Object.keys(rateValue.OBP || {});
@@ -337,10 +338,14 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
 
           const baseRate = parseFloat(guestRate?.RateBeforeTax || 0);
           const perChildRate = parseFloat(rateValue?.ExtraChildRate?.RateBeforeTax || 0);
+          console.log("Prem baseRate",baseRate);
+          console.log("Prem perChildRate",perChildRate)
+          console.log("Prem guestRate",guestRate)
 
           const guestTaxTotal = Array.isArray(guestRate?.Tax)
             ? guestRate.Tax.reduce((s, t) => s + parseFloat(t?.Amount || 0), 0)
             : 0;
+            console.log("Prem guestTaxTotal",guestTaxTotal)
           let extraChildTaxTotal = 0;
           if (extraChildren >= 1) {
             const price =
@@ -354,6 +359,7 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
             perChildRate * extraChildren +
             (extraChildTaxTotal === 0 ? guestTaxTotal : 0) +
             extraChildTaxTotal;
+            console.log("Prem totalRate",totalRate)
 
           updatedOBP.push({
             ...rateValue.OBP,
