@@ -807,6 +807,22 @@ export function GuestDetailsForm({ onComplete }) {
             Address: { Phone: selectedPropertyPhone },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
+          // Everything below is unused by the receipt itself — it's what
+          // lets ConfirmStep.jsx's "Try Again" button actually retry the
+          // SAME payment (re-POST to STAAH + redirect again) instead of
+          // just sending the guest home, matching real Amritara's own
+          // ConfirmStep.js handleRetry (mint a fresh reservation_id, rebuild
+          // the reservation JSON, POST th-payment-request again, redirect).
+          // `payload`/`finalRequestData2` are already fully built by this
+          // point (see above) — stashing them here means a retry doesn't
+          // need to reconstruct per-room nightly rates/taxes/add-ons from
+          // scratch from this flattened summary, which doesn't retain
+          // enough detail to do that correctly.
+          selectedPropertyId,
+          formOfPayment,
+          keyData: finalKeyData,
+          reservationPayload: payload,
+          finalRequestData2,
         }),
       );
 

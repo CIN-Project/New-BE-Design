@@ -77,8 +77,27 @@ export function decryptHashFunction(partnerId, partnerKey, data) {
 
 export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
   const baseUrl = `${staahBaseUrl}/api/th-payment-redirect2`;
-  console.log("[PAYMENT-FLOW] paymentHash.js: submitting hidden form to STAAH", { baseUrl, currentUrlBeforeReplace: window.location.href });
-  window.history.replaceState({}, "", "/?pay-now");
+  console.log("[PAYMENT-FLOW] paymentHash.js: submitting hidden form to STAAH", { baseUrl, currentUrlBeforePush: window.location.href });
+  // pushState, NOT replaceState — ported from real Amritara's DetailStep.js
+  // (~1688-1696), which does the exact same push right before its own
+  // redirectWithPost/form.submit(). A plain replaceState here overwrites the
+  // checkout page's own history entry with this marker, so pressing the
+  // browser Back button from STAAH's hosted page skips straight past it to
+  // whatever came before — on this site, that's effectively the homepage.
+  // pushState instead ADDS this marker on top of the checkout entry, so
+  // Back lands ON it: same document, same React tree, restored from the
+  // browser's bfcache with the guest's in-progress checkout state (form
+  // data, selected room, step) fully intact — exactly how real Amritara's
+  // desktop "back returns to the same page" behavior actually works (no
+  // pageshow/visibilitychange trickery needed, confirmed absent there).
+  // Keeps the CURRENT pathname (e.g. "/be-booking"), only swapping the
+  // query string to the marker — a hardcoded "/?pay-now" changes the
+  // pathname to the site root, and the host app's own header-hiding logic
+  // (bawahotels-nextjs-new's ConditionalHeader) only hides the header on
+  // paths starting with "/be-booking". Since pushState doesn't actually
+  // unmount the wizard, that mismatch showed the site header rendering
+  // again, overlapping the still-mounted booking wizard underneath it.
+  window.history.pushState({}, "", `${window.location.pathname}?pay-now`);
 
   const form = document.createElement("form");
   form.method = "POST";

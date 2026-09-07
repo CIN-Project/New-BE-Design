@@ -86,6 +86,33 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       setStep(4);
       return;
     }
+    // No tokenKey (STAAH never redirected back — the guest just hit the
+    // browser's own Back button from its hosted payment page) but a
+    // payment attempt was left in-flight. When the browser restores the
+    // checkout page from bfcache this effect never even re-runs (the page
+    // was never actually reloaded), so this branch only matters when it
+    // doesn't — mobile browsers commonly can't bfcache a page reached via
+    // an in-flight POST-form navigation. Without this, a fresh reload here
+    // always fell back to step 1 regardless of where the guest actually
+    // was, which read as "back sent me to the home page" even though this
+    // IS still the booking page. ConfirmStep.jsx already renders a
+    // pending/failure card with a working Retry off this same
+    // sessionStorage key — just needs to actually be shown.
+    let hasPendingBookingData = false;
+    try {
+      hasPendingBookingData = Boolean(
+        window.sessionStorage.getItem("be_bookingData"),
+      );
+    } catch {
+      hasPendingBookingData = false;
+    }
+    if (hasPendingBookingData) {
+      console.log(
+        "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 4 (ConfirmStep)",
+      );
+      setStep(4);
+      return;
+    }
     if (!syncStepToUrl) return;
     const urlStep = parseInt(params.get("step"), 10);
     if (urlStep === 3) setStep(2);

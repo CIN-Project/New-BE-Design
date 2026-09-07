@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useConfig } from "../../../config/configContext.js";
 import { verifyToken } from "../../../api/rates.js";
-import { confirmPayment, decryptHashFunction } from "../../../api/payment.js";
+import {
+  confirmPayment,
+  decryptHashFunction,
+  generateReservationId,
+  postPaymentRequest,
+  redirectToPayment,
+} from "../../../api/payment.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./ConfirmStep.css";
 
@@ -78,6 +84,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   const [reservationStatus, setReservationStatus] = useState(null);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
   const [formOfPayment, setFormOfPayment] = useState("")
+  const [retrying, setRetrying] = useState(false);
   // createPortal needs a real document to exist first — false during SSR
   // and the very first client render, true from the next tick onward
   // (matches SearchBar.jsx's own Toaster portal, same reasoning).
@@ -285,6 +292,16 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         // });
 
         if (confirmedSuccess) {
+          // Nothing previously cleared these — a stale be_bookingData from
+          // an already-completed booking would otherwise linger into a
+          // guest's NEXT, unrelated visit and get misread by Wizard.jsx's
+          // own "no tokenKey but be_bookingData present" fallback (added
+          // alongside this retry flow) as an in-flight payment, forcing
+          // that fresh session straight to this same confirm step.
+          try {
+            sessionStorage.removeItem(BOOKING_DATA_KEY);
+            sessionStorage.removeItem(PAYMENT_RESPONSE_KEY);
+          } catch {}
           // Optional/secondary: persist the confirmed booking server-side.
           // Fire-and-forget — the receipt is already sourced from the
           // verified confirm response, so a failure here shouldn't block it.
@@ -321,8 +338,89 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // "Try Again" on the failure card — ported from real ConfirmStep.js's
+  // handleRetry: mint a FRESH reservation_id (don't reuse the failed one —
+  // STAAH's own th-payment-request/redirect pairing treats each id as a
+  // one-shot payment session), rebuild the reservation JSON with it, POST
+  // th-payment-request again, then redirect to a brand-new STAAH hosted
+  // page — genuinely retrying the SAME payment, not sending the guest home
+  // (DetailStep.jsx's sessionStorage snapshot carries reservationPayload/
+  // finalRequestData2 specifically so this doesn't need to reconstruct
+  // per-room nightly rates/taxes from the flattened summary alone).
+  const handleRetryClick = async () => {
+    if (!bookingData?.reservationPayload || !bookingData?.finalRequestData2) {
+      console.warn(
+        "[booking-engine-new] Retry attempted with no stored reservation payload (stale/old be_bookingData) — sending guest home instead.",
+      );
+      window.location.href = homeUrl;
+      return;
+    }
+    setRetrying(true);
+    try {
+      const newReservationResp = await generateReservationId(
+        config,
+        bookingData.selectedPropertyId,
+      );
+      const newReservationId =
+        newReservationResp?.reservation_id || bookingData.reservationId;
+
+      const oldReservation =
+        bookingData.reservationPayload.reservations.reservation[0];
+      const updatedPayload = {
+        ...bookingData.reservationPayload,
+        reservations: {
+          reservation: [
+            { ...oldReservation, reservation_id: newReservationId },
+          ],
+        },
+      };
+      const updatedFinalRequestData2 = {
+        ...bookingData.finalRequestData2,
+        reservation_id: newReservationId,
+        ReservationJson: JSON.stringify(updatedPayload),
+      };
+
+      const paymentResp = await postPaymentRequest(config, {
+        finalRequestData2: updatedFinalRequestData2,
+        reservationPayload: updatedPayload,
+        keyData: bookingData.keyData,
+        formOfPayment: bookingData.formOfPayment,
+      });
+
+      if (paymentResp?.errorMessage !== "success") {
+        throw new Error(
+          paymentResp?.errorMessage ||
+            "Payment request failed. Please try again.",
+        );
+      }
+
+      const paramvalues = JSON.stringify({
+        property_id: bookingData.selectedPropertyId,
+        property_name: bookingData.property?.PropertyName || "",
+        property_tel: bookingData.property?.Address?.Phone || "",
+        cust_name: `${bookingData.formData?.firstName || ""} ${bookingData.formData?.lastName || ""}`.trim(),
+        cust_email: bookingData.formData?.email || "",
+        cust_phone: bookingData.formData?.phone || "",
+        cust_address: "N/A",
+        cust_city: "N/A",
+        cust_state: "N/A",
+        cust_country: "N/A",
+        cust_postalcode: "N/A",
+        reservation_id: newReservationId,
+        amount: bookingData.totalPrice,
+        keyData: bookingData.keyData,
+        form_of_payment: bookingData.formOfPayment,
+      });
+
+      redirectToPayment(config, paramvalues, bookingData.keyData);
+    } catch (err) {
+      console.error("[PAYMENT-FLOW] ConfirmStep.jsx: retry FAILED", err);
+      setRetrying(false);
+    }
+  };
+
   let content;
-  if (loading || confirming) {
+  if (loading || confirming || retrying) {
     content = (
       <div className="be-success-card">
         <div className="be-success-icon-badge be-success-icon-badge--pending">
@@ -330,9 +428,11 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         </div>
         <h1 className="be-success-title">Confirming Your Booking</h1>
         <p className="be-success-desc">
-          {confirming
-            ? "Payment received — finalizing your reservation…"
-            : "Please wait while we verify your payment with the bank."}
+          {retrying
+            ? "Reconnecting you to the payment gateway…"
+            : confirming
+              ? "Payment received — finalizing your reservation…"
+              : "Please wait while we verify your payment with the bank."}
         </p>
       </div>
     );
@@ -364,7 +464,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         responseJson={responseJson}
         hadStoredData={hadStoredData}
         homeUrl={homeUrl}
-        onRetry={onRetry}
+        onRetry={onRetry || handleRetryClick}
         siteName={config?.siteName}
         bookingData={effectiveBookingData}
       />
