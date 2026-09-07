@@ -86,6 +86,14 @@ function mapHotelsListToCityWithPropertyShape(hotelsList, cityId) {
       propertySlug: hotel.slug,
       staahPropertyId: hotel.staahPropertyId ?? hotel.id,
       staahBookingId: hotel.staahPropertyId ?? hotel.id,
+      // Left `undefined` (not coerced to false) when the source hotel record
+      // has no isDayUse field at all — DestinationField's day-use filter
+      // only excludes a property on an explicit `false`, so a consumer
+      // without this field (any GetCityWithProperty-backed one, not just
+      // this useHotelsListApi fallback) still shows every property
+      // regardless of the guest's day-use toggle, same as before this flag
+      // existed.
+      isDayUse: hotel.isDayUse == null ? undefined : Boolean(hotel.isDayUse),
     });
   }
   const cities = [...groups.values()];
@@ -124,6 +132,7 @@ export function mapCityWithPropertyResponse(data) {
       staahBookingId: property.staahBookingId,
       cityName: city.cityName,
       cityId: city.cityId,
+      isDayUse: property.isDayUse == null ? undefined : Boolean(property.isDayUse),
     })),
   );
 }

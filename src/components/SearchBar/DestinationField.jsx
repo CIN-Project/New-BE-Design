@@ -38,11 +38,21 @@ export function DestinationField({
   modalRef,
   triggerId,
   openUpwards,
+  isDayUse,
 }) {
   const selected = properties.find(
     (p) => propertyKey(p) === selectedPropertyId,
   );
-  const groups = groupByCity(properties);
+  // Only excludes a property on an explicit `isDayUse: false` — a property
+  // with no isDayUse field at all (non-Bawa consumers of this shared
+  // package, which don't send this flag) stays visible regardless of the
+  // toggle, same as before this filter existed. See properties.js's
+  // mapCityWithPropertyResponse doc comment.
+  console.log("Prem properties",properties)
+  const visibleProperties = isDayUse
+    ? properties.filter((p) => p.isDayUse !== false)
+    : properties;
+  const groups = groupByCity(visibleProperties);
 
   return (
     <div

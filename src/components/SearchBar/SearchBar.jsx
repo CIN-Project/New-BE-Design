@@ -511,6 +511,7 @@ export function SearchBar({
           modalRef={destModalRef}
           triggerId="be-destination-trigger"
           openUpwards={openUpwards}
+          isDayUse={search.isDayUse}
         />
 
         <DateRangeField
