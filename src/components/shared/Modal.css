@@ -6,7 +6,12 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  z-index: 1300;
+  /* Must clear the host site's fixed header (z-index: 99999, e.g.
+     bawahotels-nextjs-new's .main-header) — this modal is portaled to
+     document.body, so at 1300 the header sat on top of it. Matches
+     ConfirmStep.css's .be-voucher-overlay / DetailStep.css's
+     .be-processing-overlay, which have the exact same requirement. */
+  z-index: 9999999;
 }
 
 .be-modal-box {

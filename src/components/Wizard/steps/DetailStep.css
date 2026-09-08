@@ -159,7 +159,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  /* Must clear the host site's fixed header (z-index: 99999, e.g.
+     bawahotels-nextjs-new's .main-header) — at 9999 the header sat on top
+     of this overlay, showing through the "Processing your secure
+     payment..." spinner. Matches ConfirmStep.css's .be-voucher-overlay,
+     which has the exact same requirement. */
+  z-index: 9999999;
   color: white;
 }
 
