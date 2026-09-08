@@ -79,6 +79,17 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   const [responseJson, setResponseJson] = useState(null);
   const [bookingData, setBookingData] = useState(null);
   const [hadStoredData, setHadStoredData] = useState(false);
+  // The FULL verify-token/paymentResponse result[0] entry — not just its
+  // .responseJson — kept around for handleRetryClick below. Real
+  // Amritara's own retry (ConfirmStep.js's handleRetry, ~389-450) rebuilds
+  // the STAAH reservation payload from THIS same object's
+  // .reservationJson/.bookingDetailsJson (both echoed back by STAAH's own
+  // verify-token response, not something the app reconstructs itself) —
+  // this package previously only ever read .responseJson off it and
+  // discarded the rest, so retry had to fall back to the guest's
+  // PRE-payment sessionStorage snapshot instead of this authoritative,
+  // gateway-confirmed version.
+  const [completeResponseObject, setCompleteResponseObject] = useState(null);
   // null while unresolved; "success" only once the confirm call itself
   // reports success — never derived from the raw gateway echo alone.
   const [reservationStatus, setReservationStatus] = useState(null);
@@ -167,6 +178,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
       const resultEntry = parsedResponseJsonResp?.[0] || null;
       const parsedResponseJson = resultEntry?.responseJson || null;
       setFormOfPayment(resultEntry?.form_of_payment);
+      setCompleteResponseObject(resultEntry);
 
       // Pay-later bookings never go through the real gateway, so STAAH
       // doesn't return real card details — instead it echoes them back
@@ -367,6 +379,109 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // finalRequestData2 specifically so this doesn't need to reconstruct
   // per-room nightly rates/taxes from the flattened summary alone).
   const handleRetryClick = async () => {
+    const reservationJsonSrc = completeResponseObject?.reservationJson;
+    const bookingDetailsSrc = completeResponseObject?.bookingDetailsJson;
+
+    // Primary path — matches real Amritara's handleRetry exactly: rebuild
+    // the reservation from the verify-token response's OWN
+    // .reservationJson/.bookingDetailsJson (echoed back by STAAH itself,
+    // authoritative) instead of whatever the guest's browser happened to
+    // have cached from before the first redirect.
+    if (reservationJsonSrc && bookingDetailsSrc) {
+      setRetrying(true);
+      try {
+        const propertyId =
+          reservationJsonSrc?.PropertyId ?? bookingData?.selectedPropertyId;
+        const newReservationResp = await generateReservationId(
+          config,
+          propertyId,
+        );
+        const newReservationId = newReservationResp?.reservation_id;
+        if (!newReservationId) {
+          throw new Error("Could not generate a new reservation ID.");
+        }
+
+        const updatedReservationJson = JSON.parse(
+          JSON.stringify(reservationJsonSrc),
+        );
+        updatedReservationJson.reservations.reservation[0].reservation_id =
+          newReservationId;
+        updatedReservationJson.reservations.reservation[0].reservation_datetime =
+          new Date().toISOString().split("T")[0];
+
+        const propertyName = bookingDetailsSrc?.property?.PropertyName || "";
+        const propertyTel = bookingDetailsSrc?.property?.Address?.Phone || "";
+        const custName = `${bookingDetailsSrc?.formData?.firstName || ""} ${bookingDetailsSrc?.formData?.lastName || ""}`.trim();
+        const custEmail = bookingDetailsSrc?.formData?.email || "";
+        const custPhone = bookingDetailsSrc?.formData?.phone || "";
+        const amount = bookingDetailsSrc?.totalPrice;
+        const keyData =
+          bookingData?.keyData ||
+          (config?.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+
+        const finalRequestData2 = {
+          property_id: propertyId,
+          property_name: propertyName,
+          property_tel: propertyTel,
+          cust_name: custName,
+          cust_email: custEmail,
+          cust_phone: custPhone,
+          cust_address: "N/A",
+          cust_city: "N/A",
+          cust_state: "N/A",
+          cust_country: "N/A",
+          cust_postalcode: "N/A",
+          reservation_id: newReservationId,
+          amount,
+          currency: "INR",
+          BookingDetailsJson: JSON.stringify(bookingDetailsSrc),
+          ReservationJson: JSON.stringify(updatedReservationJson),
+        };
+
+        const paymentResp = await postPaymentRequest(config, {
+          finalRequestData2,
+          reservationPayload: updatedReservationJson,
+          keyData,
+          formOfPayment,
+        });
+
+        if (paymentResp?.errorMessage !== "success") {
+          throw new Error(
+            paymentResp?.errorMessage ||
+              "Payment request failed. Please try again.",
+          );
+        }
+
+        const paramvalues = JSON.stringify({
+          property_id: propertyId,
+          property_name: propertyName,
+          property_tel: propertyTel,
+          cust_name: custName,
+          cust_email: custEmail,
+          cust_phone: custPhone,
+          cust_address: "N/A",
+          cust_city: "N/A",
+          cust_state: "N/A",
+          cust_country: "N/A",
+          cust_postalcode: "N/A",
+          reservation_id: newReservationId,
+          amount,
+          keyData,
+          form_of_payment: formOfPayment,
+        });
+
+        redirectToPayment(config, paramvalues, keyData);
+      } catch (err) {
+        console.error("[PAYMENT-FLOW] ConfirmStep.jsx: retry FAILED", err);
+        setRetrying(false);
+      }
+      return;
+    }
+
+    // Fallback — no gateway-echoed reservation/booking data available (e.g.
+    // a genuinely "pending" state that never resolved a real gateway
+    // response at all), so retry off the guest's pre-payment sessionStorage
+    // snapshot instead, same as before this fix.
     if (!bookingData?.reservationPayload || !bookingData?.finalRequestData2) {
       console.warn(
         "[booking-engine-new] Retry attempted with no stored reservation payload (stale/old be_bookingData) — sending guest home instead.",
