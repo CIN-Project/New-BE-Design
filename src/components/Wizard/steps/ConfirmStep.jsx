@@ -422,10 +422,31 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         const updatedReservationJson = JSON.parse(
           JSON.stringify(reservationJsonSrc),
         );
-        updatedReservationJson.reservations.reservation[0].reservation_id =
-          newReservationId;
-        updatedReservationJson.reservations.reservation[0].reservation_datetime =
-          new Date().toISOString().split("T")[0];
+        // Amritara's own reservationJson always has this exact
+        // reservations.reservation[0] nesting (it's STAAH's XML-mirroring
+        // shape) — this app's verify-token response has been observed NOT
+        // to carry that same nesting (reservations existed but .reservation
+        // did not, throwing "Cannot read properties of undefined" and
+        // silently killing the retry right after generateReservationId
+        // succeeded). Falling back to a top-level reservation_id instead of
+        // crashing when the expected nesting isn't there.
+        const reservationList =
+          updatedReservationJson?.reservations?.reservation;
+        if (Array.isArray(reservationList) && reservationList[0]) {
+          reservationList[0].reservation_id = newReservationId;
+          reservationList[0].reservation_datetime = new Date()
+            .toISOString()
+            .split("T")[0];
+        } else {
+          console.warn(
+            "[booking-engine-new] retry: reservationJson missing the expected reservations.reservation[0] shape — setting reservation_id at the top level instead. Actual reservationJson:",
+            updatedReservationJson,
+          );
+          updatedReservationJson.reservation_id = newReservationId;
+          updatedReservationJson.reservation_datetime = new Date()
+            .toISOString()
+            .split("T")[0];
+        }
 
         const propertyName = bookingDetailsSrc?.property?.PropertyName || "";
         const propertyTel = bookingDetailsSrc?.property?.Address?.Phone || "";
