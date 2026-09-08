@@ -596,7 +596,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         responseJson={responseJson}
         hadStoredData={hadStoredData}
         homeUrl={homeUrl}
-        onRetry={onRetry}
+        onRetry={onRetry || handleRetryClick}
         siteName={config?.siteName}
         bookingData={effectiveBookingData}
       />
