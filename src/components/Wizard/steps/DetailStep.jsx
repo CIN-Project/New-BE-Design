@@ -624,6 +624,25 @@ export function GuestDetailsForm({ onComplete }) {
             Address: { Phone: selectedPropertyPhone },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
+          // Everything below is unused by the receipt itself — it's what
+          // lets ConfirmStep.jsx's "Try Again" button actually retry the
+          // SAME payment (re-POST to STAAH + redirect again) instead of
+          // just sending the guest home. Without these, handleRetryClick's
+          // fallback path (used whenever the gateway's own verify-token
+          // response doesn't carry a usable reservationJson/bookingDetailsJson
+          // to retry from directly) has nothing to rebuild a payment
+          // request from and always bails straight to homeUrl — this is
+          // exactly the "Try Again just goes to the home page" bug.
+          selectedPropertyId,
+          formOfPayment,
+          keyData: finalKeyData,
+          reservationPayload: payload,
+          finalRequestData2,
+          // Wizard.jsx's mount-effect fallback only trusts this snapshot
+          // for a short window after it's saved — see that file's own
+          // comment — so a stale/abandoned attempt from a much earlier
+          // visit can't resurrect a fake in-progress checkout indefinitely.
+          savedAt: Date.now(),
         }),
       );
 
