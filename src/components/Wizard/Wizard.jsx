@@ -33,6 +33,27 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   // so clicking "Modify Property" again after already being on step 1
   // still re-fires the effect even though the signal was never "reset".
   const [modifyPropertySignal, setModifyPropertySignal] = useState(0);
+  // Ported from Amritara_New_NextJs's back-from-payment behavior: on
+  // desktop, landing back on step 4 (whether via a failed/pending STAAH
+  // redirect or the guest's own Back button) still shows the actual
+  // booking summary/wizard page underneath — real Amritara keeps its
+  // guest-details/payment form mounted in a wide column with the status
+  // card in a narrow one beside it, rather than replacing the whole page
+  // with a single centered status card the way mobile does (a real
+  // full-screen "Payment Unsuccessful" popup there). This package's step 2
+  // (DetailStep.GuestDetailsForm + CartOverview) IS that booking summary
+  // page, so on desktop it's kept rendered at step 4 too — ConfirmStep's
+  // own inline (non-popup) card, see ConfirmStep.jsx, then renders below
+  // it instead of alone.
+  const [isMobileViewport, setIsMobileViewport] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(max-width: 768px)");
+    setIsMobileViewport(mql.matches);
+    const onChange = (e) => setIsMobileViewport(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
   // Active across every step (not just step 1) — the cart sidebar's own
   // "Modify Dates"/"Modify Guests"/promo controls render on step 2 too.
   // Sync must run for the guest-limit warnings (CartOverview.jsx) and the
@@ -98,11 +119,30 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     // IS still the booking page. ConfirmStep.jsx already renders a
     // pending/failure card with a working Retry off this same
     // sessionStorage key — just needs to actually be shown.
+    // 30 minutes — comfortably longer than anyone spends on STAAH's hosted
+    // payment page, but short enough that an abandoned/test attempt from
+    // hours or days ago (sessionStorage never expires on its own) can't
+    // keep hijacking every later, unrelated fresh search into this
+    // fallback forever. Missing/unparseable `savedAt` (data saved before
+    // this check existed) is treated as stale, not fresh.
+    const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
     let hasPendingBookingData = false;
     try {
-      hasPendingBookingData = Boolean(
-        window.sessionStorage.getItem("be_bookingData"),
-      );
+      const raw = window.sessionStorage.getItem("be_bookingData");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const age = Date.now() - (parsed?.savedAt || 0);
+        if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
+          hasPendingBookingData = true;
+        } else {
+          console.log(
+            "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
+            { savedAt: parsed?.savedAt, ageMs: age },
+          );
+          window.sessionStorage.removeItem("be_bookingData");
+          window.sessionStorage.removeItem("be_paymentResponse");
+        }
+      }
     } catch {
       hasPendingBookingData = false;
     }
@@ -174,7 +214,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
 
       {step === 1 && <StayStep onRoomsSelected={() => changeStep(2)} />}
 
-      {step === 2 && (
+      {(step === 2 || (step === 4 && !isMobileViewport)) && (
         <div className="be-cart-details-layout">
           <div className="be-cart-left-col">
             {/* Guest details + add-ons on one screen, no separate card-entry

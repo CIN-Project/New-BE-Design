@@ -823,6 +823,15 @@ export function GuestDetailsForm({ onComplete }) {
           keyData: finalKeyData,
           reservationPayload: payload,
           finalRequestData2,
+          // Wizard.jsx's mount-effect fallback (jump straight to step 4 when
+          // there's no tokenKey but this key is present) only makes sense
+          // for a FEW minutes after a real STAAH redirect — without a way to
+          // tell "fresh" from "stale", a payment attempt abandoned days ago
+          // (or just left over from testing) would otherwise hijack every
+          // later, completely unrelated fresh search into looking like a
+          // broken in-progress checkout forever, since sessionStorage never
+          // expires on its own.
+          savedAt: Date.now(),
         }),
       );
 

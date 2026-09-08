@@ -36,6 +36,19 @@
   }
 }
 
+/* Desktop's non-popup variant (see ConfirmStep.jsx) — same centered card,
+   but sitting inline in the normal page flow instead of pinned over a
+   dimmed full-screen backdrop. */
+.be-voucher-overlay--inline {
+  position: static;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  z-index: auto;
+  overflow: visible;
+  padding: 2rem 1rem;
+}
+
 .be-success-card {
   background: white;
   border: 1px solid rgba(191, 161, 95, 0.3);
