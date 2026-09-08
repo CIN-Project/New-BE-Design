@@ -59,11 +59,7 @@ export function BookingEngineAuthProvider({ children }) {
     // by the time they came back (bfcache miss, or via browser Back), there
     // was nothing left to resume the booking from, no matter how correct
     // the resume/retry logic itself was.
-    const handleUnload = () => {
-      Object.values(SESSION_KEYS).forEach((key) =>
-        sessionStorage.removeItem(key),
-      );
-    };
+     const handleUnload = () => sessionStorage.clear();
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
     // eslint-disable-next-line react-hooks/exhaustive-deps

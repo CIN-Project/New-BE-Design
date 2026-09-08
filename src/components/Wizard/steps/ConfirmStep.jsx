@@ -100,15 +100,15 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // this package's wizard has no such two-column layout to reuse, so the
   // same 768px threshold is applied directly here instead). 768 is also
   // this package's own established tablet/phone breakpoint elsewhere.
-  const [isMobileViewport, setIsMobileViewport] = useState(true);
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia("(max-width: 768px)");
-    setIsMobileViewport(mql.matches);
-    const onChange = (e) => setIsMobileViewport(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
+  // const [isMobileViewport, setIsMobileViewport] = useState(true);
+  // useEffect(() => {
+  //   if (typeof window === "undefined" || !window.matchMedia) return;
+  //   const mql = window.matchMedia("(max-width: 768px)");
+  //   setIsMobileViewport(mql.matches);
+  //   const onChange = (e) => setIsMobileViewport(e.matches);
+  //   mql.addEventListener("change", onChange);
+  //   return () => mql.removeEventListener("change", onChange);
+  // }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -317,10 +317,10 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
           // own "no tokenKey but be_bookingData present" fallback (added
           // alongside this retry flow) as an in-flight payment, forcing
           // that fresh session straight to this same confirm step.
-          try {
-            sessionStorage.removeItem(BOOKING_DATA_KEY);
-            sessionStorage.removeItem(PAYMENT_RESPONSE_KEY);
-          } catch {}
+          // try {
+          //   sessionStorage.removeItem(BOOKING_DATA_KEY);
+          //   sessionStorage.removeItem(PAYMENT_RESPONSE_KEY);
+          // } catch {}
           // Optional/secondary: persist the confirmed booking server-side.
           // Fire-and-forget — the receipt is already sourced from the
           // verified confirm response, so a failure here shouldn't block it.
@@ -439,7 +439,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   };
 
   let content;
-  if (loading || confirming || retrying) {
+  if (loading || confirming) {
     content = (
       <div className="be-success-card">
         <div className="be-success-icon-badge be-success-icon-badge--pending">
@@ -447,11 +447,9 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         </div>
         <h1 className="be-success-title">Confirming Your Booking</h1>
         <p className="be-success-desc">
-          {retrying
-            ? "Reconnecting you to the payment gateway…"
-            : confirming
-              ? "Payment received — finalizing your reservation…"
-              : "Please wait while we verify your payment with the bank."}
+          {confirming
+            ? "Payment received — finalizing your reservation…"
+            : "Please wait while we verify your payment with the bank."}
         </p>
       </div>
     );
@@ -483,7 +481,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         responseJson={responseJson}
         hadStoredData={hadStoredData}
         homeUrl={homeUrl}
-        onRetry={onRetry || handleRetryClick}
+        onRetry={onRetry}
         siteName={config?.siteName}
         bookingData={effectiveBookingData}
       />
@@ -499,16 +497,19 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
   // full-screen overlay in this package is (BookingFlow's mobile search
   // sheet, DropdownModal's dropdowns): so it isn't constrained by this
   // step's own position:relative/overflow ancestors in the wizard layout.
-  if (isMobileViewport) {
-    return createPortal(
-      <div className="be-voucher-overlay">{content}</div>,
-      document.body,
-    );
-  }
+  // if (isMobileViewport) {
+  //   return createPortal(
+  //     <div className="be-voucher-overlay">{content}</div>,
+  //     document.body,
+  //   );
+  // }
 
   // Desktop: no popup — the same status/retry card renders inline as part
   // of the normal booking page (see the effect above for why).
-  return <div className="be-voucher-overlay be-voucher-overlay--inline">{content}</div>;
+    return createPortal(
+    <div className="be-voucher-overlay">{content}</div>,
+    document.body,
+  );
 }
 
 function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPayment }) {

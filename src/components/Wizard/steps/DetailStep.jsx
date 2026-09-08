@@ -807,31 +807,6 @@ export function GuestDetailsForm({ onComplete }) {
             Address: { Phone: selectedPropertyPhone },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
-          // Everything below is unused by the receipt itself — it's what
-          // lets ConfirmStep.jsx's "Try Again" button actually retry the
-          // SAME payment (re-POST to STAAH + redirect again) instead of
-          // just sending the guest home, matching real Amritara's own
-          // ConfirmStep.js handleRetry (mint a fresh reservation_id, rebuild
-          // the reservation JSON, POST th-payment-request again, redirect).
-          // `payload`/`finalRequestData2` are already fully built by this
-          // point (see above) — stashing them here means a retry doesn't
-          // need to reconstruct per-room nightly rates/taxes/add-ons from
-          // scratch from this flattened summary, which doesn't retain
-          // enough detail to do that correctly.
-          selectedPropertyId,
-          formOfPayment,
-          keyData: finalKeyData,
-          reservationPayload: payload,
-          finalRequestData2,
-          // Wizard.jsx's mount-effect fallback (jump straight to step 4 when
-          // there's no tokenKey but this key is present) only makes sense
-          // for a FEW minutes after a real STAAH redirect — without a way to
-          // tell "fresh" from "stale", a payment attempt abandoned days ago
-          // (or just left over from testing) would otherwise hijack every
-          // later, completely unrelated fresh search into looking like a
-          // broken in-progress checkout forever, since sessionStorage never
-          // expires on its own.
-          savedAt: Date.now(),
         }),
       );
 

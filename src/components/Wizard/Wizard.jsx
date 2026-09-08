@@ -45,15 +45,15 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   // page, so on desktop it's kept rendered at step 4 too — ConfirmStep's
   // own inline (non-popup) card, see ConfirmStep.jsx, then renders below
   // it instead of alone.
-  const [isMobileViewport, setIsMobileViewport] = useState(true);
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mql = window.matchMedia("(max-width: 768px)");
-    setIsMobileViewport(mql.matches);
-    const onChange = (e) => setIsMobileViewport(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
+  // const [isMobileViewport, setIsMobileViewport] = useState(true);
+  // useEffect(() => {
+  //   if (typeof window === "undefined" || !window.matchMedia) return;
+  //   const mql = window.matchMedia("(max-width: 768px)");
+  //   setIsMobileViewport(mql.matches);
+  //   const onChange = (e) => setIsMobileViewport(e.matches);
+  //   mql.addEventListener("change", onChange);
+  //   return () => mql.removeEventListener("change", onChange);
+  // }, []);
   // Active across every step (not just step 1) — the cart sidebar's own
   // "Modify Dates"/"Modify Guests"/promo controls render on step 2 too.
   // Sync must run for the guest-limit warnings (CartOverview.jsx) and the
@@ -125,34 +125,34 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     // keep hijacking every later, unrelated fresh search into this
     // fallback forever. Missing/unparseable `savedAt` (data saved before
     // this check existed) is treated as stale, not fresh.
-    const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
-    let hasPendingBookingData = false;
-    try {
-      const raw = window.sessionStorage.getItem("be_bookingData");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const age = Date.now() - (parsed?.savedAt || 0);
-        if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
-          hasPendingBookingData = true;
-        } else {
-          console.log(
-            "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
-            { savedAt: parsed?.savedAt, ageMs: age },
-          );
-          window.sessionStorage.removeItem("be_bookingData");
-          window.sessionStorage.removeItem("be_paymentResponse");
-        }
-      }
-    } catch {
-      hasPendingBookingData = false;
-    }
-    if (hasPendingBookingData) {
-      console.log(
-        "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 4 (ConfirmStep)",
-      );
-      setStep(4);
-      return;
-    }
+    // const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
+    // let hasPendingBookingData = false;
+    // try {
+    //   const raw = window.sessionStorage.getItem("be_bookingData");
+    //   if (raw) {
+    //     const parsed = JSON.parse(raw);
+    //     const age = Date.now() - (parsed?.savedAt || 0);
+    //     if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
+    //       hasPendingBookingData = true;
+    //     } else {
+    //       console.log(
+    //         "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
+    //         { savedAt: parsed?.savedAt, ageMs: age },
+    //       );
+    //       window.sessionStorage.removeItem("be_bookingData");
+    //       window.sessionStorage.removeItem("be_paymentResponse");
+    //     }
+    //   }
+    // } catch {
+    //   hasPendingBookingData = false;
+    // }
+    // if (hasPendingBookingData) {
+    //   console.log(
+    //     "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 4 (ConfirmStep)",
+    //   );
+    //   setStep(4);
+    //   return;
+    // }
     if (!syncStepToUrl) return;
     const urlStep = parseInt(params.get("step"), 10);
     if (urlStep === 3) setStep(2);
@@ -214,7 +214,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
 
       {step === 1 && <StayStep onRoomsSelected={() => changeStep(2)} />}
 
-      {(step === 2 || (step === 4 && !isMobileViewport)) && (
+      {step === 2 && (
         <div className="be-cart-details-layout">
           <div className="be-cart-left-col">
             {/* Guest details + add-ons on one screen, no separate card-entry
