@@ -388,10 +388,28 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     // authoritative) instead of whatever the guest's browser happened to
     // have cached from before the first redirect.
     if (reservationJsonSrc && bookingDetailsSrc) {
+      // `reservationJsonSrc.PropertyId` is what real Amritara reads, but
+      // this app's own verify-token response hasn't been confirmed to
+      // always carry that nested field — `responseJson.property_id` (the
+      // raw gateway echo, referenced by Amritara's own postBookingWidged
+      // calls) is a second, independent source of the same value, and the
+      // pre-payment sessionStorage snapshot a third. Sending
+      // generateReservationId a request with none of these resolved
+      // (selectedPropertyId silently missing from the payload) is exactly
+      // what produced a 400 Bad Request here before this fix.
+      const propertyId =
+        reservationJsonSrc?.PropertyId ??
+        responseJson?.property_id ??
+        bookingData?.selectedPropertyId;
+      if (!propertyId) {
+        console.error(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: retry FAILED — no propertyId resolvable from reservationJson.PropertyId, responseJson.property_id, or bookingData.selectedPropertyId",
+        );
+        setRetrying(false);
+        return;
+      }
       setRetrying(true);
       try {
-        const propertyId =
-          reservationJsonSrc?.PropertyId ?? bookingData?.selectedPropertyId;
         const newReservationResp = await generateReservationId(
           config,
           propertyId,
@@ -491,9 +509,11 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
     }
     setRetrying(true);
     try {
+      const fallbackPropertyId =
+        bookingData.selectedPropertyId ?? responseJson?.property_id;
       const newReservationResp = await generateReservationId(
         config,
-        bookingData.selectedPropertyId,
+        fallbackPropertyId,
       );
       const newReservationId =
         newReservationResp?.reservation_id || bookingData.reservationId;
