@@ -124,24 +124,41 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     // payment page, but short enough that an abandoned/test attempt from
     // hours or days ago (sessionStorage never expires on its own) can't
     // keep hijacking every later, unrelated fresh search into this
-    // fallback forever. Missing/unparseable `savedAt` (data saved before
-    // this check existed) is treated as stale, not fresh.
+    // fallback forever.
+    //
+    // A missing `savedAt` is treated as FRESH (trust it), not stale —
+    // deliberately the opposite of what the comment here used to say.
+    // DetailStep.jsx's own `savedAt: Date.now()` write has, in practice,
+    // gone missing/been reverted independently of this file more than
+    // once this project — when that happens, `parsed?.savedAt || 0`
+    // becomes 0, so `age` computes as "milliseconds since 1970": a
+    // multi-decade number, always far past the 30-minute cutoff. That
+    // silently discarded a booking saved moments ago as if it were
+    // ancient, which is exactly backwards — a guest bouncing straight
+    // back from STAAH is the COMMON case this whole fallback exists for,
+    // while genuinely stale, `savedAt`-less data left over from days ago
+    // is the rare one. Only an EXPLICIT, parseable `savedAt` that's
+    // actually too old now gets discarded.
     const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
     let hasPendingBookingData = false;
     try {
       const raw = window.sessionStorage.getItem("be_bookingData");
       if (raw) {
         const parsed = JSON.parse(raw);
-        const age = Date.now() - (parsed?.savedAt || 0);
-        if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
+        if (typeof parsed?.savedAt !== "number") {
           hasPendingBookingData = true;
         } else {
-          console.log(
-            "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
-            { savedAt: parsed?.savedAt, ageMs: age },
-          );
-          window.sessionStorage.removeItem("be_bookingData");
-          window.sessionStorage.removeItem("be_paymentResponse");
+          const age = Date.now() - parsed.savedAt;
+          if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
+            hasPendingBookingData = true;
+          } else {
+            console.log(
+              "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
+              { savedAt: parsed.savedAt, ageMs: age },
+            );
+            window.sessionStorage.removeItem("be_bookingData");
+            window.sessionStorage.removeItem("be_paymentResponse");
+          }
         }
       }
     } catch {
