@@ -108,51 +108,52 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       return;
     }
     // No tokenKey (STAAH never redirected back — the guest just hit the
-    // browser's own Back button from its hosted payment page) but a
-    // payment attempt was left in-flight. When the browser restores the
-    // checkout page from bfcache this effect never even re-runs (the page
-    // was never actually reloaded), so this branch only matters when it
-    // doesn't — mobile browsers commonly can't bfcache a page reached via
-    // an in-flight POST-form navigation. Without this, a fresh reload here
-    // always fell back to step 1 regardless of where the guest actually
-    // was, which read as "back sent me to the home page" even though this
-    // IS still the booking page. ConfirmStep.jsx already renders a
-    // pending/failure card with a working Retry off this same
-    // sessionStorage key — just needs to actually be shown.
+    // browser's own Back button from its hosted payment page, possibly
+    // before STAAH even responded at all) but a payment attempt was left
+    // in-flight. This host app renders <Wizard syncStepToUrl={false}>
+    // (BookingFlow.jsx), so `step` never gets pushed into the URL/history
+    // at all — without this check, a fresh reload here always fell back to
+    // the default step (1, room/rate selection), which read as "back sent
+    // me to a totally unfamiliar page" even though this IS still the
+    // booking page. Real Amritara's own back-from-gateway behavior (no
+    // tokenKey yet) returns the guest to the SAME booking-summary/guest-
+    // details screen they were on — step 2 here, not step 4's
+    // confirm/failure card, which is reserved for when STAAH actually DID
+    // respond (tokenKey present, handled above).
     // 30 minutes — comfortably longer than anyone spends on STAAH's hosted
     // payment page, but short enough that an abandoned/test attempt from
     // hours or days ago (sessionStorage never expires on its own) can't
     // keep hijacking every later, unrelated fresh search into this
     // fallback forever. Missing/unparseable `savedAt` (data saved before
     // this check existed) is treated as stale, not fresh.
-    // const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
-    // let hasPendingBookingData = false;
-    // try {
-    //   const raw = window.sessionStorage.getItem("be_bookingData");
-    //   if (raw) {
-    //     const parsed = JSON.parse(raw);
-    //     const age = Date.now() - (parsed?.savedAt || 0);
-    //     if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
-    //       hasPendingBookingData = true;
-    //     } else {
-    //       console.log(
-    //         "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
-    //         { savedAt: parsed?.savedAt, ageMs: age },
-    //       );
-    //       window.sessionStorage.removeItem("be_bookingData");
-    //       window.sessionStorage.removeItem("be_paymentResponse");
-    //     }
-    //   }
-    // } catch {
-    //   hasPendingBookingData = false;
-    // }
-    // if (hasPendingBookingData) {
-    //   console.log(
-    //     "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 4 (ConfirmStep)",
-    //   );
-    //   setStep(4);
-    //   return;
-    // }
+    const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
+    let hasPendingBookingData = false;
+    try {
+      const raw = window.sessionStorage.getItem("be_bookingData");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const age = Date.now() - (parsed?.savedAt || 0);
+        if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
+          hasPendingBookingData = true;
+        } else {
+          console.log(
+            "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
+            { savedAt: parsed?.savedAt, ageMs: age },
+          );
+          window.sessionStorage.removeItem("be_bookingData");
+          window.sessionStorage.removeItem("be_paymentResponse");
+        }
+      }
+    } catch {
+      hasPendingBookingData = false;
+    }
+    if (hasPendingBookingData) {
+      console.log(
+        "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 2 (booking summary)",
+      );
+      setStep(2);
+      return;
+    }
     if (!syncStepToUrl) return;
     const urlStep = parseInt(params.get("step"), 10);
     if (urlStep === 3) setStep(2);
