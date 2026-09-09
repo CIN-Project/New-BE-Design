@@ -54,6 +54,14 @@ import "./BookingFlow.css";
  *    in-page CTA a second time. Only the value *changing* matters (so
  *    repeat clicks each re-open it even if a user already closed back to
  *    "cta" in between); the value itself is never read for anything else.
+ *  - `openWizardSignal`: same bump-a-counter pattern as `openSignal`, but
+ *    jumps straight to "wizard" instead of "search" — for restoring an
+ *    in-flight booking the guest already searched/selected a room for
+ *    (e.g. returning from STAAH's payment page without a real gateway
+ *    response yet; see Wizard.jsx's own be_bookingData-based step
+ *    restoration, which only ever gets a chance to run once "wizard" is
+ *    actually the rendered stage). `openSignal`'s "search" stage would
+ *    show an empty search form instead — the wrong stage for this case.
  */
 export function BookingFlow({
   entryMode = "reveal",
@@ -66,6 +74,7 @@ export function BookingFlow({
   onBackFromCta,
   mobileModal = false,
   openSignal,
+  openWizardSignal,
 }) {
   const [stage, setStage] = useState(initialStage || "cta");
   const showMobileModal = mobileModal && stage === "search";
@@ -74,6 +83,11 @@ export function BookingFlow({
     if (openSignal) setStage("search");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSignal]);
+
+  useEffect(() => {
+    if (openWizardSignal) setStage("wizard");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openWizardSignal]);
 
   // The modal is portaled to document.body (see the render below) — an
   // ancestor like page.js's #booking-widget wrapper (position:relative;

@@ -77,8 +77,25 @@ export function decryptHashFunction(partnerId, partnerKey, data) {
 
 export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
   const baseUrl = `${staahBaseUrl}/api/th-payment-redirect2`;
-    console.log("[PAYMENT-FLOW] paymentHash.js: submitting hidden form to STAAH", { baseUrl, currentUrlBeforeReplace: window.location.href });
-  window.history.replaceState({}, "", "/?pay-now");
+  console.log("[PAYMENT-FLOW] paymentHash.js: submitting hidden form to STAAH", { baseUrl, currentUrlBeforeReplace: window.location.href });
+  // NOT the literal "/?pay-now" real Amritara hardcodes — that unconditionally
+  // sends every guest back to the site ROOT on Back, regardless of which
+  // page they actually checked out from. Every "Book Now" entry point in
+  // this host app routes to /be-booking (a dedicated page, unlike
+  // Amritara's own widget embedded directly on its property page), so
+  // hardcoding "/" here was overwriting that path every time — this is
+  // the actual, sole reason Back was landing on the homepage instead of
+  // the booking page, no matter what else got fixed downstream of it.
+  // Preserves the CURRENT pathname + existing query string (propertyId/
+  // dates/rooms — be-booking/page.js's HydrateFromQueryParams needs these
+  // on the reload after Back) and only appends the pay-now marker.
+  const marker = new URLSearchParams(window.location.search);
+  marker.set("pay-now", "1");
+  window.history.replaceState(
+    {},
+    "",
+    `${window.location.pathname}?${marker.toString()}`,
+  );
 
   const form = document.createElement("form");
   form.method = "POST";
