@@ -9,6 +9,7 @@ import { ConfirmStep } from "./steps/ConfirmStep.js";
 import { CartOverview } from "../Cart/CartOverview.js";
 import { SearchBar } from "../SearchBar/SearchBar.js";
 import { useStayContext } from "../../context/StayContext.js";
+import { useCartContext } from "../../context/CartContext.js";
 import { useRepriceSelectedRooms } from "../../hooks/useRepriceSelectedRooms.js";
 import { useSyncSelectedRoomsWithSearch } from "../../hooks/useSyncSelectedRoomsWithSearch.js";
 import "./Wizard.css";
@@ -23,7 +24,8 @@ import "./Wizard.css";
  */
 export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
-  const { setActiveRoomSlotIndex } = useStayContext();
+  const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
+  const { updateUserDetails } = useCartContext();
   // Bumped by CartOverview's "Modify Property" link, consumed once by
   // SearchBar's own autoOpenDestinationSignal effect to open specifically
   // the Location dropdown once step 1 mounts — not the calendar or guests,
@@ -141,16 +143,19 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     // actually too old now gets discarded.
     const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
     let hasPendingBookingData = false;
+    let pendingBookingData = null;
     try {
       const raw = window.sessionStorage.getItem("be_bookingData");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (typeof parsed?.savedAt !== "number") {
           hasPendingBookingData = true;
+          pendingBookingData = parsed;
         } else {
           const age = Date.now() - parsed.savedAt;
           if (age >= 0 && age <= PENDING_BOOKING_MAX_AGE_MS) {
             hasPendingBookingData = true;
+            pendingBookingData = parsed;
           } else {
             console.log(
               "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but stale — ignoring and clearing",
@@ -165,6 +170,26 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       hasPendingBookingData = false;
     }
     if (hasPendingBookingData) {
+      // Restores the actual room selection + guest form data (not just
+      // the flattened receipt summary) so step 2 shows the real cart and
+      // pricing instead of an empty "Select Room" / ₹0 state, and stays
+      // fully editable — CartOverview/proceedToPay both read straight off
+      // StayContext.selectedRoom, and DetailStep's own form fields read
+      // off CartContext.userDetails on mount.
+      if (Array.isArray(pendingBookingData?.rawSelectedRoom)) {
+        console.log(
+          "[PAYMENT-FLOW] Wizard.jsx: restoring StayContext.selectedRoom from be_bookingData",
+          { rawSelectedRoom: pendingBookingData.rawSelectedRoom },
+        );
+        setSelectedRoom(pendingBookingData.rawSelectedRoom);
+      }
+      if (pendingBookingData?.formData) {
+        console.log(
+          "[PAYMENT-FLOW] Wizard.jsx: restoring guest details form from be_bookingData",
+          { formData: pendingBookingData.formData },
+        );
+        updateUserDetails(pendingBookingData.formData);
+      }
       console.log(
         "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 2 (booking summary)",
       );

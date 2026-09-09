@@ -638,6 +638,18 @@ export function GuestDetailsForm({ onComplete }) {
           keyData: finalKeyData,
           reservationPayload: payload,
           finalRequestData2,
+          // The FULL StayContext room objects (roomId, roomRateWithTax,
+          // maxGuest/maxAdult/maxChildren, minInventory, nightly
+          // breakdown, etc.) — NOT the flattened `selectedRoom` above
+          // (that's a display-only summary for the receipt: just
+          // roomName/roomImage/roomPackage/adults/children). CartOverview
+          // and proceedToPay's own validation both read straight off
+          // StayContext.selectedRoom, so restoring FROM this on Back is
+          // what lets step 2 show the real cart (rooms + price breakdown)
+          // and stay fully editable, instead of an empty "Select Room" /
+          // ₹0 cart that looks broken even though the guest already
+          // picked everything.
+          rawSelectedRoom: selectedRoom,
           // Wizard.jsx's mount-effect fallback only trusts this snapshot
           // for a short window after it's saved — see that file's own
           // comment — so a stale/abandoned attempt from a much earlier
