@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { useConfig } from "../../../config/configContext.js";
 import { useCartContext } from "../../../context/CartContext.js";
 import { useStayContext } from "../../../context/StayContext.js";
@@ -886,6 +886,15 @@ export function GuestDetailsForm({ onComplete }) {
           </div>
         </div>
       </form>
+
+      {/* react-hot-toast's toast.error(...) calls (proceedToPay above, e.g.
+          "Select your room(s)") are global, but only actually render where
+          a <Toaster> is mounted — StayStep.jsx and SearchBar.jsx each have
+          their own, but neither is mounted once the guest reaches this
+          step (step 2), so a validation failure here previously fired the
+          toast into thin air: the submit was correctly blocked, but the
+          guest saw no feedback explaining why nothing happened. */}
+      <Toaster position="top-right" />
 
       {isProcessing &&
         mounted &&

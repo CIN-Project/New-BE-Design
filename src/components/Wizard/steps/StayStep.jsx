@@ -1053,7 +1053,7 @@ function RoomSlotStepper({
             className="be-room-slot-continue-btn"
             onClick={onContinue}
           >
-            CONTINUE
+            CONTINUE TO CART
             <span className="be-arrow">&#8594;</span>
           </button>
         )}
