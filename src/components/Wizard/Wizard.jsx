@@ -170,6 +170,26 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       hasPendingBookingData = false;
     }
     if (hasPendingBookingData) {
+      // Unconditional, unlike the two guarded logs below — this fires
+      // regardless of what pendingBookingData actually contains, so a
+      // silent "restoration didn't happen" is distinguishable from "this
+      // code isn't even running": if THIS log is missing, the deployed
+      // bundle predates this fix; if it's present but rawSelectedRoom is
+      // absent/empty/not-an-array, DetailStep.jsx's SAVE side (the
+      // `rawSelectedRoom: selectedRoom` line) is what's missing instead.
+      console.log(
+        "[PAYMENT-FLOW] Wizard.jsx: pendingBookingData contents at restore time",
+        {
+          keys: pendingBookingData ? Object.keys(pendingBookingData) : null,
+          hasRawSelectedRoom: Array.isArray(pendingBookingData?.rawSelectedRoom),
+          rawSelectedRoomLength: Array.isArray(pendingBookingData?.rawSelectedRoom)
+            ? pendingBookingData.rawSelectedRoom.length
+            : null,
+          rawSelectedRoom: pendingBookingData?.rawSelectedRoom,
+          hasFormData: Boolean(pendingBookingData?.formData),
+          formData: pendingBookingData?.formData,
+        },
+      );
       // Restores the actual room selection + guest form data (not just
       // the flattened receipt summary) so step 2 shows the real cart and
       // pricing instead of an empty "Select Room" / ₹0 state, and stays

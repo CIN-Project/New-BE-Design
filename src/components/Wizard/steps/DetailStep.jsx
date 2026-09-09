@@ -608,6 +608,16 @@ export function GuestDetailsForm({ onComplete }) {
         );
       }
 
+      console.log(
+        "[PAYMENT-FLOW] DetailStep.jsx: saving be_bookingData snapshot",
+        {
+          hasSelectedRoom: Array.isArray(selectedRoom),
+          selectedRoomLength: Array.isArray(selectedRoom)
+            ? selectedRoom.length
+            : null,
+          selectedRoom,
+        },
+      );
       sessionStorage.setItem(
         "be_bookingData",
         JSON.stringify({
