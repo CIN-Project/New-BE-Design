@@ -540,12 +540,6 @@ export function SearchBar({
           onToggle={() => openOnly(setShowGuestsModal, 350)}
           onDone={() => {
             setShowGuestsModal(false);
-            // Last leg of the guided hand-off (location -> calendar ->
-            // guests -> here): closing the guests picker moves keyboard
-            // focus into Promo Code, the one field left before Search — the
-            // guest doesn't have to click into it themselves, just type or
-            // move straight to Search. See PromoField.jsx's id.
-            document.getElementById("be-promo-input")?.focus();
           }}
           modalRef={guestsModalRef}
           openUpwards={openUpwards}
