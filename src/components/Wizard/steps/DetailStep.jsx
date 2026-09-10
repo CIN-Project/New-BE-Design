@@ -896,6 +896,38 @@ export function GuestDetailsForm({ onComplete }) {
           </span>
         )}
 
+        {/* Mobile-only (see DetailStep.css) — desktop keeps using
+            CartOverview's own sticky-sidebar buttons (hidden here via CSS)
+            since scrolling to the very end of a long form to find the pay
+            button there would be a real regression on a tall viewport. On
+            mobile there's no sticky sidebar to keep it visible in anyway
+            (CartOverview stacks above this form instead), so real
+            Amritara's own placement — end of the form, after the privacy
+            checkbox, before the trust badges — is what this matches. Same
+            form/name/value wiring as CartOverview's buttons: handleSubmit
+            tells them apart via e.submitter either way. */}
+        <div className="be-mobile-pay-actions">
+          <button
+            type="submit"
+            name="formOfPayment"
+            value="pay_now"
+            className="be-mobile-pay-btn"
+          >
+            Confirm &amp; Pay
+          </button>
+          <div className="be-mobile-pay-divider" role="separator">
+            <span>OR</span>
+          </div>
+          <button
+            type="submit"
+            name="formOfPayment"
+            value="pay_later"
+            className="be-mobile-pay-later-btn"
+          >
+            Pay Later
+          </button>
+        </div>
+
         <div className="be-trust-badges-row">
           <div className="be-trust-badge-item">
             <CheckIcon /> Best Price Guaranteed

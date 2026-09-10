@@ -92,6 +92,13 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
   const [showDateModal, setShowDateModal] = useState(false);
   const [showGuestsModal, setShowGuestsModal] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
+  // Mirrors real Amritara's StayStep.js cartDisplayMobile (default
+  // collapsed) — the itemized breakdown below the header starts collapsed
+  // on mobile so the guest details form isn't pushed far down the page by
+  // it; CSS (see .cart-body-scroll's mobile rule in CartOverview.css)
+  // scopes the collapse to mobile widths only, so this state has no effect
+  // at desktop widths where the body always shows regardless of it.
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
 
   const totalAdults = (searchRooms || []).reduce(
     (sum, r) => sum + (r.adults || 0),
@@ -131,7 +138,12 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
 
   return (
     <div className="cart-sidebar">
-      <div className="cart-sidebar-header">
+      <div
+        className="cart-sidebar-header cart-sidebar-header-toggle"
+        onClick={() => setIsMobileExpanded((v) => !v)}
+        role="button"
+        tabIndex={0}
+      >
         <h4 className="cart-sidebar-title">
           <svg
             className="cart-sidebar-title-icon"
@@ -161,9 +173,39 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
             </span>
           ) : null}
         </h4>
+        {/* Mobile-only (see CartOverview.css) — desktop never shows this
+            toggle since the body below is never collapsed there. */}
+        <span className="cart-sidebar-mobile-chevron">
+          <ChevronIcon open={isMobileExpanded} />
+        </span>
       </div>
 
-      <div className="cart-body-scroll">
+      <div
+        className={`cart-body-scroll${isMobileExpanded ? " be-mobile-expanded" : ""}`}
+      >
+        {/* Mobile-only compact preview of the essentials (dates, guests,
+            total) — same content that's still readable/actionable while
+            the itemized breakdown below stays collapsed, matching real
+            Amritara's collapsed "Booking Details" card (dates+Modify,
+            guests+Modify, Total, nothing else) before it's tapped open. */}
+        <div className="cart-mobile-collapsed-summary">
+          <div className="cart-mobile-collapsed-row">
+            <span>
+              {formatDisplayDate(selectedStartDate)} -{" "}
+              {formatDisplayDate(selectedEndDate)}
+            </span>
+            <span style={modifyLinkStyle} onClick={() => setShowDateModal(true)}>
+              Modify
+            </span>
+          </div>
+          <div className="cart-mobile-collapsed-row">
+            <span>{guestsSummary}, {searchRooms?.length || 0} Room{(searchRooms?.length || 0) === 1 ? "" : "s"}</span>
+            <span style={modifyLinkStyle} onClick={() => setShowGuestsModal(true)}>
+              Modify
+            </span>
+          </div>
+        </div>
+
         {/* Selected Property */}
         <div className="cart-section">
           <div className="cart-section-header">

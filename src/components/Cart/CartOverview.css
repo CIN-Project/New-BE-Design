@@ -53,6 +53,23 @@
   background: var(--be-color-primary, #846836);
 }
 
+.cart-sidebar-mobile-chevron {
+  display: none;
+}
+
+.cart-mobile-collapsed-summary {
+  display: none;
+}
+
+.cart-mobile-collapsed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #333;
+  padding: 0.2rem 0;
+}
+
 @media (max-width: 1024px) {
   .cart-sidebar {
     position: static;
@@ -64,6 +81,46 @@
   }
    .cart-sidebar-header {
     padding: 0.6rem 0.2rem 0.4rem !important;
+  }
+
+  /* Mobile-only collapse — see CartOverview.jsx's isMobileExpanded doc
+     comment. Desktop (outside this media query) never applies any of
+     this, so the body there always shows in full regardless of state. */
+  .cart-sidebar-header-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .cart-sidebar-mobile-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--be-color-primary, #846836);
+    margin-left: 0.5rem;
+  }
+
+  .cart-mobile-collapsed-summary {
+    display: block;
+    padding: 0.6rem 0.2rem 0.4rem;
+    border-bottom: 1px solid #f2f2f2;
+  }
+
+  /* !important here (and on the pay-button hide rule further down) isn't
+     decorative — this file's various section/row classes each declare
+     their own `display` (flex/block/etc.), and several of those rules sit
+     LATER in this same file. Equal-specificity `display` declarations
+     resolve by source order, so a plain override up here would keep
+     losing to whichever of those happens to be declared below it — this
+     bit twice already (the chevron and the pay buttons both silently
+     stayed visible the same way) before landing on !important as the
+     actually-robust fix rather than chasing source order file-wide. */
+  .cart-body-scroll > *:not(.cart-mobile-collapsed-summary) {
+    display: none !important;
+  }
+
+  .cart-body-scroll.be-mobile-expanded > *:not(.cart-mobile-collapsed-summary) {
+    display: revert !important;
   }
 }
 
@@ -462,5 +519,22 @@
 .cart-pay-later-btn:hover {
   background: var(--be-color-primary, #846836);
   color: #ffffff !important;
+}
+
+/* The actual pay actions now live at the END of the guest-details form on
+   mobile instead (DetailStep.css's be-mobile-pay-actions, matching real
+   Amritara's own placement there) — this sidebar keeps only the Total row
+   on mobile, not a second, differently-positioned copy of the same
+   buttons. Placed AFTER the base .cart-pay-btn/.cart-pay-divider/
+   .cart-pay-later-btn rules above (all three set their own `display: flex`)
+   on purpose — equal-specificity `display` declarations resolve by source
+   order, so a hide rule earlier in the file (e.g. bundled into the first
+   1024px media block above) loses to these regardless of viewport width. */
+@media (max-width: 1024px) {
+  .cart-pay-btn,
+  .cart-pay-divider,
+  .cart-pay-later-btn {
+    display: none !important;
+  }
 }
 

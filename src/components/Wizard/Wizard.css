@@ -63,6 +63,14 @@
 
 @media (max-width: 1024px) {
   .be-cart-details-layout {
+    /* CartOverview (2nd in DOM) shown ABOVE the guest form on mobile,
+       matching real Amritara's collapsed "Booking Details" summary card
+       sitting above its "Guest Details" form. The pay/confirm buttons
+       themselves no longer live in that summary card on mobile though —
+       they moved to the END of the form itself (DetailStep.css's
+       be-mobile-pay-actions, hidden on desktop where CartOverview's own
+       sticky-sidebar buttons are still used instead), matching Amritara's
+       own button placement there. */
     flex-direction: column-reverse;
     gap: 1.8rem;
     /* align-items:flex-start (base rule above) is for the side-by-side
