@@ -1110,3 +1110,18 @@
   }
 }
 
+/* iOS Safari auto-zooms the whole page on focus of any input under 16px
+   (e.g. Promo Code, whose real <input> sits under .be-form-field-inputs at
+   0.85rem !important above). The equivalent global rule in theme.css loses
+   this specific fight: same (class + type) specificity, both !important, so
+   normal cascade order applies — and theme.css is @imported before this
+   file in theme/all.css, so this file's own rule was winning. Restating the
+   override here, later in the SAME file/selector, is what actually wins. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    .be-form-field-inputs input {
+      font-size: 16px !important;
+    }
+  }
+}
+
