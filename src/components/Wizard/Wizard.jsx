@@ -78,6 +78,33 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     }
   };
 
+  // Mobile-only "Back to Cart" on the payment-failure card (ConfirmStep.jsx's
+  // FailureState) — desktop keeps its existing "Return Home" link
+  // unchanged. Restores the same be_bookingData snapshot the mount-time
+  // pay-now-gated fallback above reads, so the guest lands back on step 2
+  // with their room selection and guest-details form exactly as they left
+  // it, still editable, instead of being sent all the way back to the
+  // homepage after a failed/declined payment.
+  const handleBackToCart = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.sessionStorage.getItem("be_bookingData");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.rawSelectedRoom)) {
+          setSelectedRoom(parsed.rawSelectedRoom);
+        }
+        if (parsed?.formData) {
+          updateUserDetails(parsed.formData);
+        }
+      }
+    } catch {
+      // No usable snapshot — still take the guest to step 2 rather than
+      // stranding them on the failure card with no way back but Home.
+    }
+    changeStep(2);
+  };
+
   // On mount only (not popstate — that's the effect below, for back/forward
   // navigation once already here): jump straight to the confirmation step
   // if STAAH just redirected the browser back with `?tokenKey=...`. Ported
@@ -332,7 +359,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         </div>
       )}
 
-      {step === 4 && <ConfirmStep />}
+      {step === 4 && <ConfirmStep onBackToCart={handleBackToCart} />}
     </div>
   );
 }

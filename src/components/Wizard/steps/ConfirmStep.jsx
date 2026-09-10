@@ -72,7 +72,7 @@ const BOOKING_DATA_KEY = "be_bookingData";
  * success signal and never made the confirm call at all — confirmPayment
  * below is that missing call.
  */
-export function ConfirmStep({ homeUrl = "/", onRetry }) {
+export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
   const config = useConfig();
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -638,6 +638,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry }) {
         hadStoredData={hadStoredData}
         homeUrl={homeUrl}
         onRetry={onRetry || handleRetryClick}
+        onBackToCart={onBackToCart}
         siteName={config?.siteName}
         bookingData={effectiveBookingData}
       />
@@ -923,6 +924,7 @@ function FailureState({
   hadStoredData,
   homeUrl,
   onRetry,
+  onBackToCart,
   siteName,
   bookingData,
 }) {
@@ -984,9 +986,27 @@ function FailureState({
         >
           Try Again
         </button>
-        <a href={homeUrl} className="be-voucher-btn-done">
+        {/* Desktop keeps this exact "Return Home" link, unchanged — see
+            be-voucher-btn-done-desktop's doc comment in ConfirmStep.css.
+            Mobile shows "Back to Cart" instead (below), which returns the
+            guest to step 2 with their room selection and guest-details form
+            restored/still editable rather than sending them all the way
+            back to the homepage after a failed/declined payment. */}
+        <a href={homeUrl} className="be-voucher-btn-done be-voucher-btn-done-desktop">
           Return Home
         </a>
+        <button
+          type="button"
+          onClick={
+            onBackToCart ||
+            (() => {
+              window.location.href = homeUrl;
+            })
+          }
+          className="be-voucher-btn-done be-voucher-btn-done-mobile"
+        >
+          Back to Cart
+        </button>
       </div>
     </div>
   );
