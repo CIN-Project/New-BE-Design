@@ -690,6 +690,20 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
     .join(" ");
   const guestEmail = formData?.email || "";
   const guestPhone = formData?.phone || "";
+  // bookingData.promoCode is cart.promoCodeContext, the base64-encoded value
+  // the rest of the booking flow sends to the API (see SearchBar.jsx/
+  // CouponComponent.jsx) — decoding it back here is what actually shows the
+  // human-readable code the guest typed instead of raw base64 on the
+  // receipt. Matches real Amritara's own atob(promoCodeContext) decode at
+  // DetailStep.js ~1101/1104.
+  let appliedPromoCode = "";
+  if (bookingData?.promoCode) {
+    try {
+      appliedPromoCode = atob(bookingData.promoCode);
+    } catch {
+      appliedPromoCode = bookingData.promoCode;
+    }
+  }
   const nights = calcNights(
     bookingData?.selectedStartDate,
     bookingData?.selectedEndDate,
@@ -800,7 +814,7 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
         </div>
         <div className="be-voucher-field">
           <span className="be-voucher-label">Applied Code</span>
-          <p className="be-voucher-value">{bookingData?.promoCode || "None"}</p>
+          <p className="be-voucher-value">{appliedPromoCode || "None"}</p>
         </div>
       </div>
 

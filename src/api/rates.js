@@ -194,7 +194,7 @@ export async function getLatestAddOnsRates(config, propertyId) {
  * Validate a promo code against the CMS before applying it to a booking.
  */
 export function verifyPromoCode(config, promoCode) {
-  return cmsPost(config, "cmsBaseUrl", "/cmsapi/booking/VerifyPromoCode", {
+  return cmsPost(config, "cmsBaseUrl", "/api/booking/VerifyPromoCode", {
     promoCode,
   });
 }

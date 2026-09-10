@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useConfig } from "../../config/configContext.js";
 import { useCartContext } from "../../context/CartContext.js";
 import { verifyPromoCode } from "../../api/rates.js";
+import { encodeBase64 } from "../../utils/base64.js";
 import "./CartOverview.css";
 
 /**
@@ -54,7 +55,7 @@ export function CouponComponent({ isOpen, onClose }) {
         // promoCodeContext changes below — inventing a client-side
         // percentage here would just be a fabricated number with no basis
         // in what the server actually returns.
-        setPromoCodeContext(btoa(masterPromo || trimmed));
+        setPromoCodeContext(encodeBase64(masterPromo || trimmed));
         setAppliedCode(trimmed);
         onClose?.();
         setCode("");

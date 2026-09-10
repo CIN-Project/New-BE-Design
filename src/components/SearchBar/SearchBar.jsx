@@ -14,6 +14,7 @@ import { PromoField } from "./PromoField.js";
 import { useCalendarRates } from "../../hooks/useCalendarRates.js";
 import { resolveExternalRedirectUrl } from "../../utils/externalRedirect.js";
 import { postBookingWidged } from "../../api/tracking.js";
+import { encodeBase64 } from "../../utils/base64.js";
 import "./SearchBar.css";
 
 /**
@@ -110,8 +111,57 @@ export function SearchBar({
   // Irrelevant at every other width/variant, where CSS keeps the summary
   // card hidden and the form always visible regardless of this value.
   const [mobileEditOpen, setMobileEditOpen] = useState(false);
+  // Raw text the guest is typing, kept separate from cart.promoCodeContext:
+  // that context field holds the base64-encoded value the rest of the
+  // booking flow sends to the API (see handlePromoCodeChange below), not
+  // human-readable text — the field used to bind straight to
+  // promoCodeContext via its onChange, sending un-encoded raw text to
+  // GetRoomsRates, so the promo silently never matched anything. No
+  // VerifyPromoCode call here on purpose, matching real Amritara's
+  // Filterbar.js handleSearchRedirection: the search bar never blocks/gates
+  // on promo validity, it just encodes whatever was typed and moves
+  // straight on to search — same as CouponComponent.jsx already does with
+  // its own actual verification step, deliberately kept separate, for the
+  // cart's own later "Apply Promo" flow.
+  // Seeded from cart.promoCodeContext (decoded) rather than "" so a promo
+  // typed into one SearchBar instance (e.g. the homepage widget) still
+  // shows up already filled in on a DIFFERENT SearchBar instance that
+  // mounts fresh later (e.g. the compact recap bar atop /be-booking, a
+  // real full-navigation remount, not the same component staying alive) —
+  // without this the field read as reset/inconsistent even though the code
+  // was still actually applied underneath (cart.promoCodeContext survived,
+  // only this local display text didn't).
+  const [promoCodeInput, setPromoCodeInput] = useState(() => {
+    if (!cart.promoCodeContext) return "";
+    try {
+      return atob(cart.promoCodeContext);
+    } catch {
+      return "";
+    }
+  });
 
   const isCompact = variant === "compact";
+
+  // Keeps this field in sync with promo changes that didn't originate from
+  // THIS instance's own typing — cleared via CouponComponent's "Remove"
+  // link in the cart, or applied/typed into a different SearchBar instance
+  // mounted at the same time (the full hero bar and the compact recap bar
+  // can both be mounted together at different breakpoints, CSS-hidden
+  // rather than unmounted — see mobileEditOpen's doc comment above). A
+  // no-op for changes THIS instance's own handlePromoCodeChange just made,
+  // since decoding what it just encoded returns the exact same text.
+  useEffect(() => {
+    if (!cart.promoCodeContext) {
+      setPromoCodeInput("");
+      return;
+    }
+    try {
+      setPromoCodeInput(atob(cart.promoCodeContext));
+    } catch {
+      // Not something this component encoded (e.g. a stale/foreign value)
+      // — leave whatever the guest already typed here alone.
+    }
+  }, [cart.promoCodeContext]);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -254,6 +304,17 @@ export function SearchBar({
       search.setSelectedStartDate(start);
       search.setSelectedEndDate(null);
     }
+  };
+
+  // No VerifyPromoCode call here — see promoCodeInput's doc comment above.
+  // Every keystroke immediately base64-encodes the raw text straight into
+  // promoCodeContext, same as real Amritara's Filterbar.js
+  // handlePromocodeChange does on its own onChange (minus the verify call),
+  // so the search bar never blocks the guest on promo validity.
+  const handlePromoCodeChange = (raw) => {
+    setPromoCodeInput(raw);
+    const trimmed = raw.trim();
+    cart.setPromoCodeContext(trimmed ? encodeBase64(trimmed) : null);
   };
 
   const handleSubmit = (e) => {
@@ -546,8 +607,8 @@ export function SearchBar({
         />
 
         <PromoField
-          value={cart.promoCodeContext || ""}
-          onChange={cart.setPromoCodeContext}
+          value={promoCodeInput}
+          onChange={handlePromoCodeChange}
         />
 
         <button

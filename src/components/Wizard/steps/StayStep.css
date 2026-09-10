@@ -715,8 +715,21 @@
 .be-rate-option-price {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #1a1a1a;
+  /* Matches real Amritara's Filterbar.js text-green-600 on the actual
+     (non-struck-through) price, both Standard and Member rows. */
+  color: #16a34a;
   text-align: right;
+}
+
+/* The API-reported "Savings" baked into a rate's OBP entry (RateBeforeTax
+   is already net of it) — struck through here next to the actual price,
+   same as real Amritara's Filterbar.js increasedPricePerRoom display. */
+.be-rate-option-price-strike {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #999;
+  text-decoration: line-through;
+  margin-right: 0.35rem;
 }
 
 .be-rate-option-price.be-member-price {

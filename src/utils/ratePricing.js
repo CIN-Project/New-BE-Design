@@ -513,7 +513,7 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
   const addonAmount = addonAmountTotal || 0;
   const gstTotal = roomTaxTotal + (addonTaxTotal || 0);
   const taxesAndFeesTotal = gstTotal + extraChargeTotal;
-  const grandTotal = roomBaseCost + roomTaxTotal + extraChargeTotal + addonAmount;
+  const grandTotal = roomBaseCost + gstTotal + extraChargeTotal + addonAmount;
   const gstPercent = roomBaseCost > 0 ? Math.round((roomTaxTotal / roomBaseCost) * 100) : 0;
 
   const allDateKeys = Array.from(

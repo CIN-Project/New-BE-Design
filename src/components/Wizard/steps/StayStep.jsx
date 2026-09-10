@@ -364,18 +364,26 @@ function getStandardRateEntries(property, room) {
  * Filterbar.js's room-list `minRate` computation (~4721-4736), which loops
  * every one of the room's RatePlans (standard AND member alike, unfiltered
  * — this is the raw availability check, not the display price) taking each
- * plan's first date's 1-adult OBP rate, and keeps the smallest positive
- * one. A room can have MinInventory > 0 (bookable count-wise) but still
- * have no valid rate returned for the searched dates; real Amritara drops
- * such a room from the list entirely rather than showing a blank/zero
- * price (see the room-list filter above this function's call site).
- * Returns null when no rate plan has any positive rate. */
-function getRoomMinRate(room) {
+ * plan's first date's OBP rate, and keeps the smallest positive one. A room
+ * can have MinInventory > 0 (bookable count-wise) but still have no valid
+ * rate returned for the searched dates; real Amritara drops such a room
+ * from the list entirely rather than showing a blank/zero price (see the
+ * room-list filter above this function's call site). Returns null when no
+ * rate plan has any positive rate.
+ *
+ * `adults` intentionally diverges from real Amritara here (which hardcodes
+ * "1" regardless of the actual search): that hardcoded 1-adult figure could
+ * read lower than every rate-plan card shown once a room is expanded (those
+ * cards price by the real searched adult count), which read as a display
+ * bug rather than the "from" teaser it was meant to be. Passing the real
+ * count keeps this figure honest and consistent with what's shown below it.
+ */
+function getRoomMinRate(room, adults = 1) {
   let minRate = null;
   (room?.RatePlans || []).forEach((plan) => {
     const firstDateKey = Object.keys(plan?.Rates || {})[0];
     const obp = plan?.Rates?.[firstDateKey]?.OBP;
-    const guestRate = getGuestRateFromObp(obp, 1);
+    const guestRate = getGuestRateFromObp(obp, adults);
     const rate = parseFloat(guestRate?.RateBeforeTax || "0");
     if (rate > 0 && (minRate === null || rate < minRate)) {
       minRate = rate;
@@ -385,37 +393,48 @@ function getRoomMinRate(room) {
   return minRate;
 }
 
-function getRoomFromPrice(property, room) {
+function getRoomFromPrice(property, room, adults = 1) {
   const entries = getStandardRateEntries(property, room);
   console.log('Prem getStandardRateEntries',entries)
   let min = Infinity;
   let minIsMemberRate = false;
+  let minSavings = 0;
 
   entries.forEach(({ rate, ratePlan }) => {
     const firstKey = Object.keys(ratePlan?.Rates || {})[0];
     const obp = ratePlan?.Rates?.[firstKey]?.OBP;
-    const guestRate = getGuestRateFromObp(obp, 1);
+    const guestRate = getGuestRateFromObp(obp, adults);
     const val = parseFloat(guestRate?.RateBeforeTax || "0");
-    
+
     if (val > 0 && val < min) {
       min = val;
       minIsMemberRate = false;
+      minSavings = parseFloat(guestRate?.Savings || "0");
     }
 
     const { memberRatePlan } = findMemberRatePlan(property, room, rate);
     if (!memberRatePlan) return;
     const memberFirstKey = Object.keys(memberRatePlan?.Rates || {})[0];
     const memberObp = memberRatePlan?.Rates?.[memberFirstKey]?.OBP;
-    const memberGuestRate = getGuestRateFromObp(memberObp, 1);
+    const memberGuestRate = getGuestRateFromObp(memberObp, adults);
     const memberVal = parseFloat(memberGuestRate?.RateBeforeTax || "0");
     if (memberVal > 0 && memberVal < min) {
       min = memberVal;
       minIsMemberRate = true;
+      minSavings = parseFloat(memberGuestRate?.Savings || "0");
     }
   });
 
   return isFinite(min)
-    ? { price: Math.round(min), isMemberRate: minIsMemberRate }
+    ? {
+        price: Math.round(min),
+        isMemberRate: minIsMemberRate,
+        // Struck-through "from" reference price — same
+        // RateBeforeTax + Savings pairing as Amritara's Filterbar.js
+        // increasedPricePerRoom (~4841), just for the single cheapest entry
+        // this "Rates Starting From" summary already picked.
+        strikePrice: minSavings > 0 ? Math.round(min + minSavings) : null,
+      }
     : null;
 }
 
@@ -628,6 +647,14 @@ function RateCard({
               </span>
             </div>
             <span className="be-rate-option-price">
+              {standardTotals.totalSavings > 0 && (
+                <span className="be-rate-option-price-strike">
+                  &#8377;
+                  {formatMoney(
+                    standardTotals.totalCartValue + standardTotals.totalSavings,
+                  )}
+                </span>
+              )}
               &#8377;{formatMoney(standardTotals.totalCartValue)}
               {!isDayUse && (
                 <div className="be-rate-unit">
@@ -667,6 +694,14 @@ function RateCard({
               <span
                 className={`be-rate-option-price be-member-price${animating ? " be-unlocking-flash" : ""}`}
               >
+                {memberTotals.totalSavings > 0 && (
+                  <span className="be-rate-option-price-strike">
+                    &#8377;
+                    {formatMoney(
+                      memberTotals.totalCartValue + memberTotals.totalSavings,
+                    )}
+                  </span>
+                )}
                 &#8377;{formatMoney(memberTotals.totalCartValue)}
                 {!isDayUse && (
                   <div className="be-rate-unit">
@@ -718,6 +753,7 @@ function RoomRow({
   activeRoomIndex,
   fromPrice,
   fromPriceIsMemberRate,
+  fromPriceStrike,
   standardEntries,
   adults,
   nights,
@@ -821,6 +857,11 @@ function RoomRow({
                 Rates Starting From
               </span>
               <span className="be-room-row-price">
+                {fromPrice != null && fromPriceStrike != null && (
+                  <span className="be-rate-option-price-strike">
+                    ₹{formatMoney(fromPriceStrike)}
+                  </span>
+                )}
                 {fromPrice != null ? `₹${formatMoney(fromPrice)}` : "—"}
                 {!isDayUse && <span> / night</span>}
                 {fromPrice != null && fromPriceIsMemberRate && (
@@ -1469,6 +1510,7 @@ export function StayStep({ onRoomsSelected }) {
     }
 
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
+    const activeSlotAdults = searchRooms?.[currentRoomIndex]?.adults ?? 1;
     console.log("Prem property?.RoomData",property?.RoomData)
     const availableRooms = (property?.RoomData || [])
       .filter((room) => !dayUseExcludedRoomIds.has(String(room?.RoomId)))
@@ -1477,8 +1519,8 @@ export function StayStep({ onRoomsSelected }) {
           !EXCLUDED_ROOM_NAMES_EXACT.includes(room?.RoomName) &&
           !(room?.RoomName || "").toLowerCase().includes("copy"),
       )
-      .filter((room) => getRoomMinRate(room) !== null)
-      .filter((room) => getRoomFromPrice(property, room) != null);
+      .filter((room) => getRoomMinRate(room, activeSlotAdults) !== null)
+      .filter((room) => getRoomFromPrice(property, room, activeSlotAdults) != null);
 
     if (!property || availableRooms.length === 0) {
       setError(
@@ -1864,8 +1906,12 @@ export function StayStep({ onRoomsSelected }) {
       if (a?.RoomId === pinnedRoomId && b?.RoomId !== pinnedRoomId) return -1;
       if (b?.RoomId === pinnedRoomId && a?.RoomId !== pinnedRoomId) return 1;
     }
-    const priceA = getRoomFromPrice(rateResponse, a)?.price ?? Infinity;
-    const priceB = getRoomFromPrice(rateResponse, b)?.price ?? Infinity;
+    const priceA =
+      getRoomFromPrice(rateResponse, a, activeSlot?.adults ?? 1)?.price ??
+      Infinity;
+    const priceB =
+      getRoomFromPrice(rateResponse, b, activeSlot?.adults ?? 1)?.price ??
+      Infinity;
     if (priceA !== priceB) return priceA - priceB;
     return (a?.RoomName || "").localeCompare(b?.RoomName || "");
   });
@@ -1932,7 +1978,11 @@ export function StayStep({ onRoomsSelected }) {
         !error &&
         rooms.map((room) => {
           const standardEntries = getStandardRateEntries(rateResponse, room);
-          const fromPriceInfo = getRoomFromPrice(rateResponse, room);
+          const fromPriceInfo = getRoomFromPrice(
+            rateResponse,
+            room,
+            activeSlot?.adults ?? 1,
+          );
 
           return (
             <RoomRow
@@ -1945,6 +1995,7 @@ export function StayStep({ onRoomsSelected }) {
               activeRoomIndex={currentRoomIndex}
               fromPrice={fromPriceInfo?.price ?? null}
               fromPriceIsMemberRate={fromPriceInfo?.isMemberRate ?? false}
+              fromPriceStrike={fromPriceInfo?.strikePrice ?? null}
               standardEntries={standardEntries}
               adults={activeSlot?.adults ?? 1}
               nights={nights}
