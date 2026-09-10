@@ -141,6 +141,20 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     // while genuinely stale, `savedAt`-less data left over from days ago
     // is the rare one. Only an EXPLICIT, parseable `savedAt` that's
     // actually too old now gets discarded.
+    // The real signal that THIS mount is actually a "bounced off STAAH
+    // before it responded" case, not just any later unrelated visit: the
+    // `pay-now` marker paymentHash.js's redirectToPayment writes into the
+    // URL (via replaceState) right before navigating to STAAH, so hitting
+    // the browser's own Back button lands right back on it. sessionStorage
+    // itself is no help here — be_bookingData outlives the transaction it
+    // was written for (nothing clears it once the guest moves on, and it
+    // isn't scoped to any one property/search), so a stale snapshot from
+    // an earlier, entirely different booking attempt was matching this
+    // fallback's OWN "no tokenKey but be_bookingData present" condition on
+    // every later fresh "Book Now" click too — even for a different
+    // property, even after explicitly picking a different room on step 1.
+    // Gating on pay-now is what actually tells those apart.
+    const payNowMarkerPresent = params.has("pay-now");
     const PENDING_BOOKING_MAX_AGE_MS = 30 * 60 * 1000;
     let hasPendingBookingData = false;
     let pendingBookingData = null;
@@ -148,7 +162,13 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       const raw = window.sessionStorage.getItem("be_bookingData");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (typeof parsed?.savedAt !== "number") {
+        if (!payNowMarkerPresent) {
+          console.log(
+            "[PAYMENT-FLOW] Wizard.jsx: be_bookingData present but no pay-now marker in the URL — this isn't a bounce-back from STAAH, clearing stale data instead of restoring",
+          );
+          window.sessionStorage.removeItem("be_bookingData");
+          window.sessionStorage.removeItem("be_paymentResponse");
+        } else if (typeof parsed?.savedAt !== "number") {
           hasPendingBookingData = true;
           pendingBookingData = parsed;
         } else {
