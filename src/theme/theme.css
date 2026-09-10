@@ -42,3 +42,18 @@
   font-family: inherit;
   color: inherit;
 }
+
+/* iOS Safari auto-zooms the whole page on focus of any form control whose
+   computed font-size is under 16px (every field here uses smaller sizes for
+   the compact widget look). @supports (-webkit-touch-callout: none) only
+   matches WebKit/iOS Safari, so this doesn't touch Android/desktop sizing —
+   same fix already shipped in the Amritara booking engine. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    [data-be-root] input,
+    [data-be-root] select,
+    [data-be-root] textarea {
+      font-size: 16px !important;
+    }
+  }
+}
