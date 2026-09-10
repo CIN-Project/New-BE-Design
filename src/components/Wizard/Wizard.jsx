@@ -10,6 +10,7 @@ import { CartOverview } from "../Cart/CartOverview.js";
 import { SearchBar } from "../SearchBar/SearchBar.js";
 import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
+import { useSearchContext } from "../../context/SearchContext.js";
 import { useRepriceSelectedRooms } from "../../hooks/useRepriceSelectedRooms.js";
 import { useSyncSelectedRoomsWithSearch } from "../../hooks/useSyncSelectedRoomsWithSearch.js";
 import "./Wizard.css";
@@ -26,6 +27,13 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
   const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
   const { updateUserDetails } = useCartContext();
+  const {
+    setSelectedPropertyId,
+    setSelectedPropertyName,
+    setSelectedPropertyPhone,
+    setSelectedStartDate,
+    setSelectedEndDate,
+  } = useSearchContext();
   // Bumped by CartOverview's "Modify Property" link, consumed once by
   // SearchBar's own autoOpenDestinationSignal effect to open specifically
   // the Location dropdown once step 1 mounts — not the calendar or guests,
@@ -96,6 +104,27 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         }
         if (parsed?.formData) {
           updateUserDetails(parsed.formData);
+        }
+        // Bouncing off STAAH is always a full page reload of this app, so
+        // SearchContext's property/dates — plain in-memory React state,
+        // nothing more — reset to their defaults exactly like
+        // StayContext/CartContext do. Without restoring these too,
+        // CartOverview's "Selected Property"/"Stay & Guests" rows read as
+        // blank ("—") even once the room/guest data above came back fine.
+        if (parsed?.selectedPropertyId != null) {
+          setSelectedPropertyId(parsed.selectedPropertyId);
+        }
+        if (parsed?.property?.PropertyName) {
+          setSelectedPropertyName(parsed.property.PropertyName);
+        }
+        if (parsed?.property?.Address?.Phone) {
+          setSelectedPropertyPhone(parsed.property.Address.Phone);
+        }
+        if (parsed?.selectedStartDate) {
+          setSelectedStartDate(new Date(parsed.selectedStartDate));
+        }
+        if (parsed?.selectedEndDate) {
+          setSelectedEndDate(new Date(parsed.selectedEndDate));
         }
       }
     } catch {

@@ -928,6 +928,25 @@ function FailureState({
   siteName,
   bookingData,
 }) {
+  // Real conditional render, not a CSS show/hide pair — a plain matchMedia
+  // check here means "Return Home" never sits in the DOM at all on mobile
+  // (matches every other mobile-only piece of UI from this session's
+  // 1024px breakpoint), instead of relying on a `display:none` override
+  // that's had to be re-fought twice already elsewhere in this file/this
+  // session whenever some other rule for the same class happened to sit
+  // later in the same stylesheet. Starts `false` (SSR/first paint) so
+  // nothing renders wrong before the real width is known; the effect
+  // corrects it immediately on mount.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1024px)");
+    setIsMobile(mql.matches);
+    const onChange = (e) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const hasErrorMessage = Boolean(responseJson?.error_msg);
   const isPending = !hasErrorMessage && !hadStoredData;
 
@@ -986,27 +1005,30 @@ function FailureState({
         >
           Try Again
         </button>
-        {/* Desktop keeps this exact "Return Home" link, unchanged — see
-            be-voucher-btn-done-desktop's doc comment in ConfirmStep.css.
-            Mobile shows "Back to Cart" instead (below), which returns the
-            guest to step 2 with their room selection and guest-details form
-            restored/still editable rather than sending them all the way
-            back to the homepage after a failed/declined payment. */}
-        <a href={homeUrl} className="be-voucher-btn-done be-voucher-btn-done-desktop">
-          Return Home
-        </a>
-        <button
-          type="button"
-          onClick={
-            onBackToCart ||
-            (() => {
-              window.location.href = homeUrl;
-            })
-          }
-          className="be-voucher-btn-done be-voucher-btn-done-mobile"
-        >
-          Back to Cart
-        </button>
+        {/* Desktop keeps this exact "Return Home" link, unchanged. Mobile
+            shows "Back to Cart" instead — not merely hidden via CSS, not
+            rendered at all — which returns the guest to step 2 with their
+            room selection and guest-details form restored/still editable
+            rather than sending them all the way back to the homepage
+            after a failed/declined payment. */}
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={
+              onBackToCart ||
+              (() => {
+                window.location.href = homeUrl;
+              })
+            }
+            className="be-voucher-btn-done"
+          >
+            Back to Cart
+          </button>
+        ) : (
+          <a href={homeUrl} className="be-voucher-btn-done">
+            Return Home
+          </a>
+        )}
       </div>
     </div>
   );

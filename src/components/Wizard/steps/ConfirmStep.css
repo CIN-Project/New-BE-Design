@@ -461,18 +461,6 @@
   opacity: 0.88;
 }
 
-/* FailureState's "Return Home"/"Back to Cart" split — desktop keeps the
-   existing "Return Home" link exactly as it was; mobile shows "Back to
-   Cart" instead (returns to step 2 with the booking still editable rather
-   than sending the guest all the way home after a failed/declined
-   payment). !important here since .be-voucher-btn-done's own shared
-   display:inline-flex (above) has equal specificity and would otherwise
-   win by plain source order for whichever of these ends up declared
-   earlier in the cascade. */
-.be-voucher-btn-done-mobile {
-  display: none !important;
-}
-
 /* "Print Voucher" (window.print(), ConfirmStep.jsx's handlePrint) is a
    real browser print — with no scoping it prints the ENTIRE page (site
    header/nav, the wizard chrome, everything else on the page), not just
@@ -543,13 +531,5 @@
 
   .be-voucher-actions {
     flex-direction: column;
-  }
-
-  .be-voucher-btn-done-desktop {
-    display: none !important;
-  }
-
-  .be-voucher-btn-done-mobile {
-    display: inline-flex !important;
   }
 }
