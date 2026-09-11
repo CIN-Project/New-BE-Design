@@ -13,6 +13,7 @@ const initialState = {
   selectedRoomDetails: null,
   cancellationPolicyState: null,
   cancellationPolicyPackage: [],
+  termsAndConditions: null,
   isRoomsChange: false,
   rateResponse: null,
   totalPrice: 0,

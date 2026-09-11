@@ -53,7 +53,18 @@ export async function getCityWithProperty(config, cityId) {
       );
     }
     const json = await res.json();
-    return mapHotelsListToCityWithPropertyShape(json?.hotelsList || [], cityId);
+    // json.hotels (bawahotels-nextjs-new's own db.json shape: an object
+    // keyed by hotel id, e.g. hotels.airport.contact = { phone, email,
+    // address }) carries each property's own contact/address details —
+    // present in the SAME /api/cms response but on a completely different
+    // top-level key than hotelsList, so it was never actually reaching
+    // mapHotelsListToCityWithPropertyShape below despite being right there
+    // in `json` the whole time.
+    return mapHotelsListToCityWithPropertyShape(
+      json?.hotelsList || [],
+      cityId,
+      json?.hotels || {},
+    );
   }
 
   const query = cityId != null ? `?CityId=${parseInt(cityId, 10)}` : "";
@@ -73,13 +84,20 @@ export async function getCityWithProperty(config, cityId) {
  * data has no separate booking-specific id, so both point at the same real
  * value rather than one of them being a fabricated placeholder.
  */
-function mapHotelsListToCityWithPropertyShape(hotelsList, cityId) {
+function mapHotelsListToCityWithPropertyShape(hotelsList, cityId, hotelsById = {}) {
   const groups = new Map();
   for (const hotel of hotelsList) {
     const key = hotel.city || "other";
     if (!groups.has(key)) {
       groups.set(key, { cityId: key, cityName: key, propertyData: [] });
     }
+    // Only ever a single combined string in this consumer's own data
+    // (db.json's hotels[id].contact.address, e.g. "Plot No. 2087, ...
+    // Mumbai, Maharashtra - 400099.") — not split into separate
+    // AddressLine/City/State/Country/PostalCode fields the way STAAH's
+    // real GetCityWithProperty response is. Mapped onto `addressLine`
+    // alone rather than fabricating the other fields from nothing.
+    const contact = hotelsById[hotel.id]?.contact;
     groups.get(key).propertyData.push({
       propertyId: hotel.CINPropertyId ?? hotel.id,
       propertyName: hotel.name,
@@ -94,6 +112,9 @@ function mapHotelsListToCityWithPropertyShape(hotelsList, cityId) {
       // regardless of the guest's day-use toggle, same as before this flag
       // existed.
       isDayUse: hotel.isDayUse == null ? undefined : Boolean(hotel.isDayUse),
+      phone: contact?.phone || null,
+      email: contact?.email || null,
+      addressLine: contact?.address || null,
     });
   }
   const cities = [...groups.values()];
@@ -133,6 +154,18 @@ export function mapCityWithPropertyResponse(data) {
       cityName: city.cityName,
       cityId: city.cityId,
       isDayUse: property.isDayUse == null ? undefined : Boolean(property.isDayUse),
+      // useHotelsListApi's own mapHotelsListToCityWithPropertyShape sets
+      // these lowercase (phone/email/addressLine); a real STAAH CMS
+      // GetCityWithProperty response hasn't been confirmed to carry these
+      // at all on propertyData, so the PascalCase fallbacks here are a
+      // best-effort guess at that source's likely naming, not a verified
+      // shape — `null` either way is what a consumer already coped with
+      // before (DetailStep.jsx's `Address: { Phone: selectedPropertyPhone }`
+      // is used as-is regardless of a missing value).
+      phone: property.phone ?? property.Phone ?? null,
+      email: property.email ?? property.Email ?? null,
+      addressLine:
+        property.addressLine ?? property.AddressLine ?? property.Address ?? null,
     })),
   );
 }

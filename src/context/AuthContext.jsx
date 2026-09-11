@@ -227,6 +227,12 @@ export function BookingEngineAuthProvider({ children }) {
         WeddingAnniversary: form.WeddingAnniversary || "",
         Gender: form.Gender || "",
         Address: form.Address || "",
+        // Real Amritara's BookingProfile.js (~89) sends this on EVERY
+        // profile save, not just a brand-new signup — an existing member
+        // completing/updating their profile behind the same "I agree to
+        // T&C" checkbox gate was silently never actually recording that
+        // acceptance server-side via this branch.
+        PrivacyPolicyAcceptance: "Y",
       });
       if (!(raw?.success === true && Number(raw?.errorCode) === 0)) {
         throw new Error(raw?.result || raw?.error || "Update failed");
