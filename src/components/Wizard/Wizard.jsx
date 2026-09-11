@@ -316,6 +316,20 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 2 (booking summary)",
       );
       setStep(2);
+      // Consume the pay-now marker now that it's done its job — otherwise
+      // this exact URL still reads as "just bounced off STAAH" forever
+      // after, so ANY later revisit (the guest's own Back arrow calling
+      // router.back() and landing back here for lack of anywhere else to
+      // go, a remount, browser forward/back) jumps straight back to step 2
+      // again instead of ever behaving like a normal fresh/closed state —
+      // this was the concrete bug: "Back to Rooms" then the wizard's own
+      // back arrow (meant to close it) bounced straight back to the
+      // booking summary instead of actually closing.
+      if (payNowMarkerPresent) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("pay-now");
+        window.history.replaceState({}, "", url);
+      }
       return;
     }
     if (!syncStepToUrl) return;

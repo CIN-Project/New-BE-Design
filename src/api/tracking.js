@@ -94,7 +94,7 @@ export function postBookingWidged(config, params = {}) {
     IsRateMatch: "N",
   };
 
-  return fetch(`${base}/cmsapi/tracker/BookingWidged`, {
+  return fetch(`${base}/api/tracker/BookingWidged`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

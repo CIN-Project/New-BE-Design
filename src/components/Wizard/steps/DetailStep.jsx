@@ -705,12 +705,12 @@ export function GuestDetailsForm({ onComplete }) {
       console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);
       setIsProcessing(false);
       toast.error(err?.message || "Payment failed. Please try again.");
-      // postBookingWidged(config, {
-      //   ctaName: err?.message || "Payment failed",
-      //   propertyId: selectedPropertyId,
-      //   apiErrorCode: "1166",
-      //   apiMessage: err?.message || "Payment failed",
-      // });
+      postBookingWidged(config, {
+        ctaName: err?.message || "Payment failed",
+        propertyId: selectedPropertyId,
+        apiErrorCode: "1166",
+        apiMessage: err?.message || "Payment failed",
+      });
     }
   };
 
