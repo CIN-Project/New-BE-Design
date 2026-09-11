@@ -101,6 +101,11 @@ export function GuestDetailsForm({ onComplete }) {
     selectedPropertyId,
     selectedPropertyName,
     selectedPropertyPhone,
+    selectedPropertyEmail,
+    selectedPropertyAddress,
+    selectedPropertyCity,
+    selectedPropertyState,
+    selectedPropertyPostalCode,
     selectedStartDate,
     selectedEndDate,
     searchRooms,
@@ -337,6 +342,34 @@ export function GuestDetailsForm({ onComplete }) {
     return "success";
   };
 
+  // Most "Book Now" entry points across a consumer site (mega menu, hotel
+  // cards, offers, ...) land here via a direct URL carrying propertyId/
+  // propertyName only — SearchContext's phone/email/address fields are
+  // only ever populated by SearchBar.jsx's own handleSelectProperty (the
+  // Location dropdown), which never runs for that far more common direct-
+  // link path. config.properties (the same list SearchBar's dropdown is
+  // built from) already carries phone/email/addressLine per property, so
+  // it's a reliable fallback lookup here regardless of which way this
+  // property actually got selected.
+  const resolvedProperty = (config.properties || []).find(
+    (p) =>
+      String(p.staahPropertyId) === String(selectedPropertyId) ||
+      String(p.propertyId) === String(selectedPropertyId),
+  );
+  console.log("resolvedProperty",resolvedProperty)
+  const resolvedPropertyPhone =
+    selectedPropertyPhone ?? resolvedProperty?.phone ?? null;
+  const resolvedPropertyEmail =
+    selectedPropertyEmail ?? resolvedProperty?.email ?? null;
+  const resolvedPropertyAddress =
+    selectedPropertyAddress ?? resolvedProperty?.addressLine ?? null;
+  const resolvedPropertyCity =
+    selectedPropertyCity ?? resolvedProperty?.city ?? null;
+  const resolvedPropertyState =
+    selectedPropertyState ?? resolvedProperty?.state ?? null;
+  const resolvedPropertyPostalCode =
+    selectedPropertyPostalCode ?? resolvedProperty?.postalCode ?? null;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formOfPayment =
@@ -551,7 +584,7 @@ export function GuestDetailsForm({ onComplete }) {
       const finalRequestData2 = {
         property_id: selectedPropertyId?.toString(),
         property_name: selectedPropertyName,
-        property_tel: selectedPropertyPhone,
+        property_tel: resolvedPropertyPhone,
         cust_name:
           `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
         cust_email: formData.email || "",
@@ -575,10 +608,37 @@ export function GuestDetailsForm({ onComplete }) {
           sessionId: bookingSessionId,
           property: {
             PropertyName: selectedPropertyName,
-            Address: { Phone: selectedPropertyPhone },
+            Address: {
+              // Matches real Amritara's own Address shape exactly (Location/
+              // AddressLine/City/State/Country/CountryCode/Email/Phone/
+              // PostalCode — see property?.Address in its DetailStep.js).
+              // City/State/PostalCode are recovered from this consumer's
+              // own single combined address string (properties.js's
+              // parseIndianAddress — verified against its real live CMS
+              // response, every one of its 6 hotel addresses follows the
+              // same "..., City, State - PIN" pattern), not fabricated.
+              // Location stays null — nothing in this consumer's data maps
+              // to it at all (real Amritara's own likely carries lat/long
+              // or a place-id, neither of which exists here). Country/
+              // CountryCode are safe to hardcode — every property this
+              // package serves for this consumer is in India, same
+              // reasoning already used for the hotel JSON-LD schema's own
+              // addressCountry.
+              Location: null,
+              AddressLine: resolvedPropertyAddress,
+              City: resolvedPropertyCity,
+              State: resolvedPropertyState,
+              Country: "India",
+              CountryCode: "IN",
+              Email: resolvedPropertyEmail,
+              Phone: resolvedPropertyPhone,
+              PostalCode: resolvedPropertyPostalCode,
+            },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
+          termsAndConditions: "_",
         }),
+        
         ReservationJson: JSON.stringify(payload),
         SessionId: bookingSessionId,
         Ip: "",
@@ -631,9 +691,35 @@ export function GuestDetailsForm({ onComplete }) {
           reservationId,
           property: {
             PropertyName: selectedPropertyName,
-            Address: { Phone: selectedPropertyPhone },
+            Address: {
+              // Matches real Amritara's own Address shape exactly (Location/
+              // AddressLine/City/State/Country/CountryCode/Email/Phone/
+              // PostalCode — see property?.Address in its DetailStep.js).
+              // City/State/PostalCode are recovered from this consumer's
+              // own single combined address string (properties.js's
+              // parseIndianAddress — verified against its real live CMS
+              // response, every one of its 6 hotel addresses follows the
+              // same "..., City, State - PIN" pattern), not fabricated.
+              // Location stays null — nothing in this consumer's data maps
+              // to it at all (real Amritara's own likely carries lat/long
+              // or a place-id, neither of which exists here). Country/
+              // CountryCode are safe to hardcode — every property this
+              // package serves for this consumer is in India, same
+              // reasoning already used for the hotel JSON-LD schema's own
+              // addressCountry.
+              Location: null,
+              AddressLine: resolvedPropertyAddress,
+              City: resolvedPropertyCity,
+              State: resolvedPropertyState,
+              Country: "India",
+              CountryCode: "IN",
+              Email: resolvedPropertyEmail,
+              Phone: resolvedPropertyPhone,
+              PostalCode: resolvedPropertyPostalCode,
+            },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
+          termsAndConditions: "",
           // Restored back into SearchContext on both the pay-now-gated
           // mount fallback and "Back to Cart" (Wizard.jsx) — without this,
           // a day-use booking that bounces off STAAH came back looking
@@ -681,7 +767,7 @@ export function GuestDetailsForm({ onComplete }) {
       const paramvalues = JSON.stringify({
         property_id: selectedPropertyId,
         property_name: selectedPropertyName,
-        property_tel: selectedPropertyPhone,
+        property_tel: resolvedPropertyPhone,
         cust_name:
           `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
         cust_email: formData.email || "",

@@ -1218,6 +1218,12 @@ export function StayStep({ onRoomsSelected }) {
     setPreselectRoomName,
     searchTrigger,
     commitSearch,
+    setSelectedPropertyPhone,
+    setSelectedPropertyEmail,
+    setSelectedPropertyAddress,
+    setSelectedPropertyCity,
+    setSelectedPropertyState,
+    setSelectedPropertyPostalCode,
   } = useSearchContext();
   const { promoCodeContext } = useCartContext();
   const {
@@ -1584,6 +1590,27 @@ export function StayStep({ onRoomsSelected }) {
       setRateResponse(property);
       setFilteredRooms(availableRooms);
       setCancellationPolicyPackage(uniqueRatePlans);
+
+      // Real Amritara reads its own property.Address straight off THIS
+      // exact same response (Filterbar.js ~790: contentProperties.current
+      // [0].PropertyData.Address.Phone) — GetRoomsRates already returns a
+      // fully structured Location/AddressLine/City/State/Country/
+      // CountryCode/Email/Phone/PostalCode object per property, no string-
+      // parsing needed at all. Authoritative over anything sourced from
+      // this consumer's own simpler CMS (properties.js's config.properties
+      // fallback, kept for when this hasn't loaded yet — e.g. DetailStep
+      // reached before a search ever ran this far).
+      const staahAddress = property?.PropertyData?.Address;
+      if (staahAddress) {
+        if (staahAddress.Phone) setSelectedPropertyPhone(staahAddress.Phone);
+        if (staahAddress.Email) setSelectedPropertyEmail(staahAddress.Email);
+        if (staahAddress.AddressLine)
+          setSelectedPropertyAddress(staahAddress.AddressLine);
+        if (staahAddress.City) setSelectedPropertyCity(staahAddress.City);
+        if (staahAddress.State) setSelectedPropertyState(staahAddress.State);
+        if (staahAddress.PostalCode)
+          setSelectedPropertyPostalCode(staahAddress.PostalCode);
+      }
     }
   }
 
@@ -1689,6 +1716,28 @@ export function StayStep({ onRoomsSelected }) {
         (rp) => rp?.RateId === selection?.rateId,
       )?.CancellationPolicy?.Description || "";
     if (cancellationText) setCancellationPolicyState(cancellationText);
+
+    // Real Amritara's own handleSelectRoom (the exact same "single funnel"
+    // this function is) does `setProperty(propertyData)` right here too —
+    // propertyData being the SAME GetRoomsRates PropertyData object
+    // rateResponse.PropertyData already is here. Its Address (Location/
+    // AddressLine/City/State/Country/CountryCode/Email/Phone/PostalCode)
+    // is what DetailStep.jsx's own property.Address ultimately sends —
+    // setting it at selection time too (not just once after the initial
+    // search resolves) matches real's exact call site and keeps this
+    // correct even if a room gets selected from a re-fetched/updated
+    // rateResponse later in the flow.
+    const staahAddress = rateResponse?.PropertyData?.Address;
+    if (staahAddress) {
+      if (staahAddress.Phone) setSelectedPropertyPhone(staahAddress.Phone);
+      if (staahAddress.Email) setSelectedPropertyEmail(staahAddress.Email);
+      if (staahAddress.AddressLine)
+        setSelectedPropertyAddress(staahAddress.AddressLine);
+      if (staahAddress.City) setSelectedPropertyCity(staahAddress.City);
+      if (staahAddress.State) setSelectedPropertyState(staahAddress.State);
+      if (staahAddress.PostalCode)
+        setSelectedPropertyPostalCode(staahAddress.PostalCode);
+    }
 
     // Ported from Filterbar.js:2913/3293 — real's exact ctaName string
     // ("Select Package And Cart Open"), fired whenever a room+rate is

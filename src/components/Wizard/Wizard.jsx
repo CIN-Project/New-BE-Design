@@ -31,6 +31,11 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     setSelectedPropertyId,
     setSelectedPropertyName,
     setSelectedPropertyPhone,
+    setSelectedPropertyEmail,
+    setSelectedPropertyAddress,
+    setSelectedPropertyCity,
+    setSelectedPropertyState,
+    setSelectedPropertyPostalCode,
     setSelectedStartDate,
     setSelectedEndDate,
     setIsDayUse,
@@ -120,6 +125,21 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         }
         if (parsed?.property?.Address?.Phone) {
           setSelectedPropertyPhone(parsed.property.Address.Phone);
+        }
+        if (parsed?.property?.Address?.Email) {
+          setSelectedPropertyEmail(parsed.property.Address.Email);
+        }
+        if (parsed?.property?.Address?.AddressLine) {
+          setSelectedPropertyAddress(parsed.property.Address.AddressLine);
+        }
+        if (parsed?.property?.Address?.City) {
+          setSelectedPropertyCity(parsed.property.Address.City);
+        }
+        if (parsed?.property?.Address?.State) {
+          setSelectedPropertyState(parsed.property.Address.State);
+        }
+        if (parsed?.property?.Address?.PostalCode) {
+          setSelectedPropertyPostalCode(parsed.property.Address.PostalCode);
         }
         if (parsed?.selectedStartDate) {
           setSelectedStartDate(new Date(parsed.selectedStartDate));
@@ -302,6 +322,25 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       }
       if (pendingBookingData?.property?.Address?.Phone) {
         setSelectedPropertyPhone(pendingBookingData.property.Address.Phone);
+      }
+      if (pendingBookingData?.property?.Address?.Email) {
+        setSelectedPropertyEmail(pendingBookingData.property.Address.Email);
+      }
+      if (pendingBookingData?.property?.Address?.AddressLine) {
+        setSelectedPropertyAddress(
+          pendingBookingData.property.Address.AddressLine,
+        );
+      }
+      if (pendingBookingData?.property?.Address?.City) {
+        setSelectedPropertyCity(pendingBookingData.property.Address.City);
+      }
+      if (pendingBookingData?.property?.Address?.State) {
+        setSelectedPropertyState(pendingBookingData.property.Address.State);
+      }
+      if (pendingBookingData?.property?.Address?.PostalCode) {
+        setSelectedPropertyPostalCode(
+          pendingBookingData.property.Address.PostalCode,
+        );
       }
       if (pendingBookingData?.selectedStartDate) {
         setSelectedStartDate(new Date(pendingBookingData.selectedStartDate));
