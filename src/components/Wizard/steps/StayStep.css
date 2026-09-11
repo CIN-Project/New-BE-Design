@@ -444,6 +444,13 @@
   }
 }
 
+/* Swiper-style dots for the mobile one-card-peek filmstrip below — hidden
+   everywhere else (desktop's multi-card carousel uses the prev/next arrow
+   buttons instead, see .be-carousel-nav-btn). */
+.be-rate-plans-dots {
+  display: none;
+}
+
 /* Below 768px the vertical stack above (rate cards full-width, one after
    another) makes comparing plans mean a lot of scrolling past a room's
    other content. Swapping back to a horizontal, swipeable filmstrip (one
@@ -461,6 +468,31 @@
   .be-rate-card-col {
     flex: 0 0 85%;
     width: auto;
+  }
+
+  .be-rate-plans-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.7rem;
+  }
+
+  .be-rate-plans-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: rgba(132, 104, 54, 0.25);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .be-rate-plans-dot.be-active {
+    background: var(--be-color-primary, #846836);
+    width: 18px;
+    border-radius: 4px;
   }
 }
 
@@ -715,9 +747,10 @@
 .be-rate-option-price {
   font-size: 0.95rem;
   font-weight: 800;
-  /* Matches real Amritara's Filterbar.js text-green-600 on the actual
-     (non-struck-through) price, both Standard and Member rows. */
-  color: #16a34a;
+  /* Matches .be-room-row-price's own color (the "Rates Starting From"
+     figure) — was briefly Amritara's text-green-600, reverted back to the
+     brand's own gold for consistency between the two prices. */
+  color: var(--be-color-primary, #846836);
   text-align: right;
 }
 

@@ -774,6 +774,35 @@ function RoomRow({
   const showNav = standardEntries.length > 3;
   const sizeLabel = parseRoomSize(room?.RoomSize);
   const beddingLabel = formatBedding(room?.Bedding);
+  // Mobile-only (≤768px, see StayStep.css) swiper-style dots for the
+  // one-card-peek horizontal filmstrip that breakpoint switches to — the
+  // desktop prev/next carousel arrows (showNav above) don't need this,
+  // they already show which cards exist by showing several at once.
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const handleRateCardsScroll = () => {
+    const el = gridRef.current;
+    if (!el) return;
+    const cards = el.querySelectorAll(".be-rate-card-col");
+    if (cards.length === 0) return;
+    const containerLeft = el.getBoundingClientRect().left;
+    let closestIndex = 0;
+    let closestDistance = Infinity;
+    cards.forEach((card, i) => {
+      const distance = Math.abs(card.getBoundingClientRect().left - containerLeft);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    });
+    setActiveCardIndex(closestIndex);
+  };
+  const scrollToCard = (index) => {
+    const el = gridRef.current;
+    if (!el) return;
+    const card = el.querySelectorAll(".be-rate-card-col")[index];
+    if (!card) return;
+    el.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
+  };
 
   // Auto-scroll to the newly-revealed rate plans on expand — ported exactly
   // from bawa-hotels-next's real toggleRoomExpansion (~458-492): scroll the
@@ -907,6 +936,7 @@ function RoomRow({
                 No rate plans available for this room.
               </p>
             ) : (
+              <>
               <div className="be-rate-plans-carousel-wrapper">
                 {showNav && (
                   <button
@@ -919,7 +949,11 @@ function RoomRow({
                   </button>
                 )}
 
-                <div className="be-rate-plans-grid" ref={gridRef}>
+                <div
+                  className="be-rate-plans-grid"
+                  ref={gridRef}
+                  onScroll={handleRateCardsScroll}
+                >
                   {standardEntries.map(({ rate, mapping, ratePlan }) => {
                     // Scoped by activeRoomIndex, not just room+rate — two
                     // room slots booking the identical room type and rate
@@ -1011,6 +1045,20 @@ function RoomRow({
                   </button>
                 )}
               </div>
+              {standardEntries.length > 1 && (
+                <div className="be-rate-plans-dots">
+                  {standardEntries.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`be-rate-plans-dot${i === activeCardIndex ? " be-active" : ""}`}
+                      onClick={() => scrollToCard(i)}
+                      aria-label={`Go to package ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>
