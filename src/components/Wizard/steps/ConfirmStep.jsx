@@ -336,11 +336,18 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           // Optional/secondary: persist the confirmed booking server-side.
           // Fire-and-forget — the receipt is already sourced from the
           // verified confirm response, so a failure here shouldn't block it.
-          postBookingResponse(
-            config,
-            parsedResponseJson,
-            details || parsedBookingData,
-          );
+          postBookingResponse(config, {
+            reservationNo: parsedResponseJson?.reservation_id,
+            // NOT parsedResponseJson — that's the gateway's own payment-
+            // status echo (status/reservation_id/error_msg), not the actual
+            // submitted reservation. completeResponseObject.reservationJson
+            // (the full room/customer/pricing object STAAH echoes back,
+            // same source handleRetryClick's reservationJsonSrc already
+            // reads at ~382) is the real ReservationJson this record is
+            // actually meant to carry.
+            reservationJson: completeResponseObject?.reservationJson,
+            bookingDetailsJson: details || parsedBookingData,
+          });
         }
       } catch (err) {
         console.error(
@@ -1110,7 +1117,10 @@ function formatCurrency(amount, currency) {
  * confirm call above (not from the raw gateway echo). Fire-and-forget: a
  * failure here shouldn't block the already-rendered receipt.
  */
-function postBookingResponse(config, responseJson, bookingData) {
+function postBookingResponse(
+  config,
+  { reservationNo, reservationJson, bookingDetailsJson },
+) {
   const base = config?.cmsBaseUrl;
   if (!base) return;
 
@@ -1118,9 +1128,9 @@ function postBookingResponse(config, responseJson, bookingData) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      reservationNo: responseJson?.reservation_id,
-      reservationJson: JSON.stringify(responseJson || {}),
-      bookingDetailsJson: JSON.stringify(bookingData || {}),
+      reservationNo,
+      reservationJson: JSON.stringify(reservationJson || {}),
+      bookingDetailsJson: JSON.stringify(bookingDetailsJson || {}),
     }),
   }).catch((err) => {
     console.error(
