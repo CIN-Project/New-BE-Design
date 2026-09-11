@@ -8,8 +8,6 @@ const initialState = {
   selectedCityId: null,
   selectedPropertyName: null,
   selectedPropertyPhone: null,
-  selectedPropertyEmail: null,
-  selectedPropertyAddress: null,
   propertyId: null,
   selectedStartDate: null,
   selectedEndDate: null,

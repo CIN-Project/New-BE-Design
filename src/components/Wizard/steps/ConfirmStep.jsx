@@ -56,7 +56,7 @@ const BOOKING_DATA_KEY = "be_bookingData";
  *     selectedStartDate, selectedEndDate, promoCode,
  *     property: { PropertyName, Address: { AddressLine, City, State,
  *       Country, PostalCode, Email, Phone } },
- *     cancellationPolicyState, termsAndConditions,
+ *     cancellationPolicyState,
  *   }
  *
  * IMPORTANT: the raw payment-gateway echo above (responseJson) is NOT the
