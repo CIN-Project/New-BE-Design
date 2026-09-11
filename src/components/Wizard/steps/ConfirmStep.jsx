@@ -344,8 +344,19 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
             // (the full room/customer/pricing object STAAH echoes back,
             // same source handleRetryClick's reservationJsonSrc already
             // reads at ~382) is the real ReservationJson this record is
-            // actually meant to carry.
-            reservationJson: completeResponseObject?.reservationJson,
+            // actually meant to carry — BUT confirmed empty for a real
+            // pay_later booking (STAAH's verify-token response apparently
+            // doesn't echo it back for that form_of_payment, unlike
+            // pay_now). Same fallback handleRetryClick already relies on
+            // for this exact gap (~531: bookingData.reservationPayload) —
+            // DetailStep.jsx saves the full submitted reservation object
+            // into be_bookingData BEFORE ever redirecting to payment, so
+            // it's available unconditionally regardless of payment type.
+            reservationJson:
+              completeResponseObject?.reservationJson &&
+              Object.keys(completeResponseObject.reservationJson).length > 0
+                ? completeResponseObject.reservationJson
+                : parsedBookingData?.reservationPayload,
             bookingDetailsJson: details || parsedBookingData,
           });
         }
