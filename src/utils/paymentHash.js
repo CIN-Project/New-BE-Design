@@ -96,6 +96,25 @@ export function redirectToPayment(paramvalues, keydata, staahBaseUrl) {
     "",
     `${window.location.pathname}?${marker.toString()}`,
   );
+  // Sticky flag, deliberately NOT cleared alongside the pay-now URL marker
+  // once that's been consumed (Wizard.jsx's mount effect strips it right
+  // after restoring step 2) — a consumer's own "back arrow" (meant to
+  // close the whole booking widget, e.g. bawa-hotels-next's
+  // handleBackFromWizard) can't safely use router.back()/plain browser
+  // history once a real payment-gateway hop is anywhere in this tab's
+  // history: going back from here can land back ON the gateway's own
+  // hosted page, which may then redirect forward into this app again on
+  // its own, reading as an infinite bounce back into the booking summary
+  // no matter how many times "back" is pressed. This flag is a session-
+  // long signal a host app can check to skip real browser-history
+  // navigation entirely once a payment attempt has happened at all, for
+  // the rest of this booking session.
+  try {
+    window.sessionStorage.setItem("be_wentToPaymentGateway", "1");
+  } catch {
+    // sessionStorage unavailable — the consumer's back-arrow just falls
+    // back to its own default behavior in that case.
+  }
 
   const form = document.createElement("form");
   form.method = "POST";
