@@ -258,8 +258,6 @@ export function SearchBar({
     );
     search.setSelectedPropertyName(property.propertyName ?? property.name);
     search.setSelectedPropertyPhone(property.phone ?? null);
-    search.setSelectedPropertyEmail(property.email ?? null);
-    search.setSelectedPropertyAddress(property.addressLine ?? null);
     search.setSelectedCityId(property.cityId ?? null);
     // Guided flow: picking a location advances straight into the calendar
     // instead of leaving the guest to notice and open it themselves —

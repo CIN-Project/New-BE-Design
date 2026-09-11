@@ -31,8 +31,6 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     setSelectedPropertyId,
     setSelectedPropertyName,
     setSelectedPropertyPhone,
-    setSelectedPropertyEmail,
-    setSelectedPropertyAddress,
     setSelectedStartDate,
     setSelectedEndDate,
     setIsDayUse,
@@ -122,12 +120,6 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         }
         if (parsed?.property?.Address?.Phone) {
           setSelectedPropertyPhone(parsed.property.Address.Phone);
-        }
-        if (parsed?.property?.Address?.Email) {
-          setSelectedPropertyEmail(parsed.property.Address.Email);
-        }
-        if (parsed?.property?.Address?.AddressLine) {
-          setSelectedPropertyAddress(parsed.property.Address.AddressLine);
         }
         if (parsed?.selectedStartDate) {
           setSelectedStartDate(new Date(parsed.selectedStartDate));
@@ -310,14 +302,6 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       }
       if (pendingBookingData?.property?.Address?.Phone) {
         setSelectedPropertyPhone(pendingBookingData.property.Address.Phone);
-      }
-      if (pendingBookingData?.property?.Address?.Email) {
-        setSelectedPropertyEmail(pendingBookingData.property.Address.Email);
-      }
-      if (pendingBookingData?.property?.Address?.AddressLine) {
-        setSelectedPropertyAddress(
-          pendingBookingData.property.Address.AddressLine,
-        );
       }
       if (pendingBookingData?.selectedStartDate) {
         setSelectedStartDate(new Date(pendingBookingData.selectedStartDate));

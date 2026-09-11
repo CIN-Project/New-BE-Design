@@ -1230,7 +1230,6 @@ export function StayStep({ onRoomsSelected }) {
     cancellationPolicyPackage,
     setCancellationPolicyPackage,
     setCancellationPolicyState,
-    setTermsAndConditions,
     setIsMemberRate,
     setIsMemberRateSelected,
     activeRoomSlotIndex: currentRoomIndex,
@@ -1690,20 +1689,6 @@ export function StayStep({ onRoomsSelected }) {
         (rp) => rp?.RateId === selection?.rateId,
       )?.CancellationPolicy?.Description || "";
     if (cancellationText) setCancellationPolicyState(cancellationText);
-
-    // Real Amritara's own handleGetDetails (Filterbar.js ~2578) resolves
-    // this the exact same way, off the property's own TermsAndConditions —
-    // a property-wide field (not per-rate-plan like CancellationPolicy
-    // above), so it reads off rateResponse (the merged property/content
-    // object mergeRoomContentWithRates returns) directly rather than off
-    // cancellationPolicyPackage. Never wired at all before this — nothing
-    // downstream (DetailStep.jsx's be_bookingData/BookingDetailsJson
-    // snapshot) had a terms-and-conditions TEXT field to send alongside
-    // cancellationPolicyState.
-    const termsText = stripHtmlTags(
-      rateResponse?.TermsAndConditions?.Description || "",
-    );
-    if (termsText) setTermsAndConditions(termsText);
 
     // Ported from Filterbar.js:2913/3293 — real's exact ctaName string
     // ("Select Package And Cart Open"), fired whenever a room+rate is
