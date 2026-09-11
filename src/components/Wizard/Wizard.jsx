@@ -33,6 +33,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     setSelectedPropertyPhone,
     setSelectedStartDate,
     setSelectedEndDate,
+    setIsDayUse,
   } = useSearchContext();
   // Bumped by CartOverview's "Modify Property" link, consumed once by
   // SearchBar's own autoOpenDestinationSignal effect to open specifically
@@ -125,6 +126,9 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         }
         if (parsed?.selectedEndDate) {
           setSelectedEndDate(new Date(parsed.selectedEndDate));
+        }
+        if (typeof parsed?.isDayUse === "boolean") {
+          setIsDayUse(parsed.isDayUse);
         }
       }
     } catch {
@@ -285,6 +289,28 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
           { formData: pendingBookingData.formData },
         );
         updateUserDetails(pendingBookingData.formData);
+      }
+      // Same SearchContext restoration as handleBackToCart below (property/
+      // dates/isDayUse) — this fallback is a raw browser-Back bounce landing
+      // straight on step 2, a different path than that button, but the same
+      // full page reload wipes the same in-memory context state either way.
+      if (pendingBookingData?.selectedPropertyId != null) {
+        setSelectedPropertyId(pendingBookingData.selectedPropertyId);
+      }
+      if (pendingBookingData?.property?.PropertyName) {
+        setSelectedPropertyName(pendingBookingData.property.PropertyName);
+      }
+      if (pendingBookingData?.property?.Address?.Phone) {
+        setSelectedPropertyPhone(pendingBookingData.property.Address.Phone);
+      }
+      if (pendingBookingData?.selectedStartDate) {
+        setSelectedStartDate(new Date(pendingBookingData.selectedStartDate));
+      }
+      if (pendingBookingData?.selectedEndDate) {
+        setSelectedEndDate(new Date(pendingBookingData.selectedEndDate));
+      }
+      if (typeof pendingBookingData?.isDayUse === "boolean") {
+        setIsDayUse(pendingBookingData.isDayUse);
       }
       console.log(
         "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 2 (booking summary)",

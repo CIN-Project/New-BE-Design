@@ -496,6 +496,18 @@
   }
 }
 
+/* A room with only one rate plan shouldn't render that single card at the
+   narrower 3-per-row/85%-peek width the multi-card layouts above use —
+   nothing to compare it against, so it should just fill the row. Declared
+   after every .be-rate-card-col rule above (desktop 3-up, ≤1024px stacked,
+   ≤768px peek-filmstrip) with !important, since :only-child's specificity
+   alone wouldn't reliably beat whichever of those a given viewport width
+   currently has active. */
+.be-rate-plans-grid .be-rate-card-col:only-child {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+}
+
 /* ---------- Rate card interior ---------- */
 
 .be-rate-card-header {

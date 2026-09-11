@@ -634,6 +634,14 @@ export function GuestDetailsForm({ onComplete }) {
             Address: { Phone: selectedPropertyPhone },
           },
           cancellationPolicyState: stay.cancellationPolicyState || "",
+          // Restored back into SearchContext on both the pay-now-gated
+          // mount fallback and "Back to Cart" (Wizard.jsx) — without this,
+          // a day-use booking that bounces off STAAH came back looking
+          // like a normal overnight stay (wrong Check-in/Check-out pairing
+          // in CartOverview, wrong nightly-vs-flat pricing) since isDayUse
+          // itself, unlike selectedStartDate/selectedEndDate, was never
+          // part of this snapshot at all.
+          isDayUse,
           // Everything below is unused by the receipt itself — it's what
           // lets ConfirmStep.jsx's "Try Again" button actually retry the
           // SAME payment (re-POST to STAAH + redirect again) instead of

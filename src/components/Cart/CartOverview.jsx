@@ -191,8 +191,17 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
         <div className="cart-mobile-collapsed-summary">
           <div className="cart-mobile-collapsed-row">
             <span>
-              {formatDisplayDate(selectedStartDate)} -{" "}
-              {formatDisplayDate(selectedEndDate)}
+              {/* Same isDayUse branch as the "Stay & Guests" section below
+                  (its own Check-in/Check-out row) — a day-use booking's
+                  checkout is the SAME calendar day as check-in, not
+                  selectedEndDate (which the search still carries as the
+                  next day internally). Showing selectedEndDate here
+                  unconditionally, like a normal overnight stay, is what
+                  made this compact preview disagree with the detailed
+                  section right below it once expanded. */}
+              {isDayUse
+                ? formatDisplayDate(selectedStartDate)
+                : `${formatDisplayDate(selectedStartDate)} - ${formatDisplayDate(selectedEndDate)}`}
             </span>
             <span style={modifyLinkStyle} onClick={() => setShowDateModal(true)}>
               Modify
