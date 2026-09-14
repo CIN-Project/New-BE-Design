@@ -269,6 +269,8 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     } catch {
       hasPendingBookingData = false;
     }
+    const payLaterMode = window.sessionStorage.getItem("payLaterMode") === "true";
+
     if (hasPendingBookingData) {
       // Unconditional, unlike the two guarded logs below — this fires
       // regardless of what pendingBookingData actually contains, so a
@@ -288,6 +290,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
           rawSelectedRoom: pendingBookingData?.rawSelectedRoom,
           hasFormData: Boolean(pendingBookingData?.formData),
           formData: pendingBookingData?.formData,
+          payLaterMode,
         },
       );
       // Restores the actual room selection + guest form data (not just
@@ -351,10 +354,21 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       if (typeof pendingBookingData?.isDayUse === "boolean") {
         setIsDayUse(pendingBookingData.isDayUse);
       }
+      // For pay_later, jump to confirmation step (4) since payment is already staged
+      // For pay_now, jump back to booking summary (step 2) for retry/recovery
+      const targetStep = payLaterMode ? 4 : 2;
       console.log(
-        "[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step 2 (booking summary)",
+        `[PAYMENT-FLOW] Wizard.jsx: no tokenKey but a payment was left in-flight (be_bookingData present) -> jumping to step ${targetStep} (${payLaterMode ? "confirmation" : "booking summary"})`,
       );
-      setStep(2);
+      setStep(targetStep);
+
+      // For pay_later, clear the mode flag after consuming it
+      if (payLaterMode) {
+        try {
+          window.sessionStorage.removeItem("payLaterMode");
+        } catch {}
+      }
+
       // Consume the pay-now marker now that it's done its job — otherwise
       // this exact URL still reads as "just bounced off STAAH" forever
       // after, so ANY later revisit (the guest's own Back arrow calling

@@ -149,7 +149,11 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         tokenKey,
       });
 
-      if (tokenKey) {
+      // For pay_later, SKIP verify-token entirely — use stored response from th-payment-request2
+      const isPayLater = rawResponse && JSON.parse(rawResponse)?.result?.[0]?.form_of_payment === "pay_later";
+
+      if (tokenKey && !isPayLater) {
+        // Only call verify-token for pay_now flow
         try {
           console.log(
             "[PAYMENT-FLOW] ConfirmStep.jsx: calling verifyToken (/api/verify-token)...",
@@ -170,6 +174,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
             err,
           );
         }
+      } else if (isPayLater) {
+        console.log("[PAYMENT-FLOW] ConfirmStep.jsx: pay_later detected — SKIPPING verify-token, using stored payment response");
       }
 
       if (cancelled) return;

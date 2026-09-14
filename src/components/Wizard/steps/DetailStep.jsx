@@ -783,10 +783,65 @@ export function GuestDetailsForm({ onComplete }) {
         form_of_payment: formOfPayment,
       });
 
-      onComplete?.();
-      console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, formOfPayment, staahBaseUrl: config?.staahBaseUrl, paramvalues });
-      // Navigates away from the app (STAAH hosted payment page) — call last.
-      redirectToPayment(config, paramvalues, resolvedKeyData);
+      // For pay_later, skip STAAH gateway entirely — create properly formatted payment response
+      // from th-payment-request2 data, then jump to confirmation step
+      if (formOfPayment === "pay_later") {
+        console.log("[PAYMENT-FLOW] DetailStep.jsx: pay_later detected — skipping STAAH redirect, formatting th-payment-request2 response for confirmation");
+        try {
+          // th-payment-request2 already staged the reservation with payment_type="Hotel Collect"
+          // Extract all data from th-payment-request2 response
+          const thPaymentResp = paymentResp?.result?.[0] || paymentResp;
+          const responseJson = thPaymentResp?.responseJson || paymentResp;
+
+          // For pay_later, populate ALL required fields from th-payment-request2 response
+          // These fields are sent to /api/payment/confirm to finalize the booking
+          const formattedResponse = {
+            result: [{
+              form_of_payment: "pay_later",
+              responseJson: {
+                status: responseJson?.status || "paylater",
+                status_code: responseJson?.status_code || "0000",
+                reservation_id: responseJson?.reservation_id || reservationId,
+                amount: responseJson?.amount !== undefined ? responseJson.amount.toString() : grandTotal.toString(),
+                currency: responseJson?.currency || "INR",
+                // These fields come from th-payment-request2 response (backend response)
+                partner_id: responseJson?.partner_id || config?.partnerId || "7",
+                // hash_key from th-payment-request2 or generate one for pay_later
+                hash_key: responseJson?.hash_key || `paylater_${reservationId}`,
+                pg_transaction_id: responseJson?.pg_transaction_id || reservationId,
+                ipn_flag: responseJson?.ipn_flag || "0", // No IPN for pay_later
+                error_msg: responseJson?.error_msg || "paylater", // Set to "paylater" for pay_later flow
+                property_id: responseJson?.property_id || selectedPropertyId?.toString(),
+              },
+              // Include full reservation data if available
+              reservationJson: thPaymentResp?.reservationJson || null,
+              bookingDetailsJson: thPaymentResp?.bookingDetailsJson || null,
+            }]
+          };
+
+          console.log("[PAYMENT-FLOW] DetailStep.jsx: formatting pay_later response", {
+            fromThPayment: responseJson,
+            formatted: formattedResponse.result[0].responseJson,
+          });
+
+          window.sessionStorage.setItem("be_paymentResponse", JSON.stringify(formattedResponse));
+          window.sessionStorage.setItem("payLaterMode", "true");
+          console.log("[PAYMENT-FLOW] DetailStep.jsx: formatted pay_later response stored in sessionStorage", { formattedResponse });
+        } catch (e) {
+          console.error("[PAYMENT-FLOW] DetailStep.jsx: failed to store pay_later response", e);
+        }
+        onComplete?.();
+        // Navigate with pay-now marker to trigger mount-time restoration, Wizard will detect payLaterMode and jump to step 4
+        const marker = new URLSearchParams(window.location.search);
+        marker.set("pay-now", "1");
+        window.history.replaceState({}, "", `${window.location.pathname}?${marker.toString()}`);
+        window.location.reload();
+      } else {
+        // Pay now: proceed with STAAH gateway redirect as normal
+        onComplete?.();
+        console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, formOfPayment, staahBaseUrl: config?.staahBaseUrl, paramvalues });
+        redirectToPayment(config, paramvalues, resolvedKeyData);
+      }
     } catch (err) {
       console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);
       setIsProcessing(false);
