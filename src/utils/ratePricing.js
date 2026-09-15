@@ -108,7 +108,8 @@ export function buildRoomSelection(room, mapping, rate, adults, options = {}) {
 
   const ratePlan = room?.RatePlans?.find((el) => el?.RateId === mapping?.RateId);
   const firstDateKey = Object.keys(ratePlan?.Rates || {})[0];
-  const rates = ratePlan?.Rates?.[firstDateKey]?.OBP;
+  const firstDateEntry = ratePlan?.Rates?.[firstDateKey];
+  const rates = firstDateEntry?.OBP;
 
   const selectedGuestRate = getGuestRateFromObp(rates, adults);
   const baseGuestRate = getGuestRateFromObp(rates, 1);
@@ -138,6 +139,7 @@ export function buildRoomSelection(room, mapping, rate, adults, options = {}) {
     roomAdultExtraCharge:
       Math.round(selectedGuestRate?.RateAfterTax || 0) -
       Math.round(baseGuestRate?.RateAfterTax || 0),
+    childRate: parseFloat(firstDateEntry?.ExtraChildRate?.RateBeforeTax) || 0,
     minInventory: room?.MinInventory,
     packageRateList: ratePlan?.Rates ?? null,
     savings,

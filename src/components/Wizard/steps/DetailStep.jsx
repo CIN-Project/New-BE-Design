@@ -488,6 +488,31 @@ export function GuestDetailsForm({ onComplete }) {
           roomTaxAmount +
           roomAddonAmount;
 
+            const {
+                  // adults,
+                  // children,
+                  applicableAdult,
+                  applicableChild,
+                  applicableGuest
+                } = room;
+          // --- Step 1: Adjust children if adults are less than applicableAdult ---
+                let adjustedAdults = adults;
+                let adjustedChildren = children;
+                
+                if (adults < applicableAdult && children > 0) {
+                  const neededAdults = applicableAdult - adults;
+                  const childrenToAdults = Math.min(neededAdults, children);
+                  adjustedAdults += childrenToAdults;
+                  adjustedChildren -= childrenToAdults;
+                }     
+                const extraChild =
+                  adjustedChildren > applicableChild
+                    ? Math.min(
+                        adjustedChildren - applicableChild,
+                        Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
+                      )
+                    : 0;
+ let roomWiseTotal = 0;
         return {
           room_id: room?.roomId?.toString() ?? "",
           room_name: room?.roomName ?? "",
@@ -507,7 +532,10 @@ export function GuestDetailsForm({ onComplete }) {
               ? nightEntry.amount + nightEntry.totalTaxes
               : Number(room?.roomRateWithTax) || 0;
               console.log("Prem dateAmountAfterTax",dateAmountAfterTax,nightEntry,room?.roomRateWithTax)
-            return {
+            
+              roomWiseTotal += dateAmountAfterTax + (extraChild > 0
+                    ? Math.round(extraChild * (room?.childRate || 0)) : 0);
+              return {
               date,
               rate_id: room?.rateId,
               rate_name: room?.roomPackage,
@@ -518,9 +546,19 @@ export function GuestDetailsForm({ onComplete }) {
                 extraAdultRate: surcharge.extraAdultCharge
                   ? String(Math.round(surcharge.extraAdultCharge))
                   : "0",
-                extraChildRate: surcharge.extraChildRoomCharge
-                  ? String(Math.round(surcharge.extraChildRoomCharge))
-                  : "0",
+                // Amritara's own extraGuests.extraChildRate is
+                // `extraChild * Math.round(room.childRate)` (StayStep.js/
+                // DetailStep.js) — room.childRate being a single flat,
+                // first-night, tax-INCLUSIVE rate, not the multi-night,
+                // tax-exclusive surcharge.extraChildRoomCharge used for the
+                // actual billed total below. This display field now matches
+                // that exactly instead of reusing the billed-total figure.
+                extraChildRate:
+                  extraChild > 0
+                    ? String(
+                        Math.round(extraChild * (room?.childRate || 0)),
+                      )
+                    : "0",
               },
               fees: [],
               Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
@@ -530,7 +568,7 @@ export function GuestDetailsForm({ onComplete }) {
             roomTaxAmount > 0
               ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
               : [],
-          amountaftertax: roomTotal.toFixed(2),
+          amountaftertax: roomWiseTotal.toFixed(2),
           remarks: "No Smoking",
           GuestCount: [
             { AgeQualifyingCode: "10", Count: String(adults) },
