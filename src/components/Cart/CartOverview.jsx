@@ -496,7 +496,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                 <span>SGST ({Math.round(gstPercent / 2)}%)</span>
                 <span>{formatCurrency(gstTotal / 2)}</span>
               </div> */}
-              {perNightBreakdown.map((night, i) => {
+              {/* {perNightBreakdown.map((night, i) => {
                 const nightTax =
                   night.rooms.reduce((sum, r) => sum + r.tax, 0) +
                   night.addonTax;
@@ -526,7 +526,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                     ) : null}
                   </div>
                 );
-              })}
+              })} */}
             </div>
           )}
 

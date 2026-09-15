@@ -452,10 +452,43 @@ function nightsBetween(startDate, endDate) {
 
 export function getRoomNightlyBreakdown(selectedRoomEntry, fallbackNights = 1) {
   const dateEntries = Object.entries(selectedRoomEntry?.packageRateList || {});
+  console.log("Prem dateEntries",dateEntries);
 
+   const adults = selectedRoomEntry.adults || 0;
+          const children = selectedRoomEntry.children || 0;
+          const applicableAdult = selectedRoomEntry?.ApplicableAdult || 0;
+          const applicableChild = selectedRoomEntry?.ApplicableChild || 0;
+          const applicableGuest = selectedRoomEntry?.ApplicableGuest || 0;
+          const maxAdult = selectedRoomEntry?.MaxAdult || 0;
+          console.log("Prem adults",adults);
+          console.log("Prem children",children);
+          console.log("Prem applicableAdult",applicableAdult);
+          console.log("Prem applicableChild",applicableChild);
+          console.log("Prem applicableGuest",applicableGuest);
+
+          let adjustedAdults = adults;
+          let adjustedChildren = children;
+
+          if (adults < applicableAdult && children > 0) {
+            const neededAdults = applicableAdult - adults;
+            const childrenToAdults = Math.min(neededAdults, children);
+            adjustedAdults += childrenToAdults;
+            adjustedChildren -= childrenToAdults;
+          }
+
+          const extraChildren =
+            adjustedChildren > applicableChild
+              ? Math.min(
+                  adjustedChildren - applicableChild,
+                  Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
+                )
+              : 0;
+console.log("Prem extraChildren",extraChildren) ;
   if (dateEntries.length === 0) {
     const amount = parseFloat(selectedRoomEntry?.packageRate) || 0;
     const afterTax = Number(selectedRoomEntry?.roomRateWithTax) || 0;
+    
+
     const tax = Math.max(0, afterTax - amount);
     return {
       baseTotal: amount * fallbackNights,
@@ -476,11 +509,15 @@ export function getRoomNightlyBreakdown(selectedRoomEntry, fallbackNights = 1) {
       const guestRate = getGuestRateFromObp(dateData?.OBP, selectedRoomEntry?.adults);
       const amount = parseFloat(guestRate?.RateBeforeTax || "0");
       const afterTax = parseFloat(guestRate?.RateAfterTax || "0");
+      
+    const amountChild = parseFloat(dateData?.ExtraChildRate?.RateBeforeTax) || 0;
+    const afterTaxChild = Number(dateData?.ExtraChildRate?.RateAfterTax) || 0;
+    const totalTaxes = (amount + (amountChild * extraChildren) >= 7500 ? Math.round((amount + (amountChild * extraChildren)) * 0.18) : Math.round((amount + (amountChild * extraChildren)) * 0.05));
       const tax = Math.max(0, afterTax - amount);
       baseTotal += amount;
-      taxTotal += tax;
+      taxTotal += totalTaxes;
       const parsedDate = new Date(dateKey);
-      return { dateKey, date: isNaN(parsedDate.getTime()) ? null : parsedDate, amount, tax };
+      return { dateKey, date: isNaN(parsedDate.getTime()) ? null : parsedDate, amount, totalTaxes };
     })
     .sort((a, b) => (a.dateKey < b.dateKey ? -1 : a.dateKey > b.dateKey ? 1 : 0));
 

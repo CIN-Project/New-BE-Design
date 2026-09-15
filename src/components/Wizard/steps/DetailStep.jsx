@@ -16,6 +16,7 @@ import {
 } from "../../../api/payment.js";
 import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
 import { getOrCreateSessionId } from "../../../utils/session.js";
+import { formatIsoDate } from "../../../utils/date.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./DetailStep.css";
 
@@ -490,8 +491,8 @@ export function GuestDetailsForm({ onComplete }) {
         return {
           room_id: room?.roomId?.toString() ?? "",
           room_name: room?.roomName ?? "",
-          arrival_date: formatDateISO(selectedStartDate),
-          departure_date: formatDateISO(selectedEndDate),
+          arrival_date: formatIsoDate(selectedStartDate),
+          departure_date: formatIsoDate(selectedEndDate),
           arrival_time: isDayUse ? to24HourTime(dayUseArrivalTime) : "00:00",
           sepcial_request: formData.specialRequests || "",
           bedding: { BedId: "", BedType: "", Beds: "" },
@@ -499,10 +500,13 @@ export function GuestDetailsForm({ onComplete }) {
           first_name: formData.firstName || "",
           last_name: formData.lastName || "",
           price: dateRange.map((date, dateIndex) => {
+            
+            console.log("Prem dateRange",date,nightByDateKey,nightlyBreakdown)
             const nightEntry = nightByDateKey.get(date);
             const dateAmountAfterTax = nightEntry
-              ? nightEntry.amount + nightEntry.tax
+              ? nightEntry.amount + nightEntry.totalTaxes
               : Number(room?.roomRateWithTax) || 0;
+              console.log("Prem dateAmountAfterTax",dateAmountAfterTax,nightEntry,room?.roomRateWithTax)
             return {
               date,
               rate_id: room?.rateId,
@@ -1162,23 +1166,34 @@ export function GuestDetailsForm({ onComplete }) {
   );
 }
 
-function formatDateISO(date) {
-  if (!date) return "";
-  return new Date(date).toISOString().split("T")[0];
-}
-
-/** Every calendar date of the stay (mirrors Amritara's getDateRange). */
+/**
+ * Every calendar date of the stay (mirrors Amritara's getDateRange). Must
+ * format with local getters (formatIsoDate), NOT `.toISOString()` — this
+ * package's calendar (RangeCalendar.jsx's getMonthDays) builds
+ * selectedStartDate/selectedEndDate as local-midnight Date objects, and
+ * `.toISOString()` converts those to UTC before slicing the date out. For
+ * any guest browsing from IST (UTC+5:30 — bawahotels' entire userbase),
+ * local midnight is 18:30 the PREVIOUS day in UTC, so every date sent to
+ * STAAH (arrival_date, departure_date, every price[].date) silently landed
+ * one day earlier than what the guest actually picked. Amritara never hit
+ * this because its selectedStartDate/selectedEndDate are already
+ * pre-formatted "YYYY-MM-DD" strings (Filterbar.js's own local-getter
+ * formatingDate) by the time its identical-looking getDateRange re-parses
+ * them — round-tripping a date-only string through `new Date()` /
+ * `.toISOString()` is safe; doing the same to a local-time Date object
+ * is not.
+ */
 function getDateRange(startDate, endDate) {
   if (!startDate || !endDate)
-    return startDate ? [formatDateISO(startDate)] : [];
+    return startDate ? [formatIsoDate(startDate)] : [];
   const dates = [];
   let current = new Date(startDate);
   const last = new Date(endDate);
   while (current < last) {
-    dates.push(new Date(current).toISOString().split("T")[0]);
+    dates.push(formatIsoDate(current));
     current.setDate(current.getDate() + 1);
   }
-  return dates.length ? dates : [formatDateISO(startDate)];
+  return dates.length ? dates : [formatIsoDate(startDate)];
 }
 
 function calculateNumberOfDays(startDate, endDate) {
