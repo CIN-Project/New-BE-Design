@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchContext } from "../../context/SearchContext.js";
 import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
@@ -98,7 +98,22 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
   // it; CSS (see .cart-body-scroll's mobile rule in CartOverview.css)
   // scopes the collapse to mobile widths only, so this state has no effect
   // at desktop widths where the body always shows regardless of it.
-  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  // Default to expanded if rooms are selected, so returning from payment
+  // shows the cart items immediately on mobile instead of being hidden.
+  const [isMobileExpanded, setIsMobileExpanded] = useState(
+    (selectedRoom && selectedRoom.length > 0) || false
+  );
+
+  // Auto-expand cart on mobile whenever rooms are selected (e.g. after
+  // returning from payment gateway failure). This ensures the user can
+  // immediately see their selected rooms and totals on mobile without
+  // having to tap to expand.
+  useEffect(() => {
+    const hasRooms = selectedRoom && selectedRoom.length > 0;
+    if (hasRooms && !isMobileExpanded) {
+      setIsMobileExpanded(true);
+    }
+  }, [selectedRoom, isMobileExpanded]);
 
   const totalAdults = (searchRooms || []).reduce(
     (sum, r) => sum + (r.adults || 0),
