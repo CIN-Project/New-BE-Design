@@ -475,7 +475,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
           {isGstOpen && (
             <div className="cart-accordion-body">
               <div className="cart-night-line">
-                <span>GST ({gstPercent}%)</span>
+                <span>GST</span>
                 <span>{formatCurrency(gstTotal)}</span>
               </div>
               {/* Extra-child/extra-adult surcharge (computeRoomSurcharge) —
@@ -488,14 +488,14 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   <span>{formatCurrency(extraChargeTotal)}</span>
                 </div>
               ) : null}
-              <div className="cart-night-line">
+              {/* <div className="cart-night-line">
                 <span>CGST ({Math.round(gstPercent / 2)}%)</span>
                 <span>{formatCurrency(gstTotal / 2)}</span>
               </div>
               <div className="cart-night-line">
                 <span>SGST ({Math.round(gstPercent / 2)}%)</span>
                 <span>{formatCurrency(gstTotal / 2)}</span>
-              </div>
+              </div> */}
               {perNightBreakdown.map((night, i) => {
                 const nightTax =
                   night.rooms.reduce((sum, r) => sum + r.tax, 0) +
