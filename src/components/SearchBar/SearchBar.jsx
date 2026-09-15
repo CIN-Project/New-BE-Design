@@ -485,24 +485,46 @@ export function SearchBar({
               {search.getSearchGuestsSummary()}
             </p>
           </div>
-          <button
-            type="button"
-            className="be-compact-summary-edit-btn"
-            onClick={() => setMobileEditOpen(true)}
-            aria-label="Edit search"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          <div className="be-compact-summary-actions">
+            {onBack && (
+              <button
+                type="button"
+                className="be-compact-summary-close-btn"
+                onClick={onBack}
+                aria-label="Close booking engine"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+            <button
+              type="button"
+              className="be-compact-summary-edit-btn"
+              onClick={() => setMobileEditOpen(true)}
+              aria-label="Edit search"
             >
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -514,7 +536,10 @@ export function SearchBar({
           <button
             type="button"
             className="be-compact-close-btn"
-            onClick={() => setMobileEditOpen(false)}
+            onClick={() => {
+              setMobileEditOpen(false);
+              onBack?.();
+            }}
             aria-label="Close"
           >
             <svg

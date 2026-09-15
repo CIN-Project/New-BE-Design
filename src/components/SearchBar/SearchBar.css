@@ -110,6 +110,7 @@
 }
 
 .be-form-group {
+  min-width: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -134,6 +135,8 @@
 }
 
 .be-form-field-inputs {
+  min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -786,6 +789,24 @@
   text-overflow: ellipsis;
 }
 
+.be-compact-summary-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  margin-left: 0.6rem;
+}
+
+.be-compact-summary-actions:has(.be-compact-summary-close-btn) {
+  padding-top: 1.3rem;
+}
+
+.be-compact-summary-actions > button {
+  margin-left: 0;
+}
+
+.be-compact-summary-close-btn,
 .be-compact-summary-edit-btn {
   flex-shrink: 0;
   width: 2.1rem;
@@ -806,6 +827,17 @@
   background: var(--be-color-primary, #846836);
   color: #ffffff;
   border-color: var(--be-color-primary, #846836);
+}
+
+.be-compact-summary-close-btn {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--be-color-text, #1d1d1d);
 }
 
 .be-compact-close-btn {
@@ -1064,11 +1096,7 @@
      as a shared top-corner overlay (mirrored on the left) needs much less
      reserved space above the fields — just enough to clear one button row. */
   .be-booking-widget-wrap--compact.be-mobile-editing .be-search-back-btn {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    margin-right: 0;
-    z-index: 1;
+    display: none;
   }
 
   /* Once the back button above is lifted out to the corner, .be-compact-
