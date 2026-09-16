@@ -644,8 +644,8 @@ export function GuestDetailsForm({ onComplete }) {
           totalPrice: grandTotal,
           selectedRoom: selectedRoomSummary,
           selectedAddonList: mappedAddons,
-          selectedStartDate,
-          selectedEndDate,
+          selectedStartDate: formatIsoDate(selectedStartDate),
+          selectedEndDate: formatIsoDate(selectedEndDate),
           promoCode: promoCodeContext,
           sessionId: bookingSessionId,
           property: {
