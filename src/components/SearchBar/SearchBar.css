@@ -2,7 +2,7 @@
 
 .be-booking-widget-wrap {
   position: relative;
-  width: 97%;
+  width: 100%;
   max-width: 1200px;
   margin: -35px auto 0 auto;
   background: #ffffff;
@@ -37,7 +37,16 @@
      Leading `auto` track is the Day Use switch (be-stay-mode-group) — same
      "first field in the row" placement Filterbar.js uses for its own
      day-use switch. */
-  grid-template-columns: auto 1.3fr 2fr 1fr 0.9fr auto;
+  /* Location and Travelers are the two fields whose content length isn't
+     fixed — a selected property's name (with its city in parens) or a
+     multi-room "N Adult, N Children - N Room" summary can both run long
+     enough to need real room, and grow further the more the guest picks.
+     Promo Code never does (an optional code is always short), so it's
+     sized to its own content (max-content) instead of claiming a fr share
+     it doesn't need. Check-in/Check-out get a real (smaller) minmax of
+     their own rather than max-content, so the pair still grows with the
+     row instead of sitting pinned to its bare "23 Sep 26" content width. */
+  grid-template-columns: auto minmax(200px, 1.1fr) minmax(260px, 1.3fr) minmax(240px, 0.9fr) max-content auto;
   gap: 0;
   align-items: center;
   width: 100%;
@@ -50,7 +59,7 @@
    before Travelers. Shrinking the track to match Travelers' own 1fr closes
    it, since a single date field is roughly that width, not the pair's. */
 .be-booking-form--dayuse {
-  grid-template-columns: auto 1.3fr 1fr 1fr 0.9fr auto;
+  grid-template-columns: auto minmax(200px, 1.1fr) minmax(140px, 1.3fr) minmax(240px, 0.9fr) max-content auto;
 }
 
 /* Day Use switch — its own narrow field at the start of the row (not a
@@ -206,6 +215,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Flex items default to min-width:auto, which for nowrap text resolves to
+     the text's own full unwrapped width — without this, a flex item never
+     shrinks below that, so it just overflows its (overflow:hidden) parent
+     and gets hard-clipped at the parent's edge with no "…" ever drawn,
+     since this element's own box never actually gets narrower than its
+     content. min-width:0 is what lets it shrink to the available space so
+     its own text-overflow:ellipsis above can actually kick in. */
+  min-width: 0;
 }
 
 /* Destination dropdown */
@@ -663,24 +680,27 @@
 }
 
 .be-booking-widget-wrap--compact .be-booking-form {
-  /* Check-in/check-out merged into one 1.7fr column (be-date-group-pair)
-     instead of two separate 0.85fr ones — see .be-booking-form's own
-     comment above for why. Promo Code's own track (last fr value) is wider
-     than Travelers' despite showing shorter content, since "PROMO CODE" is
-     the widest label once its letter-spacing is factored in — too narrow
-     here and the label wraps to two lines, which (see .be-form-field-
-     inputs label's own nowrap fix) inflates the whole bar's height since
-     every field shares one grid row sized to its tallest item. */
-  grid-template-columns: auto 1.1fr 1.75fr 0.85fr 0.9fr auto;
+  /* Same reasoning as the full variant's own .be-booking-form above:
+     Check-in/Check-out (merged into one be-date-group-pair column) and
+     Promo Code are always short, fixed-format content (a "23 Sep 26" date,
+     an optional code), sized to their own max-content instead of a fr
+     share — max-content still respects "PROMO CODE"'s own label width (see
+     .be-form-field-inputs label's nowrap fix), so the two-line-wrap problem
+     this used to guard against can't recur. All the flexible space goes to
+     Location and Travelers, the only two fields whose content actually
+     varies (a property name with its city in parens; a multi-room "N
+     Adult, N Children - N Room" summary) and can run long enough to need
+     it. */
+  grid-template-columns: auto minmax(220px, 1.4fr) max-content minmax(250px, 1.3fr) max-content auto;
 }
 
-/* Day Use: same "date field collapses, its wide track doesn't" fix as the
-   full variant's own .be-booking-form--dayuse, sized to this compact
-   grid's own proportions. Needs the extra .be-booking-form--dayuse class
-   in the selector to outrank the plain compact rule right above it (same
-   specificity otherwise, and this one has to win). */
+/* Day Use: same "date field collapses, its wide track doesn't matter
+   anymore" as the full variant's own .be-booking-form--dayuse — max-content
+   already sizes the single date field to itself, so this compact override
+   only needs to keep restating the same template it's guarding (see that
+   comment for why the restatement itself is required). */
 .be-booking-widget-wrap--compact .be-booking-form.be-booking-form--dayuse {
-  grid-template-columns: auto 1.1fr 0.9fr 0.9fr 0.8fr auto;
+  grid-template-columns: auto minmax(220px, 1.4fr) max-content minmax(250px, 1.3fr) max-content auto;
 }
 
 /* Back button + Day Use switch share the grid's one leading `auto` track

@@ -9,7 +9,14 @@ export function PromoField({ value, onChange }) {
       </svg>
       <div className="be-form-field-inputs">
         <label>Promo Code</label>
-        <input id="be-promo-input" type="text" placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
+        {/* size keeps this input's own intrinsic (max-content) width down to
+            roughly a real promo code's length — SearchBar.css now sizes its
+            grid column to max-content so Location/Travelers can claim the
+            leftover space, which only works if this doesn't default to the
+            browser's much wider UA text-input size. width:100% (shared
+            value-display rule) still makes it fill whatever that column
+            ends up being once laid out. */}
+        <input id="be-promo-input" type="text" size="10" placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );

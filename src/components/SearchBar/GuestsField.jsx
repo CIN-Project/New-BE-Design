@@ -24,7 +24,9 @@ export function GuestsField({
       </svg>
       <div className="be-form-field-inputs" id="be-guests-trigger" onClick={onToggle}>
         <label>Travelers</label>
-        <div className="be-custom-guests-display">{summaryText}</div>
+        <div className="be-custom-guests-display">
+          <span className="be-truncate">{summaryText}</span>
+        </div>
       </div>
 
       {isOpen && (
