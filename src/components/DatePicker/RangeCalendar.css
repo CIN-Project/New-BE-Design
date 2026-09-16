@@ -257,14 +257,6 @@
   background: rgba(192, 57, 43, 0.08);
 }
 
-/* A sold-out date is still a valid checkout pick (see DayCell's own
-   isPickingCheckout comment) — it keeps the sold-out look (dashed border,
-   "Sold" pill) so it's still obvious no room-night is available there, but
-   the cursor shouldn't claim the date can't be clicked when it can. */
-.be-cal-day--sold-out-checkout-ok {
-  cursor: pointer;
-}
-
 .be-cal-day--selected-start,
 .be-cal-day--selected-end,
 .be-cal-day--selected-single,

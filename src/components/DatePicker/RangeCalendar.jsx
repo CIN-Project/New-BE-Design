@@ -35,18 +35,6 @@ function DayCell({
   const startTime = rangeStart ? rangeStart.getTime() : 0;
   const endTime = rangeEnd ? rangeEnd.getTime() : 0;
 
-  // Matches real Amritara's Flatpicker.js: its own "block a 0/N/A-priced
-  // date" check only ever runs for `selectedDates.length === 1` — i.e.
-  // picking check-in. Once a check-in is already set and this is the
-  // checkout pick (rangeStart set, rangeEnd not yet, and this date is on
-  // or after it — the same condition handleDayClick below uses to treat a
-  // click as "picking checkout" rather than "restarting from a new check-
-  // in"), a sold-out date is left clickable there too, same as Amritara:
-  // checkout morning doesn't itself book a room-night, so a date with no
-  // inventory left is still a valid day to leave on.
-  const isPickingCheckout = !isDayUse && !!rangeStart && !rangeEnd && time >= startTime;
-  const soldOutBlocksClick = isSoldOut && !isPickingCheckout;
-
   // Computed regardless of isDisabled/isSoldOut — a date the guest already
   // picked as check-in/out must always read as clearly selected, even if
   // it would otherwise be disabled/sold-out for a *new* pick (e.g. it's
@@ -80,15 +68,11 @@ function DayCell({
   const classes = ["be-cal-day"];
   if (isSelected) classes.push(`be-cal-day--${variant}`);
   else if (isDisabled) classes.push("be-cal-day--disabled");
-  else if (isSoldOut) {
-    classes.push("be-cal-day--sold-out");
-    // Still reads as sold-out (dashed border, "Sold" pill) but the cursor
-    // shouldn't say not-allowed on a date that's actually pickable here.
-    if (isPickingCheckout) classes.push("be-cal-day--sold-out-checkout-ok");
-  } else if (variant) classes.push(`be-cal-day--${variant}`);
+  else if (isSoldOut) classes.push("be-cal-day--sold-out");
+  else if (variant) classes.push(`be-cal-day--${variant}`);
 
   const handleClick = () => {
-    if (isDisabled || soldOutBlocksClick) return;
+    if (isDisabled || isSoldOut) return;
     onSelect(day);
   };
 
@@ -96,7 +80,7 @@ function DayCell({
     <span
       className={classes.join(" ")}
       onClick={handleClick}
-      onMouseEnter={() => !isDisabled && !soldOutBlocksClick && onHover(day)}
+      onMouseEnter={() => !isDisabled && !isSoldOut && onHover(day)}
     >
       <span className="be-cal-day-num">{day.getDate()}</span>
       {rateText && <span className="be-cal-day-rate">{rateText}</span>}
