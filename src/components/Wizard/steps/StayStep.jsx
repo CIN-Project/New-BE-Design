@@ -109,7 +109,7 @@ function stripLeadingNumber(text) {
   return text.replace(/^\d+[.)]\s*/, "").trim();
 }
 
-function extractInclusionItems(rate, cancellationText) {
+function extractInclusionItems(rate) {
   const html = rate?.RateDescription || "";
   const liMatches = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
     .map((m) => stripLeadingNumber(stripHtmlTags(m[1])))
@@ -138,7 +138,7 @@ function extractInclusionItems(rate, cancellationText) {
     if (parts.length) return parts.slice(0, 8);
   }
 
-  return cancellationText ? [cancellationText] : [];
+  return [];
 }
 
 /** Real STAAH room-content fields beyond what was originally documented
@@ -583,7 +583,7 @@ function RateCard({
       (rp) => String(rp?.RateId) === String(rate?.RateId),
     )?.CancellationPolicy?.Description || "";
   const cancellation = classifyCancellation(cancellationText);
-  const inclusionItems = extractInclusionItems(rate, cancellationText);
+  const inclusionItems = extractInclusionItems(rate);
 
   // Prefer whichever variant is ACTUALLY selected over the "member if
   // available" default — without this, re-opening a room whose STANDARD
@@ -610,11 +610,11 @@ function RateCard({
         <h4 className="be-rate-card-title">
           {rate?.MappingDisplayName || rate?.RateName}
         </h4>
-        {/* {cancellation && (
+        {cancellation && (
           <span className={`be-cancellation-pill ${cancellation.cls}`}>
             {cancellation.label}
           </span>
-        )} */}
+        )}
       </div>
 
       <div className="be-rate-card-inclusions-wrapper">
@@ -625,6 +625,22 @@ function RateCard({
               <span>{item}</span>
             </div>
           ))}
+          {/* Matches real Amritara's Filterbar.js package card (~5769-5797):
+              the actual cancellation policy text sits right under the
+              inclusions list on every package, not just a coarse Free/
+              Non-Refundable label (that's the pill above — a quick-glance
+              summary of THIS same text, this is the full wording, e.g. a
+              real cutoff date). */}
+          {cancellationText && (
+            <div className="be-rate-card-cancellation">
+              <h5 className="be-rate-card-cancellation-title">
+                Cancellation Policy
+              </h5>
+              <p className="be-rate-card-cancellation-text">
+                {cancellationText}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -804,30 +820,33 @@ function RoomRow({
     el.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
   };
 
-  // Auto-scroll to the newly-revealed rate plans on expand — ported exactly
-  // from bawa-hotels-next's real toggleRoomExpansion (~458-492): scroll the
-  // wrapper into view once the CSS grid-rows expand transition finishes
-  // (360ms, just past the 0.35s transition — see .be-rate-plans-expand-
-  // wrapper's own transition duration), then nudge an extra 80px after
-  // another 300ms. Collapse does nothing (bawa doesn't scroll on collapse
-  // either).
-  useEffect(() => {
-    if (!isExpanded) return;
-    let innerTimeout;
-    const outerTimeout = setTimeout(() => {
+  // Auto-scroll to the newly-revealed rate plans — ported from bawa-hotels-
+  // next's real toggleRoomExpansion (~458-492): scroll the wrapper into
+  // view once the CSS grid-rows expand transition finishes (360ms, just
+  // past the 0.35s transition — see .be-rate-plans-expand-wrapper's own
+  // transition duration), then nudge an extra 80px after another 300ms.
+  //
+  // Deliberately NOT a useEffect keyed on `isExpanded`: StayStep auto-
+  // expands the first room in the list on arrival (one render after
+  // mount, via its own effect), which flips this card's isExpanded
+  // false -> true exactly the same way an explicit "View Rates" click
+  // does — a reactive effect can't tell those two apart and scrolled on
+  // both. Triggering the scroll directly from the click handler below
+  // instead means it only ever runs for a real click.
+  const handleToggleExpandClick = () => {
+    const wasExpanded = isExpanded;
+    onToggleExpand();
+    if (wasExpanded) return; // collapsing — bawa doesn't scroll on collapse either
+    setTimeout(() => {
       expandWrapperRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "end",
       });
-      innerTimeout = setTimeout(() => {
+      setTimeout(() => {
         window.scrollBy({ top: 80, behavior: "smooth" });
       }, 300);
     }, 360);
-    return () => {
-      clearTimeout(outerTimeout);
-      clearTimeout(innerTimeout);
-    };
-  }, [isExpanded]);
+  };
 
   const scrollByCard = (dir) => {
     const el = gridRef.current;
@@ -902,7 +921,7 @@ function RoomRow({
               <button
                 type="button"
                 className={`be-btn-select-room${isExpanded ? " be-expanded" : ""}`}
-                onClick={onToggleExpand}
+                onClick={handleToggleExpandClick}
               >
                 {isExpanded ? "Hide Rates" : "View Rates"}
                 <span className="be-arrow">&#8594;</span>
@@ -1247,6 +1266,10 @@ export function StayStep({ onRoomsSelected }) {
   const [error, setError] = useState(null);
   const [retryTick, setRetryTick] = useState(0);
   const [expandedRoomIds, setExpandedRoomIds] = useState(() => new Set());
+  // Tracks which room list (by id/order key) has already had its first
+  // card auto-expanded — see the effect further down, right after `rooms`
+  // is sorted.
+  const autoExpandedListKeyRef = useRef(null);
   // Set once a preselectRoomName match succeeds (see that effect below) and
   // kept around afterwards — unlike expandedRoomIds, which accumulates
   // every room a guest expands/collapses by hand, this exists purely so the
@@ -1659,9 +1682,11 @@ export function StayStep({ onRoomsSelected }) {
   // exact case-insensitive match first, falling back to a substring match
   // either direction (STAAH's own room name often carries a package/meal-
   // plan suffix this page's plain name doesn't, e.g. "Executive Room" vs
-  // "Executive Room - CP"). Expanding the matched room's card is enough to
-  // bring it into view too — RoomRow's own isExpanded effect already
-  // scrolls it into view on expand, nothing extra needed here for that.
+  // "Executive Room - CP"). Pins the matched room to the top of the list
+  // (see the sort a few lines down) and expands it — it's now the first
+  // room shown, and the first room's packages are meant to be visible on
+  // arrival without an extra "View Rates" click; every OTHER room still
+  // stays collapsed until its own "View Rates" is clicked.
   // Cleared regardless of whether anything matched, so it never re-applies
   // itself against a later, unrelated room list (e.g. after changing
   // dates/guests and re-searching from within the wizard).
@@ -1677,12 +1702,13 @@ export function StayStep({ onRoomsSelected }) {
         return name.includes(target) || target.includes(name);
       });
     if (matched) {
-      setExpandedRoomIds((prev) => new Set(prev).add(matched.RoomId));
       setPinnedRoomId(matched.RoomId);
+      setExpandedRoomIds((prev) => new Set(prev).add(matched.RoomId));
     }
     setPreselectRoomName(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredRooms, preselectRoomName]);
+
 
   const handleSelectSlot = (index) => {
     setCurrentRoomIndex(index);
@@ -2012,6 +2038,32 @@ export function StayStep({ onRoomsSelected }) {
     if (priceA !== priceB) return priceA - priceB;
     return (a?.RoomName || "").localeCompare(b?.RoomName || "");
   });
+
+  // The first card in this exact (price-sorted, pinned-room-aware) list is
+  // meant to open with its packages already visible on arrival — every
+  // OTHER room stays collapsed until its own "View Rates" is clicked. Must
+  // read off `rooms` (the array actually rendered below), not the earlier
+  // unsorted/unfiltered `filteredRooms` — a room can rank first in fetch
+  // order but not be the first card shown once capacity-filtered and price-
+  // sorted, which previously expanded the wrong (visually second) card.
+  //
+  // `rooms` is a fresh array every render (plain filter+sort above, not
+  // memoized), so this keys off a cheap identity string of its ids/order
+  // instead — only auto-expanding once per genuinely distinct room list,
+  // via autoExpandedListKeyRef. A `prev.size > 0` style guard doesn't work
+  // here: collapsing the auto-expanded first room empties expandedRoomIds,
+  // and on the very next render (same room list, new `rooms` reference)
+  // that guard would see size 0 and force it back open — the guest could
+  // never collapse it. Keying off the list itself means a genuinely new
+  // search's room list still gets its own new first-room auto-expand.
+  const roomsListKey = rooms.map((r) => r.RoomId).join(",");
+  useEffect(() => {
+    if (rooms.length === 0) return;
+    if (autoExpandedListKeyRef.current === roomsListKey) return;
+    autoExpandedListKeyRef.current = roomsListKey;
+    setExpandedRoomIds((prev) => new Set(prev).add(rooms[0].RoomId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomsListKey]);
 
   return (
     <div className="be-stay-step">
