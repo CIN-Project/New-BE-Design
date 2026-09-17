@@ -97,20 +97,22 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
   // on mobile so the guest details form isn't pushed far down the page by
   // it; CSS (see .cart-body-scroll's mobile rule in CartOverview.css)
   // scopes the collapse to mobile widths only, so this state has no effect
-  // at desktop widths where the body always shows regardless of it.
-  // Default to expanded if rooms are selected, so returning from payment
-  // shows the cart items immediately on mobile instead of being hidden.
-  const [isMobileExpanded, setIsMobileExpanded] = useState(
-    (selectedRoom && selectedRoom.length > 0) || false
-  );
+  // at desktop widths where the body always shows regardless of it. Always
+  // starts collapsed, even when rooms are already selected on mount (e.g.
+  // returning from payment gateway failure) — only a room being selected
+  // *after* the guest is already looking at this screen should auto-expand
+  // it (see the effect below), not whatever was already selected on load.
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
 
-  // Auto-expand cart on mobile the moment rooms first become selected (e.g.
-  // after returning from payment gateway failure), so the guest can
-  // immediately see their selected rooms and totals without tapping to
-  // expand. Tracked via a ref (not `isMobileExpanded` as a dependency) so
-  // this only fires on that no-rooms -> has-rooms transition — otherwise,
-  // with rooms already selected, this would re-run and re-force the panel
-  // open every time the guest collapses it themselves.
+  // Auto-expand cart on mobile the moment rooms first become selected while
+  // the guest is on this screen, so they can immediately see their selected
+  // rooms and totals without tapping to expand. Tracked via a ref (not
+  // `isMobileExpanded` as a dependency) so this only fires on a genuine
+  // no-rooms -> has-rooms transition — otherwise, with rooms already
+  // selected, this would re-run and re-force the panel open every time the
+  // guest collapses it themselves. Seeded with the room state already
+  // present at mount so a pre-existing selection isn't treated as a fresh
+  // transition and doesn't override the collapsed default above.
   const hadRoomsRef = useRef((selectedRoom && selectedRoom.length > 0) || false);
   useEffect(() => {
     const hasRooms = selectedRoom && selectedRoom.length > 0;
