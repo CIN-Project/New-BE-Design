@@ -66,6 +66,23 @@ export function SearchBar({
   const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
 
   const properties = config.properties || [];
+  // Matches real Amritara's own GHA flow (FormContext.js's getPropertyList,
+  // ~105-134): a resolved deep-link narrows the destination picker's own
+  // options down to just that one hotel instead of the site's full list,
+  // and DestinationField's `disabled` blocks opening it to pick a
+  // different one at all. Falls back to the full list on the (should-
+  // never-happen) case where selectedPropertyId doesn't actually match
+  // anything in `properties`, rather than silently showing an empty
+  // dropdown.
+  const ghaMatch = search.isGhaLocked
+    ? properties.filter(
+        (p) =>
+          (p.staahPropertyId ?? p.propertyId ?? p.id) ===
+          search.selectedPropertyId,
+      )
+    : null;
+  const destinationProperties =
+    ghaMatch && ghaMatch.length > 0 ? ghaMatch : properties;
 
   const {
     getDayRate: resolvedGetDayRate,
@@ -594,7 +611,7 @@ export function SearchBar({
         )}
 
         <DestinationField
-          properties={properties}
+          properties={destinationProperties}
           selectedPropertyId={search?.selectedPropertyId}
           onSelect={handleSelectProperty}
           isOpen={showDestModal}
@@ -603,6 +620,7 @@ export function SearchBar({
           triggerId="be-destination-trigger"
           openUpwards={openUpwards}
           isDayUse={search.isDayUse}
+          disabled={search.isGhaLocked}
         />
 
         <DateRangeField

@@ -39,6 +39,25 @@ const initialState = {
   // StayStep once it's acted on it (matched or not), so it never re-applies
   // itself against a later, unrelated room list.
   preselectRoomName: null,
+  // Set only by a Google Hotel Ads deep-link resolution (see
+  // utils/ghaDeepLink.js's resolveGhaDeepLink, called by the host's own URL
+  // hydration) — carried through untouched to DetailStep.jsx's final
+  // reservation payload as `utm_source`, matching real Amritara's
+  // DetailStep.js (~903: `utm_source: ghaUtmSource ? ghaUtmSource : ""`),
+  // so STAAH can attribute the booking's commission back to Google Hotel
+  // Ads. Left null for every other booking (this app's own Book Now
+  // entry points never set it), which DetailStep.jsx sends as "".
+  utmSource: null,
+  // Also set only by a resolved GHA deep-link, alongside utmSource above —
+  // kept as its own explicit flag (not just "utmSource is truthy") so a
+  // future non-GHA use of utmSource doesn't silently start locking the
+  // destination picker too. SearchBar.jsx reads this to restrict
+  // DestinationField to the single resolved property and disable picking a
+  // different one — matches real Amritara's own GHA flow: FormContext.js's
+  // getPropertyList (~105-134) builds a synthetic ONE-property
+  // properties/cityDropDown for FilterBar instead of the full list, so the
+  // destination search there is likewise narrowed to just that hotel.
+  isGhaLocked: false,
   // Bumped only by commitSearch() — StayStep.jsx's room-content/rate fetch
   // depends on THIS, not on selectedPropertyId/selectedStartDate/
   // selectedEndDate directly, specifically so that live-editing the wizard's

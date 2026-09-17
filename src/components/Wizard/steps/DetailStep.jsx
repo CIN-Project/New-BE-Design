@@ -114,6 +114,7 @@ export function GuestDetailsForm({ onComplete }) {
     isDayUse,
     dayUseArrivalTime,
     setDayUseArrivalTime,
+    utmSource,
   } = search;
   const { user } = useBookingEngineAuth();
   const [isDayUseTimePickerOpen, setIsDayUseTimePickerOpen] = useState(false);
@@ -585,6 +586,12 @@ export function GuestDetailsForm({ onComplete }) {
               reservation_datetime: new Date().toISOString().split("T")[0],
               reservation_id: reservationId,
               DayuseBooking: isDayUse ? true : false,
+              // Matches real Amritara's DetailStep.js (~903) — empty string
+              // for every ordinary booking, only ever populated when this
+              // search originated from a resolved GHA deep-link (see
+              // utils/ghaDeepLink.js), so STAAH can attribute commission
+              // back to Google Hotel Ads for that reservation.
+              utm_source: utmSource || "",
               commissionamount: "0.00",
               deposit: formOfPayment === "pay_later"? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),

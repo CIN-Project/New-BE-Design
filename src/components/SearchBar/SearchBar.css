@@ -151,6 +151,17 @@
   width: 100%;
 }
 
+/* A GHA-locked DestinationField (see its own `disabled` prop doc comment)
+   — not clickable, reads as inert rather than just visually identical to
+   every other (interactive) field in the bar. */
+.be-form-field-inputs--disabled {
+  cursor: not-allowed;
+}
+
+.be-form-field-inputs--disabled .be-custom-select-display {
+  opacity: 0.7;
+}
+
 .be-form-field-inputs label {
   font-size: 0.6rem;
   text-transform: uppercase;

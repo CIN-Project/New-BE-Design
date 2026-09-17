@@ -39,6 +39,12 @@ export function DestinationField({
   triggerId,
   openUpwards,
   isDayUse,
+  // Locks the field to whatever `properties` already resolves to (a GHA
+  // deep-link session — see SearchContext's isGhaLocked doc comment — hands
+  // this a single-property list) — no dropdown, no picking a different
+  // hotel. `properties` itself is what actually narrows the shown options;
+  // this only blocks the trigger from opening one.
+  disabled = false,
 }) {
   const selected = properties.find(
     (p) => propertyKey(p) === selectedPropertyId,
@@ -71,12 +77,18 @@ export function DestinationField({
         <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
         <circle cx="12" cy="10" r="3" />
       </svg>
-      <div className="be-form-field-inputs" id={triggerId} onClick={onToggle}>
+      <div
+        className={`be-form-field-inputs${disabled ? " be-form-field-inputs--disabled" : ""}`}
+        id={triggerId}
+        onClick={disabled ? undefined : onToggle}
+        aria-disabled={disabled || undefined}
+      >
         <label>Location</label>
         <div className="be-custom-select-display">
           <span className="be-truncate">
             {propertyLabel(selected || {}) || "Select location..."}
           </span>
+          {!disabled && (
           <svg
             className="be-field-icon"
             viewBox="0 0 24 24"
@@ -89,10 +101,11 @@ export function DestinationField({
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
+          )}
         </div>
       </div>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div
           ref={modalRef}
           className={`be-destination-modal be-modal-anim ${openUpwards ? "be-modal--open-up" : ""}`}

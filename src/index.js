@@ -24,3 +24,5 @@ export * as ratesApi from "./api/rates.js";
 export * as propertiesApi from "./api/properties.js";
 export * as paymentApi from "./api/payment.js";
 export * as authApi from "./api/auth.js";
+
+export { resolveGhaDeepLink } from "./utils/ghaDeepLink.js";
