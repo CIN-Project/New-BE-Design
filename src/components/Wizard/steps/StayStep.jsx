@@ -610,11 +610,11 @@ function RateCard({
         <h4 className="be-rate-card-title">
           {rate?.MappingDisplayName || rate?.RateName}
         </h4>
-        {cancellation && (
+        {/* {cancellation && (
           <span className={`be-cancellation-pill ${cancellation.cls}`}>
             {cancellation.label}
           </span>
-        )}
+        )} */}
       </div>
 
       <div className="be-rate-card-inclusions-wrapper">
