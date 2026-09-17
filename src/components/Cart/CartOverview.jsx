@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchContext } from "../../context/SearchContext.js";
 import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
@@ -104,16 +104,21 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     (selectedRoom && selectedRoom.length > 0) || false
   );
 
-  // Auto-expand cart on mobile whenever rooms are selected (e.g. after
-  // returning from payment gateway failure). This ensures the user can
-  // immediately see their selected rooms and totals on mobile without
-  // having to tap to expand.
+  // Auto-expand cart on mobile the moment rooms first become selected (e.g.
+  // after returning from payment gateway failure), so the guest can
+  // immediately see their selected rooms and totals without tapping to
+  // expand. Tracked via a ref (not `isMobileExpanded` as a dependency) so
+  // this only fires on that no-rooms -> has-rooms transition — otherwise,
+  // with rooms already selected, this would re-run and re-force the panel
+  // open every time the guest collapses it themselves.
+  const hadRoomsRef = useRef((selectedRoom && selectedRoom.length > 0) || false);
   useEffect(() => {
     const hasRooms = selectedRoom && selectedRoom.length > 0;
-    if (hasRooms && !isMobileExpanded) {
+    if (hasRooms && !hadRoomsRef.current) {
       setIsMobileExpanded(true);
     }
-  }, [selectedRoom, isMobileExpanded]);
+    hadRoomsRef.current = hasRooms;
+  }, [selectedRoom]);
 
   const totalAdults = (searchRooms || []).reduce(
     (sum, r) => sum + (r.adults || 0),
@@ -204,6 +209,12 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
             Amritara's collapsed "Booking Details" card (dates+Modify,
             guests+Modify, Total, nothing else) before it's tapped open. */}
         <div className="cart-mobile-collapsed-summary">
+          <div className="cart-mobile-collapsed-row">
+            <span>{selectedPropertyName || "—"}</span>
+            <span style={modifyLinkStyle} onClick={onModifyProperty}>
+              Modify
+            </span>
+          </div>
           <div className="cart-mobile-collapsed-row">
             <span>
               {/* Same isDayUse branch as the "Stay & Guests" section below
