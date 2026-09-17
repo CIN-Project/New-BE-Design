@@ -208,7 +208,19 @@ export function BookingFlow({
           onComplete={onComplete}
           syncStepToUrl={false}
           onSearch={handleSearch}
-          onBack={handleBack}
+          // Same "no onBackFromCta, no back button" rule as the "search"
+          // stage's SearchBar just above — a consumer that never gave this
+          // component anywhere to go back TO (e.g. a GHA ad deep-link, no
+          // returnUrl) shouldn't show an arrow at all. Without this,
+          // Wizard always received a real handleBack function (never
+          // undefined) and rendered the arrow regardless, since its own
+          // step-1 SearchBar only checks presence, not what onBackFromCta
+          // was — clicking it then fell through to handleBack's OTHER
+          // branch, setStage("cta"), which isn't a real page for a
+          // consumer using initialStage="wizard" directly (this component's
+          // "cta" stage was never entered, so it renders a bare "Book Now"
+          // button in place of the whole flow).
+          onBack={onBackFromCta ? handleBack : undefined}
         />
       )}
     </div>
