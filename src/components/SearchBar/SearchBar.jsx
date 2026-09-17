@@ -432,8 +432,12 @@ export function SearchBar({
   // so both stay in sync without duplicating the markup.
   const stayModeToggle = (
     <div className="be-form-group be-stay-mode-group">
-      <div className="be-form-field-inputs">
-        <label>Day Use</label>
+      <div className="be-form-field-inputs be-stay-mode-inputs">
+        <span
+          className={`be-stay-mode-label be-stay-mode-label--overnight ${!search.isDayUse ? "be-stay-mode-label--active" : ""}`}
+        >
+          Overnight
+        </span>
         <button
           type="button"
           role="switch"
@@ -444,6 +448,11 @@ export function SearchBar({
         >
           <span className="be-stay-mode-switch-knob" />
         </button>
+        <span
+          className={`be-stay-mode-label be-stay-mode-label--dayuse ${search.isDayUse ? "be-stay-mode-label--active" : ""}`}
+        >
+          Day Use
+        </span>
       </div>
     </div>
   );

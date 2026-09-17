@@ -572,7 +572,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  max-height: 200px;
+  max-height: 150px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -629,6 +629,32 @@
 .be-rate-card-inclusion-item {
   display: flex;
   align-items: flex-start;
+  font-size: 0.76rem;
+  color: #555;
+  line-height: 1.35;
+}
+
+/* Matches real Amritara's own package-inclusion-main-title/cancellation-div
+   pairing (Filterbar.js's booking.css) — a dashed rule to set it apart from
+   the numbered inclusion items above, same small-label-plus-text shape
+   otherwise. */
+.be-rate-card-cancellation {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(132, 104, 54, 0.15);
+}
+
+.be-rate-card-cancellation-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--be-color-primary, #846836);
+}
+
+.be-rate-card-cancellation-text {
+  margin: 0;
   font-size: 0.76rem;
   color: #555;
   line-height: 1.35;

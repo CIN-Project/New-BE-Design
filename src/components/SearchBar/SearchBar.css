@@ -70,15 +70,65 @@
   white-space: nowrap;
 }
 
+/* Grid (not flex) so the switch can be reflowed independently of the two
+   labels per breakpoint: desktop keeps Overnight/Day Use stacked as one
+   column to the left of the switch (switch spans both rows), while the
+   ≤768px override below respells the same three items into a single
+   column — Overnight, switch, Day Use — via grid-template-areas alone,
+   no JSX/markup-order changes needed. */
+.be-stay-mode-group .be-form-field-inputs {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "overnight switch"
+    "dayuse    switch";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 5px;
+}
+
+.be-stay-mode-label--overnight {
+  grid-area: overnight;
+}
+
+.be-stay-mode-label--dayuse {
+  grid-area: dayuse;
+}
+
 .be-stay-mode-switch {
-  width: 36px;
-  height: 20px;
+  grid-area: switch;
+  align-self: center;
+  justify-self: center;
+}
+
+.be-stay-mode-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(93, 71, 38, 0.4);
+  transition: color 0.25s ease;
+}
+
+.be-stay-mode-label--active {
+  color: var(--be-color-primary, #5d4726);
+}
+
+/* Vertical pill: same knob-travel math as the old horizontal switch
+   (track size 36 minus 2x2px padding minus 14px knob = 16px of travel),
+   just running top-to-bottom so its two rest positions line up with the
+   Overnight (top) / Day Use (bottom) labels beside it. */
+.be-stay-mode-switch {
+  width: 20px;
+  height: 36px;
   border-radius: var(--be-radius-pill, 999px);
   border: 1.5px solid rgba(132, 104, 54, 0.35);
   background: #ffffff;
   padding: 2px;
   display: inline-flex;
-  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: var(--be-transition-fast, all 0.3s ease);
   flex-shrink: 0;
@@ -96,13 +146,13 @@
   border-radius: 50%;
   background: var(--be-color-primary, #846836);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transform: translateX(0);
+  transform: translateY(0);
   transition: transform 0.25s ease, background-color 0.25s ease;
 }
 
 .be-stay-mode-switch--active .be-stay-mode-switch-knob {
   background: #ffffff;
-  transform: translateX(16px);
+  transform: translateY(16px);
 }
 
 .be-date-group-pair {
@@ -1036,14 +1086,41 @@
      below it stacks left-aligned in the single-column grid above, but the
      Day Use switch is the one exception: it's a standalone toggle, not a
      labeled input matching the others, so it reads better centered on its
-     own row instead of pinned to the same left edge. .be-stay-mode-group
-     has no leading icon (unlike every other field), so its only child —
-     .be-form-field-inputs — already fills the full row width; centering
-     that flex item itself would be a no-op, since align-items:center is
-     what actually centers ITS OWN children (the label + switch) within
-     that full width instead. */
+     own row instead of pinned to the same left edge. Re-spells the same
+     three grid items (Overnight label, switch, Day Use label — see the
+     un-scoped rule above) into a single centered row — Overnight, switch,
+     Day Use side by side — instead of desktop's two-row "labels stacked
+     left, switch right" split. */
   .be-stay-mode-group .be-form-field-inputs {
-    align-items: center;
+    grid-template-columns: auto auto auto;
+    grid-template-rows: auto;
+    grid-template-areas: "overnight switch dayuse";
+    justify-content: center;
+    column-gap: 8px;
+  }
+
+  /* Switch orientation follows the row it's in: sitting between the two
+     labels left-to-right here (unlike desktop's stacked labels beside a
+     vertical switch), it reads better sliding left-to-right too — same
+     36x20 track/14px knob/16px travel as the original horizontal switch,
+     just re-applied on top of the vertical desktop version above. */
+  .be-stay-mode-switch {
+    width: 36px;
+    height: 20px;
+    /* Desktop's vertical track centers its knob horizontally
+       (justify-content: center) since it only ever moves vertically; this
+       wide horizontal track needs the knob starting at the left edge
+       instead, or translateX below shifts it from an already-centered
+       rest position and it overflows past the track's right edge. */
+    justify-content: flex-start;
+  }
+
+  .be-stay-mode-switch-knob {
+    transform: translateX(0);
+  }
+
+  .be-stay-mode-switch--active .be-stay-mode-switch-knob {
+    transform: translateX(16px);
   }
 
   /* The compact variant's own grid-template-columns override above
