@@ -1177,9 +1177,13 @@
      the switch + labels so it sits flush against the property text
      instead of looking like a stray field dropped into a smaller layout. */
   .be-compact-summary .be-stay-mode-group {
-    padding: 0;
+    /* Left stays flush (0); right keeps space before this field's own
+       border-right (.be-form-group's divider line, inherited from the
+       compact wrap's base rule) instead of the switch sitting flush
+       against it. */
+    padding: 0 0.5rem 0 0;
     flex-shrink: 0;
-    margin-right: 0.5rem;
+    margin-right: 0.6rem;
     cursor: default;
   }
 
