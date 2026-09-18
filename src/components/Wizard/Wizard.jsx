@@ -456,7 +456,16 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
                 details per request. The actual submit button lives in
                 CartOverview's sidebar, wired to this form via the `form`
                 attribute. */}
-            <DetailStep.GuestDetailsForm onComplete={onComplete} />
+            <DetailStep.GuestDetailsForm
+              onComplete={onComplete}
+              // Razorpay Checkout is a same-tab JS overlay, not a page
+              // navigation — once payment is verified, jump straight to
+              // step 4 in-SPA. Nothing else (tokenKey-on-mount, the
+              // pay-now-marker/be_bookingData staleness recovery, popstate)
+              // is touched by this — those keep serving pay_later and
+              // error-recovery exactly as before.
+              onPaymentResolved={() => changeStep(4)}
+            />
             {/* <AddOnsStep /> */}
           </div>
           <CartOverview

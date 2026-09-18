@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { useConfig } from "../../../config/configContext.js";
+import { useConfig, requireConfig } from "../../../config/configContext.js";
 import { useCartContext } from "../../../context/CartContext.js";
 import { useStayContext } from "../../../context/StayContext.js";
 import { useSearchContext } from "../../../context/SearchContext.js";
@@ -14,6 +14,7 @@ import {
   redirectToPayment,
   postUserEnrollment,
 } from "../../../api/payment.js";
+import { createRazorpayOrder, loadRazorpayCheckout } from "../../../api/razorpay.js";
 import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
 import { getOrCreateSessionId } from "../../../utils/session.js";
 import { formatIsoDate } from "../../../utils/date.js";
@@ -85,7 +86,7 @@ const errorStyle = {
   textAlign: "left",
 };
 
-export function GuestDetailsForm({ onComplete }) {
+export function GuestDetailsForm({ onComplete, onPaymentResolved }) {
   const config = useConfig();
   const {
     userDetails,
@@ -888,10 +889,100 @@ export function GuestDetailsForm({ onComplete }) {
         window.history.replaceState({}, "", `${window.location.pathname}?${marker.toString()}`);
         window.location.reload();
       } else {
-        // Pay now: proceed with STAAH gateway redirect as normal
+        // Pay now: collect payment via Razorpay Checkout (replaces the old
+        // STAAH-hosted-gateway redirect) — a same-tab JS overlay, not a
+        // page navigation, so no sessionStorage/reload dance is needed to
+        // get to ConfirmStep; onPaymentResolved (Wizard.jsx) advances the
+        // wizard in-SPA once payment is verified.
+        const thPaymentResp = paymentResp?.result?.[0] || paymentResp;
+        const thResponseJson = thPaymentResp?.responseJson || paymentResp;
+        const partnerId =
+          thResponseJson?.partner_id || config?.partnerId || "7";
+
+        console.log(
+          "[PAYMENT-FLOW] DetailStep.jsx: creating Razorpay order",
+          { reservationId, amount: grandTotal },
+        );
+        const orderResp = await createRazorpayOrder(config, {
+          reservation_id: reservationId,
+          property_id: selectedPropertyId,
+          amount: grandTotal,
+          currency: "INR",
+          partner_id: partnerId,
+          keyData: finalKeyData,
+        });
+
+        const RazorpayCheckout = await loadRazorpayCheckout();
+        const rzp = new RazorpayCheckout({
+          key: requireConfig(config, "razorpayKeyId", "Razorpay checkout"),
+          amount: orderResp.amount,
+          currency: orderResp.currency,
+          order_id: orderResp.razorpay_order_id,
+          name: selectedPropertyName,
+          prefill: {
+            name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+            email: formData.email || "",
+            contact: formData.phone || "",
+          },
+          handler: async (response) => {
+            try {
+              console.log(
+                "[PAYMENT-FLOW] DetailStep.jsx: Razorpay Checkout succeeded, handing off to ConfirmStep for verification",
+                response,
+              );
+              // Store only the raw Razorpay callback fields — ConfirmStep.jsx's
+              // mount effect is what actually calls razorpay-verify (mirrors
+              // how it already owns the confirmPayment call for pay_now/
+              // pay_later, so there's exactly one place that does STAAH
+              // confirmation, and a page reload while step 4 is rendering
+              // can safely redo the same idempotent verify call).
+              window.sessionStorage.setItem(
+                "be_paymentResponse",
+                JSON.stringify({
+                  paymentMethod: "razorpay",
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              );
+              onPaymentResolved?.();
+            } catch (err) {
+              console.error(
+                "[PAYMENT-FLOW] DetailStep.jsx: failed to store Razorpay result",
+                err,
+              );
+              setIsProcessing(false);
+              toast.error(
+                "We couldn't confirm your payment. Please contact support before retrying.",
+              );
+            }
+          },
+          modal: {
+            // Guest closed the Checkout overlay without paying — no
+            // handler fires, DB row (razorpay-order) stays 'created'
+            // forever, harmless. Resubmitting mints a fresh order.
+            ondismiss: () => setIsProcessing(false),
+          },
+          theme: { color: "#846836" },
+        });
+        rzp.on("payment.failed", (resp) => {
+          console.error(
+            "[PAYMENT-FLOW] DetailStep.jsx: Razorpay payment.failed",
+            resp,
+          );
+          setIsProcessing(false);
+          toast.error(
+            resp?.error?.description || "Payment failed. Please try again.",
+          );
+          postBookingWidged(config, {
+            ctaName: resp?.error?.description || "Payment failed",
+            propertyId: selectedPropertyId,
+            apiErrorCode: "1166",
+            apiMessage: resp?.error?.description || "Payment failed",
+          });
+        });
         onComplete?.();
-        console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, formOfPayment, staahBaseUrl: config?.staahBaseUrl, paramvalues });
-        redirectToPayment(config, paramvalues, resolvedKeyData);
+        rzp.open();
       }
     } catch (err) {
       console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);

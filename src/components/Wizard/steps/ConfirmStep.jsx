@@ -11,6 +11,7 @@ import {
   postPaymentRequest,
   redirectToPayment,
 } from "../../../api/payment.js";
+import { verifyRazorpayPayment } from "../../../api/razorpay.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./ConfirmStep.css";
 
@@ -141,6 +142,80 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         "[PAYMENT-FLOW] ConfirmStep.jsx: existing sessionStorage payment response",
         { hadRawResponse: Boolean(rawResponse), rawResponse },
       );
+
+      // Razorpay's pay_now path stores a distinct shape (paymentMethod:
+      // "razorpay") instead of a STAAH gateway-echo — handled entirely
+      // separately from the tokenKey/verify-token/confirmPayment flow
+      // below, since razorpay-verify (not confirmPayment) is what actually
+      // completes the STAAH reservation for this path. This mirrors the
+      // architecture (ConfirmStep owns the one call that finalizes the
+      // booking) rather than bypassing it.
+      let parsedRazorpay = null;
+      try {
+        parsedRazorpay = rawResponse ? JSON.parse(rawResponse) : null;
+      } catch {
+        parsedRazorpay = null;
+      }
+      if (parsedRazorpay?.paymentMethod === "razorpay") {
+        console.log(
+          "[PAYMENT-FLOW] ConfirmStep.jsx: razorpay payment detected — calling razorpay-verify",
+        );
+        const parsedBookingData = parseBookingData(
+          safeSessionStorageGet(BOOKING_DATA_KEY),
+        );
+        setFormOfPayment("pay_now");
+        setBookingData(parsedBookingData);
+        setHadStoredData(true);
+        setLoading(false);
+        setConfirming(true);
+        try {
+          const confirmResp = await verifyRazorpayPayment(config, {
+            razorpay_order_id: parsedRazorpay.razorpay_order_id,
+            razorpay_payment_id: parsedRazorpay.razorpay_payment_id,
+            razorpay_signature: parsedRazorpay.razorpay_signature,
+          });
+          if (cancelled) return;
+          const errorMessage =
+            confirmResp?.result?.[0]?.confirmData?.errorMessage;
+          const details = parseBookingData(
+            confirmResp?.result?.[0]?.confirmData?.result?.[0]
+              ?.bookingDetailsJson,
+          );
+          setConfirmedBookingData(details);
+          setResponseJson({
+            status: errorMessage,
+            reservation_id: parsedBookingData?.reservationId,
+            amount: parsedBookingData?.totalPrice,
+            currency: "INR",
+            pg_transaction_id: parsedRazorpay.razorpay_payment_id,
+          });
+          setReservationStatus(
+            errorMessage === "success"
+              ? "success"
+              : errorMessage === "staah_pending"
+                ? "pending"
+                : "failed",
+          );
+          postBookingWidged(config, {
+            ctaName: "",
+            propertyId: parsedBookingData?.selectedPropertyId,
+            apiName: "razorpay-verify",
+            apiUrl: `${config?.staahBaseUrl || ""}/api/razorpay-verify`,
+            apiStatus: errorMessage === "success" ? "200" : "0",
+            apiErrorCode: errorMessage === "success" ? "200" : "0",
+            apiMessage: errorMessage || "Payment failed",
+          });
+        } catch (err) {
+          console.error(
+            "[PAYMENT-FLOW] ConfirmStep.jsx: razorpay-verify THREW",
+            err,
+          );
+          if (!cancelled) setReservationStatus("failed");
+        } finally {
+          if (!cancelled) setConfirming(false);
+        }
+        return;
+      }
 
       const tokenKey = new URLSearchParams(window.location.search).get(
         "tokenKey",
@@ -665,6 +740,11 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         onBackToCart={onBackToCart}
         siteName={config?.siteName}
         bookingData={effectiveBookingData}
+        // Razorpay already captured the payment but STAAH's reservation
+        // posting hasn't finished/succeeded yet (see razorpay-verify's
+        // "staah_pending" — money moved, so no "Try Again" (double-charge
+        // risk) and no generic "payment failed" wording.
+        paymentCaptured={reservationStatus === "pending"}
       />
     );
   }
@@ -951,6 +1031,11 @@ function FailureState({
   onBackToCart,
   siteName,
   bookingData,
+  // true only for Razorpay's "staah_pending": the payment was captured but
+  // STAAH's reservation posting hasn't finished/succeeded yet. Money has
+  // already moved, so this must never look like a plain failure (retrying
+  // risks a double charge) — distinct copy, no "Try Again" button.
+  paymentCaptured = false,
 }) {
   // Real conditional render, not a CSS show/hide pair — a plain matchMedia
   // check here means "Return Home" never sits in the DOM at all on mobile
@@ -974,16 +1059,24 @@ function FailureState({
   const hasErrorMessage = Boolean(responseJson?.error_msg);
   const isPending = !hasErrorMessage && !hadStoredData;
 
-  const statusLabel = isPending ? "Booking Pending" : "Payment Unsuccessful";
-  const title = isPending
-    ? "Booking Pending"
-    : "We Couldn't Confirm Your Booking";
-
-  const description = hasErrorMessage
-    ? `${responseJson.error_msg} If the amount was deducted, please check your email or contact us and we'll sort it out.`
+  const statusLabel = paymentCaptured
+    ? "Payment Received"
     : isPending
-      ? "We haven't received a confirmation for this booking yet. Please check your email for a confirmation, or contact us if you don't hear back soon."
-      : "We couldn't confirm your booking. Please try again or contact support.";
+      ? "Booking Pending"
+      : "Payment Unsuccessful";
+  const title = paymentCaptured
+    ? "Finalizing Your Booking"
+    : isPending
+      ? "Booking Pending"
+      : "We Couldn't Confirm Your Booking";
+
+  const description = paymentCaptured
+    ? `Your payment was received — we're finalizing your reservation. If you don't receive a confirmation email shortly, please contact us with reservation ID ${responseJson?.reservation_id || "N/A"} rather than paying again.`
+    : hasErrorMessage
+      ? `${responseJson.error_msg} If the amount was deducted, please check your email or contact us and we'll sort it out.`
+      : isPending
+        ? "We haven't received a confirmation for this booking yet. Please check your email for a confirmation, or contact us if you don't hear back soon."
+        : "We couldn't confirm your booking. Please try again or contact support.";
 
   return (
     <div className="be-voucher-card">
@@ -1017,18 +1110,20 @@ function FailureState({
       <p className="be-voucher-failure-desc">{description}</p>
 
       <div className="be-voucher-actions">
-        <button
-          type="button"
-          onClick={
-            onRetry ||
-            (() => {
-              window.location.href = homeUrl;
-            })
-          }
-          className="be-voucher-btn-print"
-        >
-          Try Again
-        </button>
+        {!paymentCaptured && (
+          <button
+            type="button"
+            onClick={
+              onRetry ||
+              (() => {
+                window.location.href = homeUrl;
+              })
+            }
+            className="be-voucher-btn-print"
+          >
+            Try Again
+          </button>
+        )}
         {/* Desktop keeps this exact "Return Home" link, unchanged. Mobile
             shows "Back to Cart" instead — not merely hidden via CSS, not
             rendered at all — which returns the guest to step 2 with their
