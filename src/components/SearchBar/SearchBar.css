@@ -1171,6 +1171,71 @@
     padding: 0.3rem 0.2rem;
   }
 
+  /* The Day Use toggle reused here is the same .be-form-group as the full
+     field form, whose padding/hover-background are sized for a whole
+     field row, not this single-line summary card — stripped down to just
+     the switch + labels so it sits flush against the property text
+     instead of looking like a stray field dropped into a smaller layout. */
+  .be-compact-summary .be-stay-mode-group {
+    padding: 0;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    cursor: default;
+  }
+
+  .be-compact-summary .be-stay-mode-group:hover {
+    background-color: transparent;
+  }
+
+  /* Labels stacked left (Overnight above Day Use), switch on the right
+     spanning both rows — the desktop arrangement (see the un-scoped
+     .be-stay-mode-group .be-form-field-inputs rule near the top of this
+     file), restored here with higher specificity (.be-compact-summary
+     ancestor) over the ≤768px side-by-side override above, which this
+     card should NOT use. */
+  .be-compact-summary .be-stay-mode-group .be-form-field-inputs {
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "overnight switch"
+      "dayuse    switch";
+    justify-content: center;
+    column-gap: 8px;
+    row-gap: 3px;
+  }
+
+  /* The switch itself follows suit — vertical (20x36, knob travels
+     top-to-bottom) like desktop, not the ≤768px horizontal version, since
+     it's now beside stacked labels rather than between inline ones. */
+  .be-compact-summary .be-stay-mode-switch {
+    width: 20px;
+    height: 36px;
+    justify-content: center;
+  }
+
+  .be-compact-summary .be-stay-mode-switch-knob {
+    transform: translateY(0);
+  }
+
+  .be-compact-summary .be-stay-mode-switch--active .be-stay-mode-switch-knob {
+    transform: translateY(16px);
+  }
+
+  /* Scoped to this compact card only — the plain outlined track (never
+     filled solid) with an always-gold knob that just slides, rather than
+     the filled-track/white-knob "active" look used everywhere else this
+     switch appears. */
+  .be-compact-summary .be-stay-mode-switch,
+  .be-compact-summary .be-stay-mode-switch--active {
+    background: #fff;
+    border-color: rgba(132, 104, 54, 0.35);
+  }
+
+  .be-compact-summary .be-stay-mode-switch-knob,
+  .be-compact-summary .be-stay-mode-switch--active .be-stay-mode-switch-knob {
+    background: var(--be-color-primary, #846836);
+  }
+
   .be-booking-widget-wrap--compact.be-mobile-editing .be-compact-summary {
     display: none;
   }

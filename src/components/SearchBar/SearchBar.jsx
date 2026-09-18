@@ -497,6 +497,7 @@ export function SearchBar({
     >
       {isCompact && (
         <div className="be-compact-summary">
+          {stayModeToggle}
           <div className="be-compact-summary-text">
             <p className="be-compact-summary-property">
               {search.selectedPropertyName || "Select a hotel"}

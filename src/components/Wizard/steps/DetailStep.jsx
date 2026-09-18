@@ -417,6 +417,19 @@ export function GuestDetailsForm({ onComplete }) {
           "Could not generate a reservation ID. Please try again.",
         );
 
+      // Ported from real Amritara's DetailStep.js (~1392):
+      // postBookingWidged("","", false,"Pay Now Click","", "", "", "","",newReservationId)
+      // — fired right after a reservation_id is obtained, for both submit
+      // buttons here (real only ever has a working Pay Now button; this
+      // package's Pay Later is a real, separate submit path, so it gets
+      // its own "Pay Later Click" ctaName rather than being silently
+      // folded into "Pay Now Click").
+      postBookingWidged(config, {
+        ctaName: formOfPayment === "pay_later" ? "Pay Later Click" : "Pay Now Click",
+        propertyId: selectedPropertyId,
+        customField1: reservationId,
+      });
+
       const numberOfDays = calculateNumberOfDays(
         selectedStartDate,
         selectedEndDate,

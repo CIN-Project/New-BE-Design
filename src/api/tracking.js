@@ -54,6 +54,11 @@ import { getOrCreateSessionId } from "../utils/session.js";
  * @param {string} [params.apiMessage]
  * @param {string} [params.customerGuid] - real's CustomerGuid/WebsiteGuid
  *   (both set to the same value at every real call site).
+ * @param {string} [params.customField1] - real's CustomField1: only ever
+ *   set to the freshly-generated reservation_id, only on the "Pay Now
+ *   Click"/"Pay Later Click" beacon fired right after
+ *   generateReservationId resolves (DetailStep.js ~1392) — "" for every
+ *   other ctaName, which is why this defaults to "" here too.
  */
 export function postBookingWidged(config, params = {}) {
   const base = config?.cmsBaseUrl;
@@ -92,6 +97,7 @@ export function postBookingWidged(config, params = {}) {
     LowestRate: 0.0,
     SearchRate: 0.0,
     IsRateMatch: "N",
+    CustomField1: params.customField1 || "",
   };
 
   return fetch(`${base}/api/tracker/BookingWidged`, {
