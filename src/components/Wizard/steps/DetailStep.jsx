@@ -481,18 +481,23 @@ export function GuestDetailsForm({ onComplete }) {
             ? adults - room.maxAdult
             : 0;
 
-        const nightlyBreakdown = getRoomNightlyBreakdown(room, nights || 1);
+        const nightlyBreakdown = getRoomNightlyBreakdown(
+          room,
+          nights || 1,
+          surcharge.extraChildren || 0,
+        );
         const nightByDateKey = new Map(
           nightlyBreakdown.nights
             .filter((n) => n.dateKey)
             .map((n) => [n.dateKey, n]),
         );
 
-        const standardTaxTotal = nightlyBreakdown.taxTotal;
-        const roomTaxAmount =
-          surcharge.extraChildren >= 1
-            ? surcharge.extraChildTax
-            : standardTaxTotal;
+        // getRoomNightlyBreakdown is now the single source of truth for
+        // this room's tax (real STAAH Tax array when there's no extra
+        // child, the extra-child GST-slab formula only when there is one —
+        // see that function's own doc comment) — no separate ternary
+        // needed here any more.
+        const roomTaxAmount = nightlyBreakdown.taxTotal;
 
         const roomAddonAmount = index === 0 ? addonAmountTotal || 0 : 0;
         const roomTotal =
@@ -578,10 +583,23 @@ export function GuestDetailsForm({ onComplete }) {
               Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
             };
           }),
+          // Itemized by real STAAH tax Name (matches real Amritara's own
+          // DetailStep.js ~1097-1126, which sends every named tax key
+          // present on the room, not just a single hardcoded "GST") —
+          // falls back to one "GST" line only if taxByName somehow ended
+          // up empty despite a non-zero roomTaxAmount, so tax is never
+          // silently dropped from the payload.
           taxes:
-            roomTaxAmount > 0
-              ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
-              : [],
+            Object.keys(nightlyBreakdown.taxByName || {}).length > 0
+              ? Object.entries(nightlyBreakdown.taxByName)
+                  .filter(([, amount]) => amount > 0)
+                  .map(([name, amount]) => ({
+                    name,
+                    value: String(Math.round(amount)),
+                  }))
+              : roomTaxAmount > 0
+                ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
+                : [],
           amountaftertax: roomWiseTotal.toFixed(2),
           remarks: "No Smoking",
           GuestCount: [

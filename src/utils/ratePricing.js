@@ -151,7 +151,6 @@ export function computeRoomSurcharge(selectedRoomEntry) {
     extraChildren: 0,
     extraAdultCharge: 0,
     extraChildRoomCharge: 0,
-    extraChildTax: 0,
     extraChildSaving: 0,
   };
   if (!selectedRoomEntry) return empty;
@@ -187,7 +186,6 @@ export function computeRoomSurcharge(selectedRoomEntry) {
 
   let extraChildRoomCharge = 0;
   let extraChildSaving = 0;
-  let extraChildTax = 0;
 
   if (extraChildren >= 1 && dateEntries.length > 0) {
     const totalExtraChildRate = dateEntries.reduce(
@@ -200,15 +198,15 @@ export function computeRoomSurcharge(selectedRoomEntry) {
     );
     extraChildRoomCharge = Math.round(totalExtraChildRate) * extraChildren;
     extraChildSaving = Math.round(totalExtraChildSaving) * extraChildren;
-
-    extraChildTax = dateEntries.reduce((sum, d) => {
-      const guestRate = getGuestRateFromObp(d?.OBP, adults);
-      const baseRate = parseFloat(guestRate?.RateBeforeTax || 0);
-      const perChildRate = parseFloat(d?.ExtraChildRate?.RateBeforeTax || 0);
-      const price = baseRate + perChildRate * extraChildren;
-      return sum + (price >= 7500 ? Math.round(price * 0.18) : Math.round(price * 0.05));
-    }, 0);
   }
+  // Tax itself is NOT computed here (any more) — getRoomNightlyBreakdown is
+  // the single source of truth for per-room tax now, since it needs the
+  // exact same extraChildren-gated branch (real STAAH Tax array vs the
+  // extra-child GST-slab formula, ported from Amritara's StayStep.js
+  // taxesFromRates/extraChildTaxes split, ~275-609) to compute `amount`
+  // and `tax` together per night anyway — having it duplicated here too
+  // risked the two copies silently drifting apart (they did: this one
+  // never picked up Amritara's non-GST ExtraChildRate.Tax passthrough).
 
   let extraAdultCharge = 0;
   if (adults > maxAdult && dateEntries.length > 0) {
@@ -218,7 +216,7 @@ export function computeRoomSurcharge(selectedRoomEntry) {
     }
   }
 
-  return { extraChildren, extraAdultCharge, extraChildRoomCharge, extraChildTax, extraChildSaving };
+  return { extraChildren, extraAdultCharge, extraChildRoomCharge, extraChildSaving };
 }
 
 export function validateGuestLimits(room, selection) {
@@ -452,101 +450,143 @@ function nightsBetween(startDate, endDate) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) || 1;
 }
 
-export function getRoomNightlyBreakdown(selectedRoomEntry, fallbackNights = 1) {
+/**
+ * Per-night base rate + tax for one selected room. `extraChildren` must be
+ * passed in (from computeRoomSurcharge's own, correctly-cased calculation —
+ * see its own doc comment) rather than re-derived here: an earlier version
+ * of this function re-derived it independently using WRONG field casing
+ * (`selectedRoomEntry.ApplicableAdult` etc. — buildRoomSelection actually
+ * sets lowercase `applicableAdult`/`applicableChild`/`applicableGuest`/
+ * `maxAdult`), so it silently always read 0 for every applicable-guest
+ * limit and could disagree with computeRoomSurcharge's own (correct)
+ * extraChildren for the exact same room — e.g. the "Extra Child Rate" line
+ * (sourced from computeRoomSurcharge) could show/hide independently of
+ * whether the GST here used the extra-child tax formula. Taking it as a
+ * parameter makes both agree by construction, and removes the duplicated
+ * (and buggy) copy of the same calculation.
+ *
+ * Tax branch matches Amritara's real StayStep.js rule exactly
+ * (taxesFromRates vs extraChildTaxes, ~275-609): with NO extra children,
+ * the real per-night STAAH `Tax` array (guestRate.Tax) is used verbatim,
+ * summed by name — NOT a guessed slab rate. Only when extraChildren >= 1
+ * does STAAH's real Tax get replaced by the 5%/18% slab-rate formula
+ * (computed off that night's own base+extra-child rate), same as
+ * Amritara's own extraChildTaxes block — and even then, any of
+ * ExtraChildRate.Tax's own NON-gst entries are preserved alongside it
+ * rather than dropped, also matching Amritara's filter
+ * (`!tax.Name.toLowerCase().includes("gst")`).
+ */
+export function getRoomNightlyBreakdown(selectedRoomEntry, fallbackNights = 1, extraChildren = 0) {
   const dateEntries = Object.entries(selectedRoomEntry?.packageRateList || {});
-  console.log("Prem dateEntries",dateEntries);
 
-   const adults = selectedRoomEntry.adults || 0;
-          const children = selectedRoomEntry.children || 0;
-          const applicableAdult = selectedRoomEntry?.ApplicableAdult || 0;
-          const applicableChild = selectedRoomEntry?.ApplicableChild || 0;
-          const applicableGuest = selectedRoomEntry?.ApplicableGuest || 0;
-          const maxAdult = selectedRoomEntry?.MaxAdult || 0;
-          console.log("Prem adults",adults);
-          console.log("Prem children",children);
-          console.log("Prem applicableAdult",applicableAdult);
-          console.log("Prem applicableChild",applicableChild);
-          console.log("Prem applicableGuest",applicableGuest);
-
-          let adjustedAdults = adults;
-          let adjustedChildren = children;
-
-          if (adults < applicableAdult && children > 0) {
-            const neededAdults = applicableAdult - adults;
-            const childrenToAdults = Math.min(neededAdults, children);
-            adjustedAdults += childrenToAdults;
-            adjustedChildren -= childrenToAdults;
-          }
-
-          const extraChildren =
-            adjustedChildren > applicableChild
-              ? Math.min(
-                  adjustedChildren - applicableChild,
-                  Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
-                )
-              : 0;
-console.log("Prem extraChildren",extraChildren) ;
   if (dateEntries.length === 0) {
     const amount = parseFloat(selectedRoomEntry?.packageRate) || 0;
     const afterTax = Number(selectedRoomEntry?.roomRateWithTax) || 0;
-    
-
     const tax = Math.max(0, afterTax - amount);
     return {
       baseTotal: amount * fallbackNights,
       taxTotal: tax * fallbackNights,
+      taxByName: tax > 0 ? { GST: tax * fallbackNights } : {},
       nights: Array.from({ length: fallbackNights }, () => ({
         dateKey: null,
         date: null,
         amount,
         tax,
+        totalTaxes: tax,
+        taxLines: tax > 0 ? [{ name: "GST", amount: tax }] : [],
       })),
     };
   }
 
   let baseTotal = 0;
   let taxTotal = 0;
+  const taxByName = {};
+  const addTaxLines = (lines) => {
+    for (const line of lines) {
+      if (!line?.name || !(line.amount > 0)) continue;
+      taxByName[line.name] = (taxByName[line.name] || 0) + line.amount;
+    }
+  };
+
   const nights = dateEntries
     .map(([dateKey, dateData]) => {
       const guestRate = getGuestRateFromObp(dateData?.OBP, selectedRoomEntry?.adults);
       const amount = parseFloat(guestRate?.RateBeforeTax || "0");
-      const afterTax = parseFloat(guestRate?.RateAfterTax || "0");
-      
-    const amountChild = parseFloat(dateData?.ExtraChildRate?.RateBeforeTax) || 0;
-    const afterTaxChild = Number(dateData?.ExtraChildRate?.RateAfterTax) || 0;
-    const totalTaxes = (amount + (amountChild * extraChildren) >= 7500 ? Math.round((amount + (amountChild * extraChildren)) * 0.18) : Math.round((amount + (amountChild * extraChildren)) * 0.05));
-      const tax = Math.max(0, afterTax - amount);
+
+      let taxLines;
+      if (extraChildren >= 1) {
+        const amountChild = parseFloat(dateData?.ExtraChildRate?.RateBeforeTax) || 0;
+        const price = amount + amountChild * extraChildren;
+        const gstAmount = price >= 7500 ? Math.round(price * 0.18) : Math.round(price * 0.05);
+        const nonGstExtraChildLines = Array.isArray(dateData?.ExtraChildRate?.Tax)
+          ? dateData.ExtraChildRate.Tax
+              .filter((t) => !String(t?.Name || "").toLowerCase().includes("gst"))
+              .map((t) => ({ name: t.Name, amount: parseFloat(t.Amount) || 0 }))
+          : [];
+        taxLines = [{ name: "GST", amount: gstAmount }, ...nonGstExtraChildLines];
+      } else {
+        taxLines = Array.isArray(guestRate?.Tax)
+          ? guestRate.Tax.map((t) => ({ name: t.Name, amount: parseFloat(t.Amount) || 0 }))
+          : [];
+      }
+
+      const tax = taxLines.reduce((sum, t) => sum + t.amount, 0);
       baseTotal += amount;
-      taxTotal += totalTaxes;
+      taxTotal += tax;
+      addTaxLines(taxLines);
       const parsedDate = new Date(dateKey);
-      return { dateKey, date: isNaN(parsedDate.getTime()) ? null : parsedDate, amount, totalTaxes };
+      return {
+        dateKey,
+        date: isNaN(parsedDate.getTime()) ? null : parsedDate,
+        amount,
+        tax,
+        totalTaxes: tax,
+        taxLines,
+      };
     })
     .sort((a, b) => (a.dateKey < b.dateKey ? -1 : a.dateKey > b.dateKey ? 1 : 0));
 
-  return { baseTotal, taxTotal, nights };
+  return { baseTotal, taxTotal, taxByName, nights };
 }
 
 export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEndDate, addonAmountTotal, addonTaxTotal }) {
   const nights = nightsBetween(selectedStartDate, selectedEndDate);
   const rooms = (selectedRoom || []).filter((r) => r?.roomId);
 
-  const roomBreakdowns = rooms.map((r) => ({
+  // computeRoomSurcharge runs first per room so its (correctly-cased)
+  // extraChildren can be handed to getRoomNightlyBreakdown — see that
+  // function's own doc comment for why these must share one value instead
+  // of each re-deriving it independently.
+  const roomSurchargesByRoom = rooms.map((r) => computeRoomSurcharge(r));
+  const roomBreakdowns = rooms.map((r, i) => ({
     room: r,
-    ...getRoomNightlyBreakdown(r, nights),
+    ...getRoomNightlyBreakdown(r, nights, roomSurchargesByRoom[i].extraChildren),
   }));
 
   const totalSavings = rooms.reduce((sum, r) => sum + (parseFloat(r?.savings) || 0), 0);
 
   let roomTaxTotal = 0;
   let extraChargeTotal = 0;
-  const roomSurcharges = roomBreakdowns.map(({ room: r, taxTotal: standardTax }) => {
-    const surcharge = computeRoomSurcharge(r);
+  const taxByName = {};
+  const roomSurcharges = roomBreakdowns.map(({ room: r, taxTotal: roomTax, taxByName: roomTaxByName }, i) => {
+    const surcharge = roomSurchargesByRoom[i];
 
-    roomTaxTotal += surcharge.extraChildren >= 1 ? surcharge.extraChildTax : standardTax;
+    roomTaxTotal += roomTax;
     extraChargeTotal += surcharge.extraChildRoomCharge + surcharge.extraAdultCharge;
+    for (const [name, amount] of Object.entries(roomTaxByName || {})) {
+      taxByName[name] = (taxByName[name] || 0) + amount;
+    }
 
     return { roomId: r.roomId, ...surcharge };
   });
+
+  if (addonTaxTotal > 0) {
+    // Addon GST isn't itemized by name anywhere upstream (StayContext only
+    // ever tracks one flat addonTaxTotal) — folded into the same "GST" key
+    // the room-level real tax lines use, rather than inventing a separate
+    // "Add-on GST" name with no real source.
+    taxByName.GST = (taxByName.GST || 0) + addonTaxTotal;
+  }
 
   const roomBaseCost = roomBreakdowns.reduce((sum, rb) => sum + rb.baseTotal, 0);
   const addonAmount = addonAmountTotal || 0;
@@ -585,6 +625,7 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
           roomName: rb.room.roomName,
           amount: nightEntry?.amount ?? 0,
           tax: nightEntry?.tax ?? 0,
+          taxLines: nightEntry?.taxLines ?? [],
         };
       }),
       addonAmount: i === 0 ? addonAmount : 0,
@@ -603,6 +644,11 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
     addonAmount,
     addonTax: addonTaxTotal || 0,
     gstTotal,
+    // Real tax lines by STAAH's own Name (or the extra-child GST-slab
+    // formula's name, "GST"), summed across every room/night — e.g.
+    // { GST: 4200, "Service Charge": 300 }. Lets the UI/payload show the
+    // actual tax component names instead of a single hardcoded "GST".
+    taxByName,
     taxesAndFeesTotal,
     grandTotal,
     gstPercent,

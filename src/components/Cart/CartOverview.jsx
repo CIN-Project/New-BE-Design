@@ -140,9 +140,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     nights,
     roomBaseCost,
     gstTotal,
-    gstPercent,
     extraChargeTotal,
     taxesAndFeesTotal,
+    taxByName,
     addonAmount,
     grandTotal,
     perNightBreakdown,
@@ -487,10 +487,29 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
 
           {isGstOpen && (
             <div className="cart-accordion-body">
-              <div className="cart-night-line">
-                <span>GST</span>
-                <span>{formatCurrency(gstTotal)}</span>
-              </div>
+              {/* Itemized by real STAAH tax Name (ratePricing.js's
+                  taxByName — see getRoomNightlyBreakdown's doc comment) —
+                  usually just "GST", but shows any other real named tax
+                  component STAAH returns instead of collapsing everything
+                  into a single hardcoded "GST" line. Falls back to the
+                  plain gstTotal figure only if taxByName is empty despite
+                  gstTotal being non-zero (shouldn't happen, but never hide
+                  a real charge over a display-only gap). */}
+              {Object.keys(taxByName || {}).length > 0 ? (
+                Object.entries(taxByName)
+                  .filter(([, amount]) => amount > 0)
+                  .map(([name, amount]) => (
+                    <div className="cart-night-line" key={name}>
+                      <span>{name}</span>
+                      <span>{formatCurrency(amount)}</span>
+                    </div>
+                  ))
+              ) : gstTotal > 0 ? (
+                <div className="cart-night-line">
+                  <span>GST</span>
+                  <span>{formatCurrency(gstTotal)}</span>
+                </div>
+              ) : null}
               {/* Extra-child/extra-adult surcharge (computeRoomSurcharge) —
                   real Amritara's cart shows this as its own "Extra Child
                   Rate" line alongside GST under "Taxes & Fees", not folded
@@ -501,18 +520,20 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   <span>{formatCurrency(extraChargeTotal)}</span>
                 </div>
               ) : null}
-              {/* <div className="cart-night-line">
-                <span>CGST ({Math.round(gstPercent / 2)}%)</span>
-                <span>{formatCurrency(gstTotal / 2)}</span>
-              </div>
-              <div className="cart-night-line">
-                <span>SGST ({Math.round(gstPercent / 2)}%)</span>
-                <span>{formatCurrency(gstTotal / 2)}</span>
-              </div> */}
-              {/* {perNightBreakdown.map((night, i) => {
+              {/* Per-room, per-night tax breakdown — this package's own
+                  enhancement beyond real Amritara (which only ever shows
+                  one flat tax total for the whole stay, see StayStep.js's
+                  taxList rendering) — matches the per-night Base Stay Cost
+                  breakdown just above, useful when nightly OBP rates (and
+                  therefore nightly tax) genuinely differ. Was commented out
+                  because every r.tax here used to always be 0 — fixed now
+                  that getRoomNightlyBreakdown actually returns real
+                  per-night tax instead of silently dropping it. */}
+              {perNightBreakdown.map((night, i) => {
                 const nightTax =
                   night.rooms.reduce((sum, r) => sum + r.tax, 0) +
                   night.addonTax;
+                if (nightTax <= 0) return null;
                 return (
                   <div className="cart-night-block" key={i}>
                     <div className="cart-night-header">
@@ -523,23 +544,25 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                       </span>
                       <span>{formatCurrency(nightTax)}</span>
                     </div>
-                    {night.rooms.map((r, ri) => (
-                      <div className="cart-night-line" key={ri}>
-                        <span>
-                          Room {ri + 1}: {r.roomName}
-                        </span>
-                        <span>{formatCurrency(r.tax)}</span>
-                      </div>
-                    ))}
+                    {night.rooms.map((r, ri) =>
+                      r.tax > 0 ? (
+                        <div className="cart-night-line" key={ri}>
+                          <span>
+                            Room {ri + 1}: {r.roomName}
+                          </span>
+                          <span>{formatCurrency(r.tax)}</span>
+                        </div>
+                      ) : null,
+                    )}
                     {night.addonTax > 0 ? (
                       <div className="cart-night-line">
-                        <span>Stay Add-ons GST ({gstPercent}%)</span>
+                        <span>Stay Add-ons GST</span>
                         <span>{formatCurrency(night.addonTax)}</span>
                       </div>
                     ) : null}
                   </div>
                 );
-              })} */}
+              })}
             </div>
           )}
 
