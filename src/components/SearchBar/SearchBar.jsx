@@ -347,7 +347,16 @@ export function SearchBar({
       return;
     }
     if (!search.selectedStartDate || !search.selectedEndDate) {
-      toast.error("Please select check-in and check-out dates.");
+      // Day Use only ever shows one user-facing date field (see
+      // DateRangeField.jsx's isDayUse branch — the end date is derived
+      // internally, not picked by the guest), so the message shouldn't
+      // talk about a "check-out" date that was never presented as a
+      // separate thing to select.
+      toast.error(
+        search.isDayUse
+          ? "Please select a date."
+          : "Please select check-in and check-out dates.",
+      );
       return;
     }
 
@@ -563,10 +572,15 @@ export function SearchBar({
           <button
             type="button"
             className="be-compact-close-btn"
-            onClick={() => {
-              setMobileEditOpen(false);
-              onBack?.();
-            }}
+            // Cancels editing back to the collapsed summary card only —
+            // does NOT call onBack(), which exits the whole booking engine
+            // (that's the collapsed summary card's own separate "Close
+            // booking engine" button, be-compact-summary-close-btn, a few
+            // lines up). This X was firing both, so tapping it while
+            // editing dates/guests/etc. closed the entire wizard instead
+            // of just collapsing back to the summary the guest was
+            // editing from.
+            onClick={() => setMobileEditOpen(false)}
             aria-label="Close"
           >
             <svg
@@ -694,12 +708,16 @@ export function SearchBar({
         </button>
       </form>
 
-      {!isCompact &&
-        mounted &&
+      {mounted &&
         createPortal(
           <Toaster
             position="top-center"
-            containerStyle={{ top: 100 }}
+            // Both this and BookingFlow's full-screen mobile search modal
+            // (.be-booking-flow-mobile-modal, z-index: 9999999) are
+            // portaled to document.body as siblings — without a z-index
+            // higher than that modal's, the toast fired fine but rendered
+            // completely hidden behind its opaque white background.
+            containerStyle={{ top: 100, zIndex: 10000000 }}
           />,
           document.body,
         )}

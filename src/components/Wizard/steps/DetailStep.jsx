@@ -1125,6 +1125,8 @@ export function GuestDetailsForm({ onComplete }) {
             name="formOfPayment"
             value="pay_now"
             className="be-mobile-pay-btn"
+            disabled={stay.isRatesRefreshing}
+            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
           >
             Confirm &amp; Pay
           </button>
@@ -1136,6 +1138,8 @@ export function GuestDetailsForm({ onComplete }) {
             name="formOfPayment"
             value="pay_later"
             className="be-mobile-pay-later-btn"
+            disabled={stay.isRatesRefreshing}
+            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
           >
             Pay Later
           </button>

@@ -170,6 +170,17 @@
     border-color: var(--be-color-primary-hover, #bfa15f);
   }
 
+  .be-mobile-pay-btn:disabled,
+  .be-mobile-pay-later-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .be-mobile-pay-btn:disabled:hover {
+    background: var(--be-color-primary, #846836);
+    border-color: var(--be-color-primary, #846836);
+  }
+
   .be-mobile-pay-divider {
     display: flex;
     align-items: center;
@@ -206,6 +217,11 @@
   .be-mobile-pay-later-btn:hover {
     background: var(--be-color-primary, #846836);
     color: #ffffff !important;
+  }
+
+  .be-mobile-pay-later-btn:disabled:hover {
+    background: #ffffff;
+    color: var(--be-color-primary, #846836) !important;
   }
 }
 

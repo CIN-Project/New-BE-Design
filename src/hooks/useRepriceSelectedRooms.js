@@ -41,7 +41,7 @@ export function useRepriceSelectedRooms() {
   const config = useConfig();
   const { selectedPropertyId, selectedStartDate, selectedEndDate, searchRooms } =
     useSearchContext();
-  const { selectedRoom, setSelectedRoom } = useStayContext();
+  const { selectedRoom, setSelectedRoom, setIsRatesRefreshing } = useStayContext();
   const { promoCodeContext } = useCartContext();
 
   const checkInParam = selectedStartDate ? formatIsoDate(selectedStartDate) : "";
@@ -74,6 +74,14 @@ export function useRepriceSelectedRooms() {
     if (!hasAnySelection || !selectedPropertyId || !checkInParam || !checkOutParam) return;
 
     let cancelled = false;
+
+    // Same flag StayStep.jsx's own fetch sets — CartOverview.jsx disables
+    // Pay & Confirm/Pay Later while it's true, so a guest can't submit a
+    // booking against a room/rate slot that's mid-reprice here (this hook
+    // is exactly the path "Modify Dates"/"Modify Guests" from the cart
+    // sidebar on step 2 goes through — StayStep isn't even mounted there,
+    // so its own fetch effect never runs for this edit path at all).
+    setIsRatesRefreshing(true);
 
     (async () => {
       try {
@@ -177,6 +185,13 @@ export function useRepriceSelectedRooms() {
           "booking-engine-new: failed to reprice selected rooms for new dates/guests",
           err,
         );
+      } finally {
+        // Guarded on `cancelled` the same way `setSelectedRoom` above is —
+        // if a newer edit already superseded this run, that newer run's
+        // own `setIsRatesRefreshing(true)` (and eventual `false`) owns the
+        // flag now; this stale run finishing shouldn't clear it out from
+        // under it.
+        if (!cancelled) setIsRatesRefreshing(false);
       }
     })();
 

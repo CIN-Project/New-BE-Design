@@ -82,7 +82,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     searchRooms,
     isDayUse,
   } = useSearchContext();
-  const { selectedRoom, cancellationPolicyState } = useStayContext();
+  const { selectedRoom, cancellationPolicyState, isRatesRefreshing } = useStayContext();
   const { addonAmountTotal, addonTaxTotal, selectedAddOns, promoCodeContext } =
     useCartContext();
 
@@ -581,6 +581,12 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
           name="formOfPayment"
           value="pay_now"
           className="cart-pay-btn"
+          disabled={isRatesRefreshing}
+          // Room/rate data is mid-refresh (a property/date change just
+          // triggered a refetch, or the guest hit Search) — submitting
+          // against it here would book whatever was selected under the
+          // OLD rates, not what's about to load in.
+          title={isRatesRefreshing ? "Updating rates…" : undefined}
         >
           Pay &amp; Confirm Booking <span aria-hidden="true">&rarr;</span>
         </button>
@@ -593,6 +599,8 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
           name="formOfPayment"
           value="pay_later"
           className="cart-pay-later-btn"
+          disabled={isRatesRefreshing}
+          title={isRatesRefreshing ? "Updating rates…" : undefined}
         >
           Pay Later
         </button>

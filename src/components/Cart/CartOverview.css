@@ -475,6 +475,17 @@
   border-color: var(--be-color-primary-hover, #bfa15f);
 }
 
+.cart-pay-btn:disabled,
+.cart-pay-later-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cart-pay-btn:disabled:hover {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+}
+
 .cart-pay-divider {
   display: flex;
   align-items: center;
@@ -519,6 +530,11 @@
 .cart-pay-later-btn:hover {
   background: var(--be-color-primary, #846836);
   color: #ffffff !important;
+}
+
+.cart-pay-later-btn:disabled:hover {
+  background: #ffffff;
+  color: var(--be-color-primary, #846836) !important;
 }
 
 /* The actual pay actions now live at the END of the guest-details form on

@@ -32,6 +32,12 @@ const initialState = {
   totalRoomsBasePriceMember: 0,
   selectedInitialRoom: null,
   wmrRateKey: null,
+  // True from the moment a room/rate refetch is triggered (Search click,
+  // a property/date change that auto-refreshes — see StayStep.jsx) until
+  // it resolves. CartOverview.jsx disables the Pay & Confirm/Pay Later
+  // buttons while this is true, so a guest can't submit a booking against
+  // room/rate data that's mid-refresh (and about to change under them).
+  isRatesRefreshing: false,
   isRatePing: false,
   ratePingRoomId: 0,
   ratePingPrpertyId: 0,

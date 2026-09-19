@@ -1259,6 +1259,7 @@ export function StayStep({ onRoomsSelected }) {
     setIsMemberRateSelected,
     activeRoomSlotIndex: currentRoomIndex,
     setActiveRoomSlotIndex: setCurrentRoomIndex,
+    setIsRatesRefreshing,
   } = useStayContext();
   const { user } = useBookingEngineAuth();
 
@@ -1415,6 +1416,43 @@ export function StayStep({ onRoomsSelected }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPropertyId]);
 
+  // Same auto-refresh treatment as the property-change effect just above,
+  // but for a completed date-range change (both "Modify Dates" and the
+  // full search bar's own date field commit start+end together in one
+  // update via SearchContext.setSelectedDates — see DateRangeModal.jsx/
+  // SearchBar.jsx's handleChangeRange — so this never fires mid-drag on a
+  // half-picked range, only once a real new range is confirmed).
+  const prevDatesRef = useRef({ start: selectedStartDate, end: selectedEndDate });
+  useEffect(() => {
+    if (!hasSearchedRef.current) {
+      prevDatesRef.current = { start: selectedStartDate, end: selectedEndDate };
+      return;
+    }
+    const prev = prevDatesRef.current;
+    const changed =
+      prev.start?.getTime() !== selectedStartDate?.getTime() ||
+      prev.end?.getTime() !== selectedEndDate?.getTime();
+    prevDatesRef.current = { start: selectedStartDate, end: selectedEndDate };
+    if (changed && checkInParam && checkOutParam) {
+      // Any room already picked belongs to the OLD dates — its rate/
+      // availability can't be trusted once the room list refetches for
+      // the new range (same reasoning as the property-change reset).
+      setSelectedRoom((prev) =>
+        (prev || []).map((r) => ({
+          id: r.id,
+          adults: r.adults,
+          children: r.children,
+          roomId: "",
+          roomName: "",
+          roomImage: null,
+        })),
+      );
+      setCurrentRoomIndex(0);
+      commitSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStartDate, selectedEndDate]);
+
   // Same stale-selection problem as the property-change reset above, but for
   // the Day Use toggle: switching modes re-filters the room Mapping (see the
   // isDayUse branch in applyMerge) so a room picked under the old mode may
@@ -1467,6 +1505,7 @@ export function StayStep({ onRoomsSelected }) {
 
     async function run() {
       setLoading(true);
+      setIsRatesRefreshing(true);
       setError(null);
       hasSearchedRef.current = true;
       try {
@@ -1501,7 +1540,10 @@ export function StayStep({ onRoomsSelected }) {
       } catch (err) {
         if (!cancelled) setError(err?.message || "Failed to load room rates.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setIsRatesRefreshing(false);
+        }
       }
     }
 
