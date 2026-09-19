@@ -818,6 +818,19 @@ export function GuestDetailsForm({ onComplete }) {
           // ₹0 cart that looks broken even though the guest already
           // picked everything.
           rawSelectedRoom: selectedRoom,
+          // SearchContext's own per-slot adults/children — a SEPARATE piece
+          // of state from rawSelectedRoom above (which has its own copy,
+          // but only inside each already-selected room's slot). CartOverview
+          // 's "Stay & Guests" guest count, and useRepriceSelectedRooms.js's
+          // "fresh" adults/children lookup on every subsequent reprice, both
+          // read THIS, not rawSelectedRoom — without restoring it too, a
+          // real round-trip to the STAAH-hosted payment page and back reset
+          // it to SearchContext's default guest count (losing e.g. a
+          // selected child), which then got read as the guest's real,
+          // current selection by the very next reprice and silently
+          // overwrote the correctly-restored room's own adults/children
+          // (and its Extra Child Rate) right back down to match.
+          searchRooms,
           // Wizard.jsx's mount-effect fallback only trusts this snapshot
           // for a short window after it's saved — see that file's own
           // comment — so a stale/abandoned attempt from a much earlier

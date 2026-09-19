@@ -39,6 +39,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     setSelectedStartDate,
     setSelectedEndDate,
     setIsDayUse,
+    setSearchRooms,
   } = useSearchContext();
   // Bumped by CartOverview's "Modify Property" link, consumed once by
   // SearchBar's own autoOpenDestinationSignal effect to open specifically
@@ -107,6 +108,19 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed?.rawSelectedRoom)) {
           setSelectedRoom(parsed.rawSelectedRoom);
+        }
+        // SearchContext's own adults/children — a separate piece of state
+        // from rawSelectedRoom's own copy (see DetailStep.jsx's doc comment
+        // on why this is saved at all). CartOverview's guest count AND
+        // useRepriceSelectedRooms.js's "fresh" adults/children lookup both
+        // read this, not rawSelectedRoom — without restoring it here too,
+        // it stayed at SearchContext's reset default (e.g. losing a
+        // selected child), and the very next reprice then read that wrong
+        // default as the guest's real current guest count and silently
+        // overwrote the just-restored room's own adults/children (and its
+        // Extra Child Rate) back down to match it.
+        if (Array.isArray(parsed?.searchRooms)) {
+          setSearchRooms(parsed.searchRooms);
         }
         if (parsed?.formData) {
           updateUserDetails(parsed.formData);
@@ -305,6 +319,20 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
           { rawSelectedRoom: pendingBookingData.rawSelectedRoom },
         );
         setSelectedRoom(pendingBookingData.rawSelectedRoom);
+      }
+      // Same SearchContext.searchRooms restoration as handleBackToCart
+      // below, and for the same reason (see that function's own doc
+      // comment) — without this, CartOverview's guest count and the very
+      // next useRepriceSelectedRooms.js reprice both fell back to
+      // SearchContext's reset default guest count instead of what the
+      // guest actually had selected (e.g. silently dropping a child and
+      // its Extra Child Rate right back out of the price).
+      if (Array.isArray(pendingBookingData?.searchRooms)) {
+        console.log(
+          "[PAYMENT-FLOW] Wizard.jsx: restoring SearchContext.searchRooms from be_bookingData",
+          { searchRooms: pendingBookingData.searchRooms },
+        );
+        setSearchRooms(pendingBookingData.searchRooms);
       }
       if (pendingBookingData?.formData) {
         console.log(
