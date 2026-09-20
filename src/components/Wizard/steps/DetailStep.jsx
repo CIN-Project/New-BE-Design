@@ -276,6 +276,25 @@ export function GuestDetailsForm({ onComplete }) {
   };
 
   const proceedToPay = (rooms) => {
+    // Modify Dates (DateRangeModal.jsx) commits check-in/check-out together
+    // in one atomic setSelectedDates(start, end) call ONLY once a full
+    // range is picked — but the guest can also just close the modal (X/
+    // backdrop) right after picking only check-in, which leaves
+    // selectedEndDate null (see DateRangeModal.jsx's own handleChangeRange:
+    // the two-step start-then-null-end branch). Nothing downstream ever
+    // checked for that before proceeding to payment. Day Use only ever
+    // shows one date field to begin with (see SearchBar.jsx's matching
+    // check-in-only message), so it only needs selectedStartDate.
+    if (!selectedStartDate || (!isDayUse && !selectedEndDate)) {
+      const message = isDayUse
+        ? "Please select a date."
+        : !selectedStartDate
+          ? "Please select check-in and check-out dates."
+          : "Please select a check-out date.";
+      toast.error(message);
+      return message;
+    }
+
     const isSelected = (rooms || []).every((room) => room?.roomId);
     if (!isSelected) {
       toast.error("Select your room(s)");
