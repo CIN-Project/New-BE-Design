@@ -5,6 +5,7 @@ import { useConfig } from "../../../config/configContext.js";
 import { useCartContext } from "../../../context/CartContext.js";
 import { useSearchContext } from "../../../context/SearchContext.js";
 import { getAddOns } from "../../../api/rates.js";
+import { postBookingWidged } from "../../../api/tracking.js";
 import "./AddOnsStep.css";
 
 function formatCurrency(value) {
@@ -119,13 +120,30 @@ export function AddOnsStep() {
 
     let cancelled = false;
     setIsLoading(true);
+    // Ported from Filterbar.js's fetchAddOns (~2103-2173) — beacon fired
+    // once the add-ons fetch settles, success or failure (real Amritara
+    // fires this once, in its finally block, not on entry too).
     getAddOns(config, selectedPropertyId)
       .then((data) => {
         if (cancelled) return;
-        setAddonList(data?.[0]?.ExtrasData || []);
+        const extras = data?.[0]?.ExtrasData || [];
+        setAddonList(extras);
+        postBookingWidged(config, {
+          ctaName: "Fetch AddOns",
+          propertyId: selectedPropertyId,
+          apiStatus: extras.length > 0 ? "Success" : "Data not found",
+          apiMessage: extras.length > 0 ? "Success" : "Data not found",
+        });
       })
       .catch((err) => {
         console.error("[booking-engine-new] Failed to load add-ons", err);
+        postBookingWidged(config, {
+          ctaName: "Fetch AddOns",
+          propertyId: selectedPropertyId,
+          apiStatus: err?.message || "Error",
+          apiErrorCode: "1166",
+          apiMessage: err?.message || "Error",
+        });
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

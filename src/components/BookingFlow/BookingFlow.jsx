@@ -7,6 +7,8 @@ import { SearchBar } from "../SearchBar/SearchBar.js";
 import { Wizard } from "../Wizard/Wizard.js";
 import { useBookingEngineTheme } from "../../theme/ThemeProvider.js";
 import { themeToCssVariables } from "../../theme/cssVariables.js";
+import { useConfig } from "../../config/configContext.js";
+import { postBookingWidged } from "../../api/tracking.js";
 import "./BookingFlow.css";
 
 /**
@@ -76,6 +78,7 @@ export function BookingFlow({
   openSignal,
   openWizardSignal,
 }) {
+  const config = useConfig();
   const [stage, setStage] = useState(initialStage || "cta");
   const showMobileModal = mobileModal && stage === "search";
 
@@ -126,6 +129,16 @@ export function BookingFlow({
   }, [showMobileModal]);
 
   const handleCtaClick = () => {
+    // Ported from the ~25 page-wrapper components across real Amritara
+    // that mount this widget as a modal (e.g. AboutUs.js's
+    // handleBookNowClick) — each fires "Widget Open"/"Widget Closed" on
+    // its own "Book Now" CTA and the widget's own close button, rather
+    // than this living inside StayStep/DetailStep/ConfirmStep/Filterbar
+    // like every other beacon. This component is the one place in this
+    // package that plays the equivalent role (the CTA-reveal/collapse
+    // stage transition), so it's centralized here instead of needing every
+    // consumer page to fire it themselves.
+    postBookingWidged(config, { ctaName: "Widget Open" });
     setStage(entryMode === "direct" ? "wizard" : "search");
   };
 
@@ -139,6 +152,7 @@ export function BookingFlow({
   };
 
   const handleBack = () => {
+    postBookingWidged(config, { ctaName: "Widget Closed", isClose: true });
     if (onBackFromCta) {
       onBackFromCta();
       return;
@@ -174,7 +188,10 @@ export function BookingFlow({
               <button
                 type="button"
                 className="be-booking-flow-mobile-modal-close"
-                onClick={() => setStage("cta")}
+                onClick={() => {
+                  postBookingWidged(config, { ctaName: "Widget Closed", isClose: true });
+                  setStage("cta");
+                }}
                 aria-label="Close"
               >
                 <svg

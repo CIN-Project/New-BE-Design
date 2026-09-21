@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useConfig } from "../../config/configContext.js";
 import { useCartContext } from "../../context/CartContext.js";
+import { useSearchContext } from "../../context/SearchContext.js";
 import { verifyPromoCode } from "../../api/rates.js";
+import { postBookingWidged } from "../../api/tracking.js";
 import { encodeBase64 } from "../../utils/base64.js";
 import "./CartOverview.css";
 
@@ -26,6 +28,7 @@ import "./CartOverview.css";
 export function CouponComponent({ isOpen, onClose }) {
   const config = useConfig();
   const { promoCodeContext, setPromoCodeContext, setPromoCodeCustomerContext } = useCartContext();
+  const { selectedPropertyId } = useSearchContext();
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -43,6 +46,24 @@ export function CouponComponent({ isOpen, onClose }) {
     setError("");
     try {
       const response = await verifyPromoCode(config, trimmed);
+
+      // Ported from Filterbar.js's handlePromocodeChange (~2457-2525) —
+      // fired for both outcomes of the dedicated VerifyPromoCode endpoint.
+      // (Distinct from Amritara's separate "Invalid Promocode" ctaName,
+      // which fires from the RATE-SEARCH response's own promo rejection
+      // (errtype === "promocode") — this package's promo verification only
+      // ever goes through this one dedicated endpoint, so there's no
+      // equivalent second trigger point to wire that one from.)
+      postBookingWidged(config, {
+        ctaName: "Verify Promo Code",
+        propertyId: selectedPropertyId,
+        apiStatus: response?.errorCode === "0" ? "Success" : response?.errorCode,
+        apiErrorCode: response?.errorCode === "0" ? "200" : response?.errorCode,
+        apiMessage:
+          response?.errorCode === "0"
+            ? "Success"
+            : response?.message || response?.data?.message || "Invalid promo code",
+      });
 
       if (response?.errorCode === "0") {
         const masterPromo = response?.data?.masterPromo;
@@ -64,6 +85,13 @@ export function CouponComponent({ isOpen, onClose }) {
       }
     } catch (err) {
       setError(err?.message || "Could not verify promo code. Please try again.");
+      postBookingWidged(config, {
+        ctaName: "Verify Promo Code",
+        propertyId: selectedPropertyId,
+        apiStatus: err?.message || "Error",
+        apiErrorCode: "1166",
+        apiMessage: err?.message || "Could not verify promo code.",
+      });
     } finally {
       setIsSubmitting(false);
     }

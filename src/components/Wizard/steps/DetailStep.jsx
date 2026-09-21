@@ -401,8 +401,22 @@ export function GuestDetailsForm({ onComplete }) {
       `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
       { selectedPropertyId },
     );
-    if (proceedToPay(selectedRoom) !== "success") {
+    const proceedResult = proceedToPay(selectedRoom);
+    if (proceedResult !== "success") {
       console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — proceedToPay check failed (room/guest mismatch)");
+      // Ported from DetailStep.js's handleSubmit (~1364-1372) — real
+      // Amritara passes proceedToPay's own returned failure STRING directly
+      // as ctaName (it's always one of: "Select your room(s)", "One or
+      // more room(s) are out of stock.", the three "Selected
+      // adults/children/guests are greater than..." messages, or an
+      // inventory-exceeded message) — same here, this one call site covers
+      // every proceedToPay failure reason, not just this specific message.
+      postBookingWidged(config, {
+        ctaName: proceedResult,
+        propertyId: selectedPropertyId,
+        apiErrorCode: proceedResult === "Failed to fetch" ? "1165" : "1166",
+        apiMessage: proceedResult,
+      });
       return;
     }
     if (!validate()) {
@@ -425,16 +439,44 @@ export function GuestDetailsForm({ onComplete }) {
     updateUserDetails({ ...formData });
     setIsProcessing(true);
     try {
-      const reservationResp = await generateReservationId(
-        config,
-        selectedPropertyId,
-      );
+      let reservationResp;
+      try {
+        reservationResp = await generateReservationId(config, selectedPropertyId);
+      } catch (reservationErr) {
+        // Ported from DetailStep.js's generateReservationIdFromAPI
+        // (~662-719) — fires on both outcomes; caught locally here (rather
+        // than falling through to handleSubmit's own generic catch below)
+        // specifically so the failure beacon gets this real ctaName
+        // instead of a generic "Payment failed" one.
+        postBookingWidged(config, {
+          ctaName: "Fetch reservation ID",
+          propertyId: selectedPropertyId,
+          apiStatus: reservationErr?.message || "Error",
+          apiErrorCode: "1166",
+          apiMessage: reservationErr?.message || "Could not generate a reservation ID.",
+        });
+        throw reservationErr;
+      }
       const reservationId = reservationResp?.reservation_id;
       console.log("[PAYMENT-FLOW] DetailStep.jsx: generateReservationId result", { reservationResp, reservationId });
-      if (!reservationId)
+      if (!reservationId) {
+        postBookingWidged(config, {
+          ctaName: "Fetch reservation ID",
+          propertyId: selectedPropertyId,
+          apiErrorCode: "1166",
+          apiMessage: "Could not generate a reservation ID.",
+        });
         throw new Error(
           "Could not generate a reservation ID. Please try again.",
         );
+      }
+      postBookingWidged(config, {
+        ctaName: "Fetch reservation ID",
+        propertyId: selectedPropertyId,
+        apiStatus: "Success",
+        apiMessage: "Success",
+        customField1: reservationId,
+      });
 
       // Ported from real Amritara's DetailStep.js (~1392):
       // postBookingWidged("","", false,"Pay Now Click","", "", "", "","",newReservationId)
@@ -762,6 +804,17 @@ export function GuestDetailsForm({ onComplete }) {
         formOfPayment,
       });
       console.log("[PAYMENT-FLOW] DetailStep.jsx: postPaymentRequest result", { paymentResp });
+      // Ported from DetailStep.js's handleJson (~787-1334) — beacon covers
+      // both outcomes of the th-payment-request call (this package's own
+      // equivalent of real Amritara's PaymentRequest endpoint).
+      postBookingWidged(config, {
+        ctaName: "Post payment request",
+        propertyId: selectedPropertyId,
+        apiStatus: paymentResp?.errorMessage || "Error",
+        apiErrorCode: paymentResp?.errorMessage === "success" ? "200" : "1166",
+        apiMessage: paymentResp?.errorMessage || "Payment request failed.",
+        customField1: reservationId,
+      });
       if (paymentResp?.errorMessage !== "success") {
         throw new Error(
           paymentResp?.errorMessage ||

@@ -1500,7 +1500,20 @@ export function StayStep({ onRoomsSelected }) {
   // that's whatever just hydrated in; on a real Search click or a location
   // change, that's whatever the guest just confirmed.
   useEffect(() => {
-    if (!selectedPropertyId || !checkInParam || !checkOutParam) return;
+    if (!checkInParam || !checkOutParam) return;
+    if (!selectedPropertyId) {
+      // Ported from Filterbar.js's fetchContentApi/fetchRatePrices guard
+      // clauses (~1059-1062, ~1739-1742) — real Amritara fires this exact
+      // ctaName/ApiStatus/ApiMessage triple when a rate/content fetch would
+      // otherwise be attempted with no property id at all.
+      postBookingWidged(config, {
+        ctaName: "PropertyId not at Cin",
+        apiStatus: "PropertyId not at Cin",
+        apiErrorCode: "1180",
+        apiMessage: "PropertyId not at Cin",
+      });
+      return;
+    }
     let cancelled = false;
 
     async function run() {
@@ -1508,6 +1521,9 @@ export function StayStep({ onRoomsSelected }) {
       setIsRatesRefreshing(true);
       setError(null);
       hasSearchedRef.current = true;
+      // Ported from StayStep.js's own fetchRateApi (~611-629) — fired on
+      // entry, before the fetch itself runs (no Api* fields yet).
+      postBookingWidged(config, { ctaName: "Fetch Rate", propertyId: selectedPropertyId });
       try {
         const [contentData, inventoryData] = await Promise.all([
           getRoomsRates(config, {
@@ -1536,9 +1552,24 @@ export function StayStep({ onRoomsSelected }) {
           ? inventoryData.Product[0]?.Rooms || []
           : [];
 
-        applyMerge();
+        applyMerge(true);
       } catch (err) {
-        if (!cancelled) setError(err?.message || "Failed to load room rates.");
+        if (!cancelled) {
+          setError(err?.message || "Failed to load room rates.");
+          // Ported from Filterbar.js's fetchRatePrices catch block
+          // (~1892-1938) — "Network Error" specifically for a network-level
+          // failure (matches Amritara's error.code === "ERR_NETWORK" check),
+          // "Invalid Inventory" for everything else.
+          const isNetworkError =
+            err?.code === "ERR_NETWORK" || err?.message === "Network Error";
+          postBookingWidged(config, {
+            ctaName: isNetworkError ? "Network Error" : "Invalid Inventory",
+            propertyId: selectedPropertyId,
+            apiStatus: isNetworkError ? "Network Error" : err?.message || "Invalid Inventory",
+            apiErrorCode: isNetworkError ? "1168" : "1166",
+            apiMessage: isNetworkError ? "Network Error" : err?.message || "Invalid Inventory",
+          });
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -1576,7 +1607,12 @@ export function StayStep({ onRoomsSelected }) {
 
   // Re-run the content+inventory merge (no re-fetch) whenever the current
   // guest-slot selections change, since per-date OBP totals depend on them.
-  function applyMerge() {
+  // `trackFetch` is true only when called right after a REAL fetch (run(),
+  // above) — the "No rate plan found"/"Sold Out"/"rate fetched" beacons
+  // below are tied to a genuine STAAH round-trip in real Amritara
+  // (Filterbar.js's fetchRatePrices), not to every guest-count/day-use
+  // re-merge of already-fetched data this function also handles.
+  function applyMerge(trackFetch = false) {
     // mergeRoomContentWithRates skips a slot when `sel.roomId ===
     // room.RoomId` (ported faithfully from Filterbar.js's checkIfBothReady
     // ~694) — harmless in real Amritara only because that merge runs
@@ -1650,11 +1686,46 @@ export function StayStep({ onRoomsSelected }) {
       setRateResponse(null);
       setFilteredRooms([]);
       setCancellationPolicyPackage([]);
+      if (trackFetch) {
+        // Ported from Filterbar.js's fetchRatePrices (~1790-1868, three
+        // near-identical empty-result branches collapsed to one here).
+        postBookingWidged(config, {
+          ctaName: "No rate plan found",
+          propertyId: selectedPropertyId,
+          apiErrorCode: "1176",
+        });
+      }
     } else {
       setError(null);
       setRateResponse(property);
       setFilteredRooms(availableRooms);
       setCancellationPolicyPackage(uniqueRatePlans);
+      if (trackFetch) {
+        // Ported from Filterbar.js's fetchRatePrices (~915-937) — fires
+        // when EVERY room for the property is sold out (MinInventory 0),
+        // distinct from "No rate plan found" above (no usable rate data at
+        // all) and from a single room being sold out (not tracked here —
+        // real Amritara's own per-room "Room Sold Out" isn't one of this
+        // package's tracked touchpoints).
+        const allSoldOut = (property.RoomData || []).every(
+          (room) => Number(room?.MinInventory ?? 0) <= 0,
+        );
+        if (allSoldOut) {
+          postBookingWidged(config, {
+            ctaName: "Sold Out",
+            propertyId: selectedPropertyId,
+          });
+        } else {
+          // Ported from StayStep.js's fetchRateApi finally block (~1034,
+          // "rate Fetched") — lowercase "rate fetched" used here to match
+          // this package's own tracking.js JSDoc example.
+          postBookingWidged(config, {
+            ctaName: "rate fetched",
+            propertyId: selectedPropertyId,
+            roomsName: availableRooms.map((r) => r?.RoomName).filter(Boolean).join(", "),
+          });
+        }
+      }
 
       // Real Amritara reads its own property.Address straight off THIS
       // exact same response (Filterbar.js ~790: contentProperties.current

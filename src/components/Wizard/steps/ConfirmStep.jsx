@@ -162,6 +162,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           console.log("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken SUCCEEDED", {
             result,
           });
+          // Ported from Filterbar.js's verifyGuidToken (~1640-1694).
+          postBookingWidged(config, { ctaName: "Verify GuidToken", apiStatus: "Success", apiMessage: "Success" });
           rawResponse = JSON.stringify(result);
           try {
             window.sessionStorage.setItem(PAYMENT_RESPONSE_KEY, rawResponse);
@@ -173,6 +175,12 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
             "[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken FAILED — will fall back to any stored response, or show pending/failure state",
             err,
           );
+          postBookingWidged(config, {
+            ctaName: "Verify GuidToken",
+            apiStatus: err?.message || "Error",
+            apiErrorCode: "1166",
+            apiMessage: err?.message || "Verify GuidToken failed",
+          });
         }
       } else if (isPayLater) {
         console.log("[PAYMENT-FLOW] ConfirmStep.jsx: pay_later detected — SKIPPING verify-token, using stored payment response");
@@ -185,6 +193,20 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       const parsedResponseJson = resultEntry?.responseJson || null;
       setFormOfPayment(resultEntry?.form_of_payment);
       setCompleteResponseObject(resultEntry);
+
+      // Ported from ConfirmStep.js (~150-158) — fires off the raw gateway
+      // echo as soon as it's parsed, BEFORE the separate confirmPayment
+      // call below (see that call's own "Reservation post" beacon) — this
+      // one tracks what the gateway itself reported, not whether STAAH
+      // actually finalized the booking.
+      if (parsedResponseJson) {
+        postBookingWidged(config, {
+          ctaName: "Payment response",
+          propertyId: parsedResponseJson?.property_id,
+          apiMessage: parsedResponseJson?.status === "error" ? "Payment failed" : undefined,
+          apiErrorCode: parsedResponseJson?.status === "error" ? "1173" : undefined,
+        });
+      }
 
       // Pay-later bookings never go through the real gateway, so STAAH
       // doesn't return real card details — instead it echoes them back
@@ -439,6 +461,18 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           propertyId,
         );
         const newReservationId = newReservationResp?.reservation_id;
+        // Ported from ConfirmStep.js's own generateReservationIdFromAPI
+        // (~331-386, used specifically by this retry flow) — same ctaName
+        // as DetailStep.jsx's first-attempt beacon, since it's the same
+        // real endpoint either way.
+        postBookingWidged(config, {
+          ctaName: "Fetch reservation ID",
+          propertyId,
+          apiStatus: newReservationId ? "Success" : "Error",
+          apiErrorCode: newReservationId ? undefined : "1166",
+          apiMessage: newReservationId ? "Success" : "Could not generate a new reservation ID.",
+          customField1: newReservationId || "",
+        });
         if (!newReservationId) {
           throw new Error("Could not generate a new reservation ID.");
         }
@@ -508,6 +542,20 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           formOfPayment,
         });
 
+        // Ported from ConfirmStep.js's own retry submit handler
+        // (~395-519) — this retry's th-payment-request beacon has its own
+        // distinct ctaName ("Th payment request") from DetailStep.jsx's
+        // first-attempt one ("Post payment request"), matching real
+        // Amritara's two separate functions/ctaNames for the same
+        // underlying endpoint.
+        postBookingWidged(config, {
+          ctaName: "Th payment request",
+          propertyId,
+          apiStatus: paymentResp?.errorMessage || "Error",
+          apiErrorCode: paymentResp?.errorMessage === "success" ? "200" : "1166",
+          apiMessage: paymentResp?.errorMessage || "Payment request failed.",
+          customField1: newReservationId,
+        });
         if (paymentResp?.errorMessage !== "success") {
           throw new Error(
             paymentResp?.errorMessage ||
