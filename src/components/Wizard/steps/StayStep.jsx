@@ -1505,9 +1505,13 @@ export function StayStep({ onRoomsSelected }) {
       // Ported from Filterbar.js's fetchContentApi/fetchRatePrices guard
       // clauses (~1059-1062, ~1739-1742) — real Amritara fires this exact
       // ctaName/ApiStatus/ApiMessage triple when a rate/content fetch would
-      // otherwise be attempted with no property id at all.
+      // otherwise be attempted with no property id at all. Real's ApiName/
+      // ApiUrl at this guard are whatever the enclosing fetchRatePrices had
+      // already built for its own GetRoomsRates call before this check.
       postBookingWidged(config, {
         ctaName: "PropertyId not at Cin",
+        apiName: "GetRoomsRates",
+        apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
         apiStatus: "PropertyId not at Cin",
         apiErrorCode: "1180",
         apiMessage: "PropertyId not at Cin",
@@ -1522,8 +1526,18 @@ export function StayStep({ onRoomsSelected }) {
       setError(null);
       hasSearchedRef.current = true;
       // Ported from StayStep.js's own fetchRateApi (~611-629) — fired on
-      // entry, before the fetch itself runs (no Api* fields yet).
-      postBookingWidged(config, { ctaName: "Fetch Rate", propertyId: selectedPropertyId });
+      // entry, before the fetch itself runs. ApiName/ApiUrl here reflect
+      // the actual request this triggers (getRoomsRates' CMS GetRoomsRates
+      // feed — the same one Filterbar.js's own fetchRatePrices calls this
+      // "GetRoomsRates", not StayStep.js's differently-named "rate"/
+      // cin-api/rate call, since this package's single merged fetch is
+      // that CMS endpoint, not STAAH's).
+      postBookingWidged(config, {
+        ctaName: "Fetch Rate",
+        propertyId: selectedPropertyId,
+        apiName: "GetRoomsRates",
+        apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
+      });
       try {
         const [contentData, inventoryData] = await Promise.all([
           getRoomsRates(config, {
@@ -1565,6 +1579,8 @@ export function StayStep({ onRoomsSelected }) {
           postBookingWidged(config, {
             ctaName: isNetworkError ? "Network Error" : "Invalid Inventory",
             propertyId: selectedPropertyId,
+            apiName: "GetRoomsRates",
+            apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
             apiStatus: isNetworkError ? "Network Error" : err?.message || "Invalid Inventory",
             apiErrorCode: isNetworkError ? "1168" : "1166",
             apiMessage: isNetworkError ? "Network Error" : err?.message || "Invalid Inventory",
@@ -1692,6 +1708,8 @@ export function StayStep({ onRoomsSelected }) {
         postBookingWidged(config, {
           ctaName: "No rate plan found",
           propertyId: selectedPropertyId,
+          apiName: "GetRoomsRates",
+          apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
           apiErrorCode: "1176",
         });
       }
@@ -1714,14 +1732,24 @@ export function StayStep({ onRoomsSelected }) {
           postBookingWidged(config, {
             ctaName: "Sold Out",
             propertyId: selectedPropertyId,
+            apiName: "GetRoomsRates",
+            apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
           });
         } else {
           // Ported from StayStep.js's fetchRateApi finally block (~1034,
           // "rate Fetched") — lowercase "rate fetched" used here to match
-          // this package's own tracking.js JSDoc example.
+          // this package's own tracking.js JSDoc example. ApiName/ApiUrl
+          // match the other beacons on this same merged fetch (see "Fetch
+          // Rate" above); ApiStatus "200" stands in for the resolved
+          // response status, since this only runs once the fetch has
+          // already resolved with usable data.
           postBookingWidged(config, {
             ctaName: "rate fetched",
             propertyId: selectedPropertyId,
+            apiName: "GetRoomsRates",
+            apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
+            apiStatus: "200",
+            apiMessage: "Success",
             roomsName: availableRooms.map((r) => r?.RoomName).filter(Boolean).join(", "),
           });
         }
@@ -2252,7 +2280,23 @@ export function StayStep({ onRoomsSelected }) {
               room={room}
               property={rateResponse}
               isExpanded={expandedRoomIds.has(room.RoomId)}
-              onToggleExpand={() => toggleExpand(room.RoomId)}
+              onToggleExpand={() => {
+                // Ported from Filterbar.js's handleGetDetails (~2822-2828,
+                // "Select Room") — real fires this once, transitioning from
+                // the room list into that room's rate details (propertyId
+                // is literally "0" at real's own call site, left unset
+                // here for the same default). This "View Rates" toggle is
+                // this package's own equivalent of that transition — only
+                // fired on the collapsed-to-expanded direction, matching
+                // real's one-way navigation (no "un-select room" beacon).
+                if (!expandedRoomIds.has(room.RoomId)) {
+                  postBookingWidged(config, {
+                    ctaName: "Select Room",
+                    roomsName: room?.RoomName,
+                  });
+                }
+                toggleExpand(room.RoomId);
+              }}
               isActiveSlotRoom={activeSlotEntry?.roomId === room.RoomId}
               activeRoomIndex={currentRoomIndex}
               fromPrice={fromPriceInfo?.price ?? null}

@@ -131,6 +131,8 @@ export function AddOnsStep() {
         postBookingWidged(config, {
           ctaName: "Fetch AddOns",
           propertyId: selectedPropertyId,
+          apiName: "add-ons",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/cin-api/add-ons`,
           apiStatus: extras.length > 0 ? "Success" : "Data not found",
           apiMessage: extras.length > 0 ? "Success" : "Data not found",
         });
@@ -140,6 +142,8 @@ export function AddOnsStep() {
         postBookingWidged(config, {
           ctaName: "Fetch AddOns",
           propertyId: selectedPropertyId,
+          apiName: "add-ons",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/cin-api/add-ons`,
           apiStatus: err?.message || "Error",
           apiErrorCode: "1166",
           apiMessage: err?.message || "Error",

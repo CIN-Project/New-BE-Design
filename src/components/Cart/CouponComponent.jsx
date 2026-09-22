@@ -57,6 +57,8 @@ export function CouponComponent({ isOpen, onClose }) {
       postBookingWidged(config, {
         ctaName: "Verify Promo Code",
         propertyId: selectedPropertyId,
+        apiName: "VerifyPromoCode",
+        apiUrl: `${config?.cmsBaseUrl || ""}/api/booking/VerifyPromoCode`,
         apiStatus: response?.errorCode === "0" ? "Success" : response?.errorCode,
         apiErrorCode: response?.errorCode === "0" ? "200" : response?.errorCode,
         apiMessage:
@@ -88,6 +90,8 @@ export function CouponComponent({ isOpen, onClose }) {
       postBookingWidged(config, {
         ctaName: "Verify Promo Code",
         propertyId: selectedPropertyId,
+        apiName: "VerifyPromoCode",
+        apiUrl: `${config?.cmsBaseUrl || ""}/api/booking/VerifyPromoCode`,
         apiStatus: err?.message || "Error",
         apiErrorCode: "1166",
         apiMessage: err?.message || "Could not verify promo code.",

@@ -245,8 +245,27 @@ export function GuestDetailsForm({ onComplete }) {
           customerGuid: row?.guid || prev.customerGuid,
         }));
       }
-    } catch {
+      // Ported from DetailStep.js's getUserEnrollment (~529-583) — real's
+      // exact ctaName/apiName for this endpoint.
+      postBookingWidged(config, {
+        ctaName: "Post User Enrollment",
+        propertyId: selectedPropertyId,
+        apiName: "user-enrollment",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
+        apiStatus: "200",
+        apiMessage: "Success",
+      });
+    } catch (err) {
       // Swallowed on purpose: a failed lookup should never block checkout.
+      postBookingWidged(config, {
+        ctaName: "Post User Enrollment",
+        propertyId: selectedPropertyId,
+        apiName: "user-enrollment",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
+        apiStatus: err?.status ?? err?.message ?? "Error",
+        apiErrorCode: err?.status ?? "1166",
+        apiMessage: err?.status ? "Data not found" : err?.message || "Error",
+      });
     } finally {
       setIsLookingUpPhone(false);
     }
@@ -451,6 +470,8 @@ export function GuestDetailsForm({ onComplete }) {
         postBookingWidged(config, {
           ctaName: "Fetch reservation ID",
           propertyId: selectedPropertyId,
+          apiName: "reservation-id",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
           apiStatus: reservationErr?.message || "Error",
           apiErrorCode: "1166",
           apiMessage: reservationErr?.message || "Could not generate a reservation ID.",
@@ -463,6 +484,8 @@ export function GuestDetailsForm({ onComplete }) {
         postBookingWidged(config, {
           ctaName: "Fetch reservation ID",
           propertyId: selectedPropertyId,
+          apiName: "reservation-id",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
           apiErrorCode: "1166",
           apiMessage: "Could not generate a reservation ID.",
         });
@@ -473,6 +496,8 @@ export function GuestDetailsForm({ onComplete }) {
       postBookingWidged(config, {
         ctaName: "Fetch reservation ID",
         propertyId: selectedPropertyId,
+        apiName: "reservation-id",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
         apiStatus: "Success",
         apiMessage: "Success",
         customField1: reservationId,
@@ -810,6 +835,8 @@ export function GuestDetailsForm({ onComplete }) {
       postBookingWidged(config, {
         ctaName: "Post payment request",
         propertyId: selectedPropertyId,
+        apiName: "th-payment-request",
+        apiUrl: `${config?.staahBaseUrl || ""}${formOfPayment === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"}`,
         apiStatus: paymentResp?.errorMessage || "Error",
         apiErrorCode: paymentResp?.errorMessage === "success" ? "200" : "1166",
         apiMessage: paymentResp?.errorMessage || "Payment request failed.",
@@ -1013,10 +1040,13 @@ export function GuestDetailsForm({ onComplete }) {
       console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);
       setIsProcessing(false);
       toast.error(err?.message || "Payment failed. Please try again.");
+      // Ported from DetailStep.js's handleSubmit catch block (~1484-1489) —
+      // real gives "Load failed" its own ApiErrorCode ("1167"), distinct
+      // from every other failure message ("1166").
       postBookingWidged(config, {
         ctaName: err?.message || "Payment failed",
         propertyId: selectedPropertyId,
-        apiErrorCode: "1166",
+        apiErrorCode: err?.message === "Load failed" ? "1167" : "1166",
         apiMessage: err?.message || "Payment failed",
       });
     }

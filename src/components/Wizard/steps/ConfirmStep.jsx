@@ -162,8 +162,18 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           console.log("[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken SUCCEEDED", {
             result,
           });
-          // Ported from Filterbar.js's verifyGuidToken (~1640-1694).
-          postBookingWidged(config, { ctaName: "Verify GuidToken", apiStatus: "Success", apiMessage: "Success" });
+          // Ported from Filterbar.js's verifyGuidToken (~1640-1694) — real
+          // sends the numeric HTTP status as both ApiStatus/ApiErrorCode on
+          // success ("200" here since this call only reaches this point
+          // once verifyToken has already resolved, i.e. the request was ok).
+          postBookingWidged(config, {
+            ctaName: "Verify GuidToken",
+            apiName: "verify-token",
+            apiUrl: `${config?.staahBaseUrl || ""}/api/verify-token`,
+            apiStatus: "200",
+            apiErrorCode: "200",
+            apiMessage: "Success",
+          });
           rawResponse = JSON.stringify(result);
           try {
             window.sessionStorage.setItem(PAYMENT_RESPONSE_KEY, rawResponse);
@@ -177,6 +187,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           );
           postBookingWidged(config, {
             ctaName: "Verify GuidToken",
+            apiName: "verify-token",
+            apiUrl: `${config?.staahBaseUrl || ""}/api/verify-token`,
             apiStatus: err?.message || "Error",
             apiErrorCode: "1166",
             apiMessage: err?.message || "Verify GuidToken failed",
@@ -339,15 +351,23 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         setConfirmedBookingData(details);
 
         // Ported from ConfirmStep.js's handleConfirm (~251-329) — real's
-        // exact apiName ("confirm") and apiUrl for this specific call.
+        // exact apiName ("confirm") and apiUrl for this specific call. Real
+        // only branches ctaName/ApiStatus/ApiErrorCode/ApiMessage on the
+        // raw fetch's res.ok (HTTP-level) — it always reports "Success"
+        // here regardless of the business-level errorMessage, since that's
+        // checked separately for reservationStatus/UI, not for this beacon.
+        // This call site only runs once confirmPayment has already
+        // resolved without throwing, i.e. the real equivalent of res.ok, so
+        // ctaName stays "" and the fields stay "200"/"Success" the same way
+        // real's res.ok branch does — regardless of confirmedSuccess.
         postBookingWidged(config, {
           ctaName: "",
           propertyId: parsedResponseJson?.property_id,
           apiName: "confirm",
           apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
-          apiStatus: confirmedSuccess ? "200" : "0",
-          apiErrorCode: confirmedSuccess ? "200" : "0",
-          apiMessage: confirmedSuccess ? "Success" : "Payment failed",
+          apiStatus: "200",
+          apiErrorCode: "200",
+          apiMessage: "Success",
         });
 
         if (confirmedSuccess) {
@@ -394,13 +414,22 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           err,
         );
         if (!cancelled) setReservationStatus("failed");
+        // Real's handleConfirm has two distinct failure shapes this single
+        // catch folds together (confirmPayment/staahSignedRequest throws on
+        // a non-ok HTTP status instead of real's own explicit `if(!res.ok)`
+        // branch): an HTTP-level failure (err.status set) matches real's
+        // ctaName "Reservation post" with the actual status as
+        // ApiStatus/ApiErrorCode; anything else (signature/network/parse
+        // exception) matches real's catch(err), which leaves ctaName ""
+        // (never reassigned there) and uses err.message/"1166".
         postBookingWidged(config, {
-          ctaName: "Reservation post",
+          ctaName: err?.status != null ? "Reservation post" : "",
           propertyId: parsedResponseJson?.property_id,
           apiName: "confirm",
           apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
-          apiErrorCode: "1166",
-          apiMessage: "Payment failed",
+          apiStatus: err?.status ?? err?.message,
+          apiErrorCode: err?.status ?? "1166",
+          apiMessage: err?.status != null ? "Payment failed" : err?.message,
         });
       } finally {
         if (!cancelled) setConfirming(false);
@@ -468,6 +497,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         postBookingWidged(config, {
           ctaName: "Fetch reservation ID",
           propertyId,
+          apiName: "reservation-id",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
           apiStatus: newReservationId ? "Success" : "Error",
           apiErrorCode: newReservationId ? undefined : "1166",
           apiMessage: newReservationId ? "Success" : "Could not generate a new reservation ID.",
@@ -551,6 +582,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         postBookingWidged(config, {
           ctaName: "Th payment request",
           propertyId,
+          apiName: "th-payment-request",
+          apiUrl: `${config?.staahBaseUrl || ""}${formOfPayment === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"}`,
           apiStatus: paymentResp?.errorMessage || "Error",
           apiErrorCode: paymentResp?.errorMessage === "success" ? "200" : "1166",
           apiMessage: paymentResp?.errorMessage || "Payment request failed.",
