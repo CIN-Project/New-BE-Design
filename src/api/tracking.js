@@ -1,4 +1,4 @@
-import { getOrCreateSessionId } from "../utils/session.js";
+import { getOrCreateSessionId, getCtaCustomerId } from "../utils/session.js";
 import { getDeviceInfo, getCachedPublicIp } from "../utils/clientInfo.js";
 
 /**
@@ -65,8 +65,17 @@ import { getDeviceInfo, getCachedPublicIp } from "../utils/clientInfo.js";
  * @param {string|number} [params.apiStatus]
  * @param {string|number} [params.apiErrorCode]
  * @param {string} [params.apiMessage]
- * @param {string} [params.customerGuid] - real's CustomerGuid/WebsiteGuid
- *   (both set to the same value at every real call site).
+ * @param {string} [params.customerGuid] - real's CustomerGuid: defaults to
+ *   the session-persisted tracking guid (see utils/session.js's
+ *   getCtaCustomerId) when omitted, only overridden once a real CRM guid is
+ *   known (post "Post User Enrollment" — see DetailStep.jsx's
+ *   handlePhoneBlur, which calls setCtaCustomerId so every call site, in
+ *   every step, picks the upgraded guid up automatically from here on).
+ *   WebsiteGuid is always the session-persisted guid itself, matching real's
+ *   own CustomerGuid/WebsiteGuid split (DetailStep.js ~429-430).
+ * @param {string} [params.utmSource] - real's `utm_source` (SearchContext's
+ *   `utmSource`, set only by a resolved Google Hotel Ads deep-link — see
+ *   ghaDeepLink.js). Sent as "" for every non-GHA booking, matching real.
  * @param {string} [params.customField1] - real's CustomField1: only ever
  *   set to the freshly-generated reservation_id, only on the "Pay Now
  *   Click"/"Pay Later Click" beacon fired right after
@@ -79,6 +88,7 @@ export async function postBookingWidged(config, params = {}) {
 
   const ip = await getCachedPublicIp();
   const { deviceName, deviceType } = getDeviceInfo();
+  const ctaCustomerId = getCtaCustomerId();
 
   const payload = {
     ctaName: params.ctaName || "",
@@ -106,8 +116,9 @@ export async function postBookingWidged(config, params = {}) {
     ApiStatus: params.apiStatus != null ? String(params.apiStatus) : "",
     ApiErrorCode: params.apiErrorCode != null ? String(params.apiErrorCode) : "",
     ApiMessage: params.apiMessage || "",
-    CustomerGuid: params.customerGuid || "",
-    WebsiteGuid: params.customerGuid || "",
+    CustomerGuid: params.customerGuid || ctaCustomerId,
+    WebsiteGuid: ctaCustomerId,
+    Utm_source: params.utmSource || "",
     ChainName: "",
     ChainId: 0,
     LowestRate: 0.0,

@@ -137,6 +137,47 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       } catch {
         rawResponse = null;
       }
+
+      // Hoisted above the verify-token/payment-response beacons below (was
+      // previously only parsed later, right before setBookingData) so every
+      // postBookingWidged call on this page — not just the confirm/retry
+      // ones — can carry the same booking-context fields. Safe to read this
+      // early: it's a pure sessionStorage parse (DetailStep.jsx wrote it
+      // BEFORE ever redirecting to STAAH) that doesn't depend on anything
+      // resolved further down this function.
+      const parsedBookingData = parseBookingData(
+        safeSessionStorageGet(BOOKING_DATA_KEY),
+      );
+
+      // Common postBookingWidged fields for every CTA fired from this step
+      // — sourced from the be_bookingData snapshot DetailStep.jsx saves
+      // right before redirecting to STAAH's hosted payment page, since this
+      // step is a fresh mount after that round-trip with no live
+      // SearchContext/StayContext state of its own. Mirrors real
+      // ConfirmStep.js/DetailStep.js's postBookingWidged, which rebuilds
+      // these same fields fresh on every call. `extra` can still override
+      // any of these per call site (e.g. propertyId from the gateway's own
+      // echoed parsedResponseJson where that's more authoritative).
+      const trackCta = (ctaName, extra = {}) => {
+        const rooms = parsedBookingData?.selectedRoom || [];
+        const totalAdults = rooms.reduce((sum, r) => sum + (r?.adults || 0), 0);
+        const totalChildren = rooms.reduce((sum, r) => sum + (r?.children || 0), 0);
+        postBookingWidged(config, {
+          ctaName,
+          propertyId: parsedBookingData?.selectedPropertyId,
+          cityId: parsedBookingData?.selectedCityId,
+          checkIn: (parsedBookingData?.selectedStartDate || "").slice(0, 10),
+          checkOut: (parsedBookingData?.selectedEndDate || "").slice(0, 10),
+          adults: totalAdults,
+          children: totalChildren,
+          roomCount: rooms.length,
+          roomsName: rooms.map((r) => r?.roomName).filter(Boolean).join(", "),
+          packageName: rooms.map((r) => r?.roomPackage).filter(Boolean).join(", "),
+          customerGuid: parsedBookingData?.formData?.customerGuid,
+          utmSource: parsedBookingData?.utmSource,
+          ...extra,
+        });
+      };
       console.log(
         "[PAYMENT-FLOW] ConfirmStep.jsx: existing sessionStorage payment response",
         { hadRawResponse: Boolean(rawResponse), rawResponse },
@@ -166,8 +207,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           // sends the numeric HTTP status as both ApiStatus/ApiErrorCode on
           // success ("200" here since this call only reaches this point
           // once verifyToken has already resolved, i.e. the request was ok).
-          postBookingWidged(config, {
-            ctaName: "Verify GuidToken",
+          trackCta("Verify GuidToken", {
             apiName: "verify-token",
             apiUrl: `${config?.staahBaseUrl || ""}/api/verify-token`,
             apiStatus: "200",
@@ -185,8 +225,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
             "[PAYMENT-FLOW] ConfirmStep.jsx: verifyToken FAILED — will fall back to any stored response, or show pending/failure state",
             err,
           );
-          postBookingWidged(config, {
-            ctaName: "Verify GuidToken",
+          trackCta("Verify GuidToken", {
             apiName: "verify-token",
             apiUrl: `${config?.staahBaseUrl || ""}/api/verify-token`,
             apiStatus: err?.message || "Error",
@@ -212,8 +251,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       // one tracks what the gateway itself reported, not whether STAAH
       // actually finalized the booking.
       if (parsedResponseJson) {
-        postBookingWidged(config, {
-          ctaName: "Payment response",
+        trackCta("Payment response", {
           propertyId: parsedResponseJson?.property_id,
           apiMessage: parsedResponseJson?.status === "error" ? "Payment failed" : undefined,
           apiErrorCode: parsedResponseJson?.status === "error" ? "1173" : undefined,
@@ -293,9 +331,6 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         }
       }
 
-      const parsedBookingData = parseBookingData(
-        safeSessionStorageGet(BOOKING_DATA_KEY),
-      );
       console.log("parsedBookingData", parsedBookingData);
       console.log(
         "[PAYMENT-FLOW] ConfirmStep.jsx: parsed gateway response + booking data",
@@ -360,8 +395,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         // resolved without throwing, i.e. the real equivalent of res.ok, so
         // ctaName stays "" and the fields stay "200"/"Success" the same way
         // real's res.ok branch does — regardless of confirmedSuccess.
-        postBookingWidged(config, {
-          ctaName: "",
+        trackCta("", {
           propertyId: parsedResponseJson?.property_id,
           apiName: "confirm",
           apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
@@ -422,8 +456,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         // ApiStatus/ApiErrorCode; anything else (signature/network/parse
         // exception) matches real's catch(err), which leaves ctaName ""
         // (never reassigned there) and uses err.message/"1166".
-        postBookingWidged(config, {
-          ctaName: err?.status != null ? "Reservation post" : "",
+        trackCta(err?.status != null ? "Reservation post" : "", {
           propertyId: parsedResponseJson?.property_id,
           apiName: "confirm",
           apiUrl: `${config?.staahBaseUrl || ""}/api/payment/confirm`,
@@ -456,6 +489,33 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
   const handleRetryClick = async () => {
     const reservationJsonSrc = completeResponseObject?.reservationJson;
     const bookingDetailsSrc = completeResponseObject?.bookingDetailsJson;
+
+    // Same common-fields shape as resolvePaymentResult's own trackCta above,
+    // sourced from the `bookingData` component state instead of that
+    // effect's local `parsedBookingData` — by the time a guest can even
+    // click Retry, resolvePaymentResult has already run to completion and
+    // called setBookingData with the same underlying be_bookingData
+    // snapshot.
+    const trackRetryCta = (ctaName, extra = {}) => {
+      const rooms = bookingData?.selectedRoom || [];
+      const totalAdults = rooms.reduce((sum, r) => sum + (r?.adults || 0), 0);
+      const totalChildren = rooms.reduce((sum, r) => sum + (r?.children || 0), 0);
+      postBookingWidged(config, {
+        ctaName,
+        propertyId: bookingData?.selectedPropertyId,
+        cityId: bookingData?.selectedCityId,
+        checkIn: (bookingData?.selectedStartDate || "").slice(0, 10),
+        checkOut: (bookingData?.selectedEndDate || "").slice(0, 10),
+        adults: totalAdults,
+        children: totalChildren,
+        roomCount: rooms.length,
+        roomsName: rooms.map((r) => r?.roomName).filter(Boolean).join(", "),
+        packageName: rooms.map((r) => r?.roomPackage).filter(Boolean).join(", "),
+        customerGuid: bookingData?.formData?.customerGuid,
+        utmSource: bookingData?.utmSource,
+        ...extra,
+      });
+    };
 
     // Primary path — matches real Amritara's handleRetry exactly: rebuild
     // the reservation from the verify-token response's OWN
@@ -494,8 +554,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         // (~331-386, used specifically by this retry flow) — same ctaName
         // as DetailStep.jsx's first-attempt beacon, since it's the same
         // real endpoint either way.
-        postBookingWidged(config, {
-          ctaName: "Fetch reservation ID",
+        trackRetryCta("Fetch reservation ID", {
           propertyId,
           apiName: "reservation-id",
           apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
@@ -579,8 +638,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         // first-attempt one ("Post payment request"), matching real
         // Amritara's two separate functions/ctaNames for the same
         // underlying endpoint.
-        postBookingWidged(config, {
-          ctaName: "Th payment request",
+        trackRetryCta("Th payment request", {
           propertyId,
           apiName: "th-payment-request",
           apiUrl: `${config?.staahBaseUrl || ""}${formOfPayment === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"}`,

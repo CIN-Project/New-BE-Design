@@ -1229,6 +1229,7 @@ export function StayStep({ onRoomsSelected }) {
   const config = useConfig();
   const {
     selectedPropertyId,
+    selectedCityId,
     selectedStartDate,
     selectedEndDate,
     searchRooms,
@@ -1243,6 +1244,7 @@ export function StayStep({ onRoomsSelected }) {
     setSelectedPropertyCity,
     setSelectedPropertyState,
     setSelectedPropertyPostalCode,
+    utmSource,
   } = useSearchContext();
   const { promoCodeContext } = useCartContext();
   const {
@@ -1292,6 +1294,45 @@ export function StayStep({ onRoomsSelected }) {
 
   const checkInParam = toIsoDateParam(selectedStartDate);
   const checkOutParam = toIsoDateParam(selectedEndDate);
+
+  // Common postBookingWidged fields for every CTA fired from this step —
+  // real Amritara's own StayStep.js/Filterbar.js postBookingWidged rebuilds
+  // these same adults/children/rooms/checkIn/checkOut/roomsName/packageName
+  // fields fresh on EVERY call (not just "Select Package And Cart Open"),
+  // sourced from whatever's currently selected. `extra` can still override
+  // any of these (e.g. "Select Room"/"Select Package And Cart Open" pass a
+  // single just-acted-on room's name instead of the full joined selection,
+  // "rate fetched" passes the fetched room list instead of the picked one).
+  const trackCta = (ctaName, extra = {}) => {
+    const totalAdults = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.adults || 0),
+      0,
+    );
+    const totalChildren = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.children || 0),
+      0,
+    );
+    postBookingWidged(config, {
+      ctaName,
+      propertyId: selectedPropertyId,
+      cityId: selectedCityId,
+      checkIn: checkInParam,
+      checkOut: checkOutParam,
+      adults: totalAdults,
+      children: totalChildren,
+      roomCount: selectedRoom?.length,
+      roomsName: (selectedRoom || [])
+        .map((r) => r?.roomName)
+        .filter(Boolean)
+        .join(", "),
+      packageName: (selectedRoom || [])
+        .map((r) => r?.roomPackage)
+        .filter(Boolean)
+        .join(", "),
+      utmSource,
+      ...extra,
+    });
+  };
   // Includes adults/children, not just id — a guest-count edit on an
   // EXISTING room slot (no add/remove) must also re-trigger the sync effect
   // below. This used to key off ids alone, so bumping "Children" in the
@@ -1508,8 +1549,7 @@ export function StayStep({ onRoomsSelected }) {
       // otherwise be attempted with no property id at all. Real's ApiName/
       // ApiUrl at this guard are whatever the enclosing fetchRatePrices had
       // already built for its own GetRoomsRates call before this check.
-      postBookingWidged(config, {
-        ctaName: "PropertyId not at Cin",
+      trackCta("PropertyId not at Cin", {
         apiName: "GetRoomsRates",
         apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
         apiStatus: "PropertyId not at Cin",
@@ -1532,9 +1572,7 @@ export function StayStep({ onRoomsSelected }) {
       // "GetRoomsRates", not StayStep.js's differently-named "rate"/
       // cin-api/rate call, since this package's single merged fetch is
       // that CMS endpoint, not STAAH's).
-      postBookingWidged(config, {
-        ctaName: "Fetch Rate",
-        propertyId: selectedPropertyId,
+      trackCta("Fetch Rate", {
         apiName: "GetRoomsRates",
         apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
       });
@@ -1576,9 +1614,7 @@ export function StayStep({ onRoomsSelected }) {
           // "Invalid Inventory" for everything else.
           const isNetworkError =
             err?.code === "ERR_NETWORK" || err?.message === "Network Error";
-          postBookingWidged(config, {
-            ctaName: isNetworkError ? "Network Error" : "Invalid Inventory",
-            propertyId: selectedPropertyId,
+          trackCta(isNetworkError ? "Network Error" : "Invalid Inventory", {
             apiName: "GetRoomsRates",
             apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
             apiStatus: isNetworkError ? "Network Error" : err?.message || "Invalid Inventory",
@@ -1705,9 +1741,7 @@ export function StayStep({ onRoomsSelected }) {
       if (trackFetch) {
         // Ported from Filterbar.js's fetchRatePrices (~1790-1868, three
         // near-identical empty-result branches collapsed to one here).
-        postBookingWidged(config, {
-          ctaName: "No rate plan found",
-          propertyId: selectedPropertyId,
+        trackCta("No rate plan found", {
           apiName: "GetRoomsRates",
           apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
           apiErrorCode: "1176",
@@ -1729,9 +1763,7 @@ export function StayStep({ onRoomsSelected }) {
           (room) => Number(room?.MinInventory ?? 0) <= 0,
         );
         if (allSoldOut) {
-          postBookingWidged(config, {
-            ctaName: "Sold Out",
-            propertyId: selectedPropertyId,
+          trackCta("Sold Out", {
             apiName: "GetRoomsRates",
             apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
           });
@@ -1743,9 +1775,7 @@ export function StayStep({ onRoomsSelected }) {
           // Rate" above); ApiStatus "200" stands in for the resolved
           // response status, since this only runs once the fetch has
           // already resolved with usable data.
-          postBookingWidged(config, {
-            ctaName: "rate fetched",
-            propertyId: selectedPropertyId,
+          trackCta("rate fetched", {
             apiName: "GetRoomsRates",
             apiUrl: `${config?.cmsRoomRatesBaseUrl || ""}/rates/GetRoomsRates?RequestType=bedata&PropertyId=${selectedPropertyId}&Product=yes&CheckInDate=${checkInParam}&CheckOutDate=${checkOutParam}&PromoCode=${promoCodeContext || ""}`,
             apiStatus: "200",
@@ -1910,11 +1940,7 @@ export function StayStep({ onRoomsSelected }) {
     // ("Select Package And Cart Open"), fired whenever a room+rate is
     // chosen (standard, member, or post-login-unlock — applySelection is
     // the single funnel all three go through).
-    postBookingWidged(config, {
-      ctaName: "Select Package And Cart Open",
-      propertyId: selectedPropertyId,
-      checkIn: checkInParam,
-      checkOut: checkOutParam,
+    trackCta("Select Package And Cart Open", {
       roomsName: selection?.roomName,
       packageName: selection?.roomPackage,
       isCartOpen: true,
@@ -2290,8 +2316,7 @@ export function StayStep({ onRoomsSelected }) {
                 // fired on the collapsed-to-expanded direction, matching
                 // real's one-way navigation (no "un-select room" beacon).
                 if (!expandedRoomIds.has(room.RoomId)) {
-                  postBookingWidged(config, {
-                    ctaName: "Select Room",
+                  trackCta("Select Room", {
                     roomsName: room?.RoomName,
                   });
                 }

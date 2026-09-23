@@ -15,7 +15,7 @@ import {
   postUserEnrollment,
 } from "../../../api/payment.js";
 import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
-import { getOrCreateSessionId } from "../../../utils/session.js";
+import { getOrCreateSessionId, setCtaCustomerId } from "../../../utils/session.js";
 import { formatIsoDate } from "../../../utils/date.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import "./DetailStep.css";
@@ -100,6 +100,7 @@ export function GuestDetailsForm({ onComplete }) {
   const search = useSearchContext();
   const {
     selectedPropertyId,
+    selectedCityId,
     selectedPropertyName,
     selectedPropertyPhone,
     selectedPropertyEmail,
@@ -189,6 +190,43 @@ export function GuestDetailsForm({ onComplete }) {
     }));
   }, [user]);
 
+  // Common postBookingWidged fields for every CTA fired from this step —
+  // mirrors real DetailStep.js's own postBookingWidged (~403-440), which
+  // rebuilds adults/children/rooms/cityId/checkIn/checkOut/roomsName/
+  // packageName/CustomerGuid fresh on EVERY call, not just one. `extra` can
+  // still override any of these per call site.
+  const trackCta = (ctaName, extra = {}) => {
+    const totalAdults = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.adults || 0),
+      0,
+    );
+    const totalChildren = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.children || 0),
+      0,
+    );
+    postBookingWidged(config, {
+      ctaName,
+      propertyId: selectedPropertyId,
+      cityId: selectedCityId,
+      checkIn: formatIsoDate(selectedStartDate),
+      checkOut: formatIsoDate(selectedEndDate),
+      adults: totalAdults,
+      children: totalChildren,
+      roomCount: selectedRoom?.length,
+      roomsName: (selectedRoom || [])
+        .map((r) => r?.roomName)
+        .filter(Boolean)
+        .join(", "),
+      packageName: (selectedRoom || [])
+        .map((r) => r?.roomPackage)
+        .filter(Boolean)
+        .join(", "),
+      customerGuid: formData.customerGuid,
+      utmSource,
+      ...extra,
+    });
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setErrors((prev) => {
@@ -244,22 +282,25 @@ export function GuestDetailsForm({ onComplete }) {
           email: row?.email || prev.email,
           customerGuid: row?.guid || prev.customerGuid,
         }));
+        // Mirrors real DetailStep.js (~389-392): once a real CRM guid is
+        // known, it replaces the session-scoped tracking guid for every
+        // postBookingWidged call from here on — from ANY wizard step, not
+        // just this one, and even if the guest navigates back to an earlier
+        // step afterward (see getCtaCustomerId's own doc comment).
+        if (row?.guid) setCtaCustomerId(row.guid);
       }
       // Ported from DetailStep.js's getUserEnrollment (~529-583) — real's
       // exact ctaName/apiName for this endpoint.
-      postBookingWidged(config, {
-        ctaName: "Post User Enrollment",
-        propertyId: selectedPropertyId,
+      trackCta("Post User Enrollment", {
         apiName: "user-enrollment",
         apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
         apiStatus: "200",
         apiMessage: "Success",
+        customerGuid: row?.guid || formData.customerGuid,
       });
     } catch (err) {
       // Swallowed on purpose: a failed lookup should never block checkout.
-      postBookingWidged(config, {
-        ctaName: "Post User Enrollment",
-        propertyId: selectedPropertyId,
+      trackCta("Post User Enrollment", {
         apiName: "user-enrollment",
         apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
         apiStatus: err?.status ?? err?.message ?? "Error",
@@ -430,9 +471,7 @@ export function GuestDetailsForm({ onComplete }) {
       // adults/children/guests are greater than..." messages, or an
       // inventory-exceeded message) — same here, this one call site covers
       // every proceedToPay failure reason, not just this specific message.
-      postBookingWidged(config, {
-        ctaName: proceedResult,
-        propertyId: selectedPropertyId,
+      trackCta(proceedResult, {
         apiErrorCode: proceedResult === "Failed to fetch" ? "1165" : "1166",
         apiMessage: proceedResult,
       });
@@ -467,9 +506,7 @@ export function GuestDetailsForm({ onComplete }) {
         // than falling through to handleSubmit's own generic catch below)
         // specifically so the failure beacon gets this real ctaName
         // instead of a generic "Payment failed" one.
-        postBookingWidged(config, {
-          ctaName: "Fetch reservation ID",
-          propertyId: selectedPropertyId,
+        trackCta("Fetch reservation ID", {
           apiName: "reservation-id",
           apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
           apiStatus: reservationErr?.message || "Error",
@@ -481,9 +518,7 @@ export function GuestDetailsForm({ onComplete }) {
       const reservationId = reservationResp?.reservation_id;
       console.log("[PAYMENT-FLOW] DetailStep.jsx: generateReservationId result", { reservationResp, reservationId });
       if (!reservationId) {
-        postBookingWidged(config, {
-          ctaName: "Fetch reservation ID",
-          propertyId: selectedPropertyId,
+        trackCta("Fetch reservation ID", {
           apiName: "reservation-id",
           apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
           apiErrorCode: "1166",
@@ -493,9 +528,7 @@ export function GuestDetailsForm({ onComplete }) {
           "Could not generate a reservation ID. Please try again.",
         );
       }
-      postBookingWidged(config, {
-        ctaName: "Fetch reservation ID",
-        propertyId: selectedPropertyId,
+      trackCta("Fetch reservation ID", {
         apiName: "reservation-id",
         apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
         apiStatus: "Success",
@@ -510,9 +543,7 @@ export function GuestDetailsForm({ onComplete }) {
       // package's Pay Later is a real, separate submit path, so it gets
       // its own "Pay Later Click" ctaName rather than being silently
       // folded into "Pay Now Click").
-      postBookingWidged(config, {
-        ctaName: formOfPayment === "pay_later" ? "Pay Later Click" : "Pay Now Click",
-        propertyId: selectedPropertyId,
+      trackCta(formOfPayment === "pay_later" ? "Pay Later Click" : "Pay Now Click", {
         customField1: reservationId,
       });
 
@@ -832,9 +863,7 @@ export function GuestDetailsForm({ onComplete }) {
       // Ported from DetailStep.js's handleJson (~787-1334) — beacon covers
       // both outcomes of the th-payment-request call (this package's own
       // equivalent of real Amritara's PaymentRequest endpoint).
-      postBookingWidged(config, {
-        ctaName: "Post payment request",
-        propertyId: selectedPropertyId,
+      trackCta("Post payment request", {
         apiName: "th-payment-request",
         apiUrl: `${config?.staahBaseUrl || ""}${formOfPayment === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"}`,
         apiStatus: paymentResp?.errorMessage || "Error",
@@ -919,6 +948,8 @@ export function GuestDetailsForm({ onComplete }) {
           // request from and always bails straight to homeUrl — this is
           // exactly the "Try Again just goes to the home page" bug.
           selectedPropertyId,
+          selectedCityId,
+          utmSource,
           formOfPayment,
           keyData: finalKeyData,
           reservationPayload: payload,
@@ -1043,9 +1074,7 @@ export function GuestDetailsForm({ onComplete }) {
       // Ported from DetailStep.js's handleSubmit catch block (~1484-1489) —
       // real gives "Load failed" its own ApiErrorCode ("1167"), distinct
       // from every other failure message ("1166").
-      postBookingWidged(config, {
-        ctaName: err?.message || "Payment failed",
-        propertyId: selectedPropertyId,
+      trackCta(err?.message || "Payment failed", {
         apiErrorCode: err?.message === "Load failed" ? "1167" : "1166",
         apiMessage: err?.message || "Payment failed",
       });
