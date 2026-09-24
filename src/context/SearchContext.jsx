@@ -20,7 +20,7 @@ const initialState = {
   isDateChanged: false,
   keyData: null,
   searchResults: [],
-  searchRooms: [{ id: 1, adults: 2, children: 0 }],
+  searchRooms: [{ id: 1, adults: 1, children: 0 }],
   // Day Use booking — ported from Filterbar.js's day-use toggle. Kept as a
   // single flag (not Filterbar.js's two-tier "live filter state" vs
   // "committed context state" split) since this package doesn't have that
@@ -107,7 +107,7 @@ export function useSearchContext() {
   const addSearchRoom = () => {
     ctx.setSearchRooms((rooms) => [
       ...rooms,
-      { id: Date.now(), adults: 2, children: 0 },
+      { id: Date.now(), adults: 1, children: 0 },
     ]);
   };
 
