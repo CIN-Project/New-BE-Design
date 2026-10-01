@@ -12,6 +12,7 @@ import {
   redirectToPayment,
 } from "../../../api/payment.js";
 import { postBookingWidged } from "../../../api/tracking.js";
+import { getCachedPublicIp } from "../../../utils/clientInfo.js";
 import "./ConfirmStep.css";
 
 const PAYMENT_RESPONSE_KEY = "be_paymentResponse";
@@ -605,6 +606,10 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         const keyData =
           bookingData?.keyData ||
           (config?.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+        // Same source the tracker (tracking.js's postBookingWidged) uses
+        // for its own `ip` field — cached after the first call, so this is
+        // free if it already resolved earlier in the session.
+        const clientIp = await getCachedPublicIp();
 
         const finalRequestData2 = {
           property_id: propertyId,
@@ -623,6 +628,15 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           currency: "INR",
           BookingDetailsJson: JSON.stringify(bookingDetailsSrc),
           ReservationJson: JSON.stringify(updatedReservationJson),
+          // This retry path previously omitted SessionId/Ip entirely
+          // (unlike DetailStep.jsx's first-attempt finalRequestData2,
+          // which always sends both). SessionId reuses the ORIGINAL
+          // booking's session id (bookingDetailsSrc.sessionId, nested in
+          // the BookingDetailsJson DetailStep.jsx built) rather than
+          // minting a new one — this is a retry of the same booking
+          // attempt, not a new session.
+          SessionId: bookingDetailsSrc?.sessionId || "",
+          Ip: clientIp,
         };
 
         const paymentResp = await postPaymentRequest(config, {

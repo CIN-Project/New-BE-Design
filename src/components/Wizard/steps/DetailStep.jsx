@@ -18,6 +18,7 @@ import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/rateP
 import { getOrCreateSessionId, setCtaCustomerId } from "../../../utils/session.js";
 import { formatIsoDate } from "../../../utils/date.js";
 import { postBookingWidged } from "../../../api/tracking.js";
+import { getCachedPublicIp } from "../../../utils/clientInfo.js";
 import "./DetailStep.css";
 
 const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Dr"];
@@ -263,10 +264,21 @@ export function GuestDetailsForm({ onComplete }) {
         .map((r) => r?.roomPackage)
         .filter(Boolean)
         .join(", ");
+      // Same source the tracker (tracking.js's postBookingWidged) uses for
+      // its own `ip` field — getCachedPublicIp() fetches api64.ipify.org
+      // once per tab and caches the promise, so this costs nothing extra
+      // if the tracker already resolved it earlier in the session.
+      const clientIp = await getCachedPublicIp();
       const result = await postUserEnrollment(config, {
         payload: {
           MobileNo: formData.phone,
           PropertyId: search.selectedPropertyId?.toString(),
+          // Matches the documented payload shape (see payment.js's
+          // postUserEnrollment doc comment) — bookingSessionId reuses the
+          // same getOrCreateSessionId() session used for this booking
+          // everywhere else in this file (finalRequestData2, ~line 842).
+          SessionId: getOrCreateSessionId(),
+          Ip: clientIp,
           Room: roomNames,
           Package: packageNames,
         },
@@ -777,6 +789,11 @@ export function GuestDetailsForm({ onComplete }) {
       const finalKeyData =
         keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
       const bookingSessionId = getOrCreateSessionId();
+      // Same source the tracker (tracking.js's postBookingWidged) uses for
+      // its own `ip` field — cached after the first call, so this is free
+      // if the tracker (or handlePhoneBlur's enrollment lookup above)
+      // already resolved it earlier in the session.
+      const clientIp = await getCachedPublicIp();
 
       const finalRequestData2 = {
         property_id: selectedPropertyId?.toString(),
@@ -840,7 +857,7 @@ export function GuestDetailsForm({ onComplete }) {
         
         ReservationJson: JSON.stringify(payload),
         SessionId: bookingSessionId,
-        Ip: "",
+        Ip: clientIp,
         CtaCustomerId: formData.customerGuid || "",
         Room: (selectedRoom || []).map((room) => room?.roomName).join(", "),
         Package: (selectedRoom || [])
