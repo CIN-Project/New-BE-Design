@@ -25,7 +25,7 @@ import "./Wizard.css";
  */
 export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
-  const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
+  const { setActiveRoomSlotIndex, setSelectedRoom, selectedRoom } = useStayContext();
   const { updateUserDetails } = useCartContext();
   const {
     setSelectedPropertyId,
@@ -415,6 +415,15 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
     }
     if (!syncStepToUrl) return;
     const urlStep = parseInt(params.get("step"), 10);
+    // A later step in the URL with no room chosen (e.g. a page reload — selections aren't persisted)
+    // would open an empty guest-details/confirm step; start from room selection instead.
+    const hasSelectedRoom = Array.isArray(selectedRoom) && selectedRoom.some((slot) => slot?.roomId);
+    if (urlStep >= 2 && urlStep <= 4 && !hasSelectedRoom) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("step");
+      window.history.replaceState({}, "", url);
+      return;
+    }
     if (urlStep === 3) setStep(2);
     else if (urlStep >= 1 && urlStep <= 4) {
       console.log("[PAYMENT-FLOW] Wizard.jsx: restoring step from URL on mount", { urlStep });
@@ -431,6 +440,8 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       console.log("[PAYMENT-FLOW] Wizard.jsx: popstate (back/forward) step change", { urlStep });
       if (urlStep === 3) setStep(2);
       else if (urlStep >= 1 && urlStep <= 4) setStep(urlStep);
+      // The first (room selection) entry has no "step" param — Back from step 2 lands there.
+      else if (!url.searchParams.has("step")) setStep(1);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);

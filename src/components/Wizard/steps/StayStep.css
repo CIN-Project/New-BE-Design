@@ -1118,21 +1118,33 @@
   z-index: 1200;
 }
 
+/* The card itself doesn't scroll (its contents do, in .be-room-modal-scroll), so the close button
+   stays pinned to the corner. dvh keeps it within the visible screen on mobile browsers. */
 .be-room-modal {
   background: #ffffff;
   border-radius: 10px;
   width: 100%;
   max-width: 640px;
   max-height: 85vh;
-  overflow-y: auto;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   position: relative;
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+}
+
+.be-room-modal-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 
 .be-room-modal-close {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  z-index: 5;
   width: 34px;
   height: 34px;
   border-radius: 50%;

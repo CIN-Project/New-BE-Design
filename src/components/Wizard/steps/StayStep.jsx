@@ -263,6 +263,8 @@ function RoomDetailsModal({ room, onClose }) {
           <CloseIcon />
         </button>
 
+        {/* Only this scrolls, so the close button above stays in the corner. */}
+        <div className="be-room-modal-scroll">
         {room.Images?.length > 0 && (
           <ImageSlider images={room.Images} className="be-room-modal-img" />
         )}
@@ -306,6 +308,7 @@ function RoomDetailsModal({ room, onClose }) {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>
@@ -358,6 +361,19 @@ function getStandardRateEntries(property, room) {
       return { rate, mapping: rateMapping, ratePlan };
     })
     .filter((entry) => entry.ratePlan);
+}
+
+/** Rate-plan entries sorted by the stay total each card displays, cheapest first (ties keep their
+ * original order). Entries with no positive price sort last. */
+function sortRateEntriesByPrice(entries, adults) {
+  const priceOf = ({ ratePlan, mapping }) => {
+    const total = computeRatePlanTotals(ratePlan, mapping, adults)?.totalCartValue;
+    return total > 0 ? total : Infinity;
+  };
+  return entries
+    .map((entry, index) => ({ entry, index, price: priceOf(entry) }))
+    .sort((a, b) => a.price - b.price || a.index - b.index)
+    .map(({ entry }) => entry);
 }
 
 /** Whether a room has ANY computable rate at all for these dates — mirrors
@@ -2293,7 +2309,13 @@ export function StayStep({ onRoomsSelected }) {
         advancingToIndex === null &&
         !error &&
         rooms.map((room) => {
-          const standardEntries = getStandardRateEntries(rateResponse, room);
+          // A room's rate plans, cheapest first (the price each plan's card shows for this stay
+          // and guest count) — STAAH returns them in its own arbitrary order. Plans without a
+          // computable price go last.
+          const standardEntries = sortRateEntriesByPrice(
+            getStandardRateEntries(rateResponse, room),
+            activeSlot?.adults ?? 1,
+          );
           const fromPriceInfo = getRoomFromPrice(
             rateResponse,
             room,

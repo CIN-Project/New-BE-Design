@@ -223,7 +223,7 @@ export function BookingFlow({
       {stage === "wizard" && !onNavigateToWizard && (
         <Wizard
           onComplete={onComplete}
-          syncStepToUrl={false}
+          syncStepToUrl={Boolean(config?.syncWizardStepToUrl)}
           onSearch={handleSearch}
           // Same "no onBackFromCta, no back button" rule as the "search"
           // stage's SearchBar just above — a consumer that never gave this

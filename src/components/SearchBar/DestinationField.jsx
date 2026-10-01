@@ -59,6 +59,8 @@ export function DestinationField({
     ? properties.filter((p) => p.isDayUse !== false)
     : properties;
   const groups = groupByCity(visibleProperties);
+  // Long hotel names are truncated in the field; hovering shows the full name.
+  const selectedLabel = propertyLabel(selected || {});
 
   return (
     <div
@@ -82,11 +84,12 @@ export function DestinationField({
         id={triggerId}
         onClick={disabled ? undefined : onToggle}
         aria-disabled={disabled || undefined}
+        title={selectedLabel || undefined}
       >
         <label>Location</label>
         <div className="be-custom-select-display">
           <span className="be-truncate">
-            {propertyLabel(selected || {}) || "Select location..."}
+            {selectedLabel || "Select location..."}
           </span>
           {!disabled && (
           <svg
@@ -122,6 +125,7 @@ export function DestinationField({
                       type="button"
                       className={`be-destination-option ${selectedPropertyId === key ? "be-destination-option--selected" : ""}`}
                       onClick={() => onSelect(p)}
+                      title={propertyLabel(p)}
                     >
                       {propertyLabel(p)}
                     </button>

@@ -133,6 +133,7 @@ Fonts can also be set via `config` instead of `theme` — see `fontFamily`/`font
 | `properties` | Search bar destination list | `[{ staahPropertyId, propertyId, propertyName, cityName, cityId, propertySlug?, staahBookingId?, phone? }]` — grouped by `cityName` in the dropdown. `staahPropertyId` (not `propertyId`) is what's actually sent to every rate/room/calendar API call — see the Security-adjacent note in `propertiesApi.mapCityWithPropertyResponse`'s doc comment. A simpler `{ id, name, city }` shape is also accepted as a fallback for hand-written mocks. |
 | `otpLength` | Loyalty OTP unlock | Default `6` |
 | `defaultAdults` | Search bar guests | Adults pre-filled for the first room and every room the guest adds, clamped to 1–4. Default `1` |
+| `syncWizardStepToUrl` | Booking steps | `true` gives each step its own browser history entry (`?step=N`), so the browser's Back button returns to the previous step instead of leaving the page. Default `false` |
 | `prefillDefaultDates` | Search bar dates | `true` starts the search on tonight → tomorrow instead of empty dates. Default `false` |
 | `defaultMemberPromoCode` | Payment | Optional fallback promo code applied when a guest books a member rate with no promo entered — property-specific business data, no default |
 | `sessionTimeoutMs` | Member login session | Default `30 * 60 * 1000` (30 minutes) |
