@@ -79,12 +79,29 @@ const { Provider, useDomainContext } = createDomainContext(
   initialState,
 );
 
+// config.defaultAdults, clamped to the guest picker's own 1–4 range.
+function defaultAdultsFrom(config) {
+  const n = Math.round(Number(config?.defaultAdults));
+  return Number.isFinite(n) ? Math.min(4, Math.max(1, n)) : 1;
+}
+
+// Tonight → tomorrow at local midnight (the same shape the date picker sets).
+function defaultStayDates() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 1);
+  return { selectedStartDate: start, selectedEndDate: end };
+}
+
 export function SearchProvider({ children }) {
   const config = useConfig();
   return (
     <Provider
       initialState={{
         keyData: config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : null,
+        searchRooms: [{ id: 1, adults: defaultAdultsFrom(config), children: 0 }],
+        ...(config.prefillDefaultDates ? defaultStayDates() : {}),
       }}
     >
       {children}
@@ -94,6 +111,7 @@ export function SearchProvider({ children }) {
 
 export function useSearchContext() {
   const ctx = useDomainContext();
+  const config = useConfig();
 
   const setSelectedDates = (startDate, endDate) => {
     if (startDate > endDate) {
@@ -107,7 +125,7 @@ export function useSearchContext() {
   const addSearchRoom = () => {
     ctx.setSearchRooms((rooms) => [
       ...rooms,
-      { id: Date.now(), adults: 1, children: 0 },
+      { id: Date.now(), adults: defaultAdultsFrom(config), children: 0 },
     ]);
   };
 

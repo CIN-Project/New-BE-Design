@@ -132,6 +132,8 @@ Fonts can also be set via `config` instead of `theme` — see `fontFamily`/`font
 | `membersApiUserId` / `membersApiPassword` | Loyalty/member login | **Server-only secret** — see Security note. These are the Members API's own service-account credentials, not a guest's login |
 | `properties` | Search bar destination list | `[{ staahPropertyId, propertyId, propertyName, cityName, cityId, propertySlug?, staahBookingId?, phone? }]` — grouped by `cityName` in the dropdown. `staahPropertyId` (not `propertyId`) is what's actually sent to every rate/room/calendar API call — see the Security-adjacent note in `propertiesApi.mapCityWithPropertyResponse`'s doc comment. A simpler `{ id, name, city }` shape is also accepted as a fallback for hand-written mocks. |
 | `otpLength` | Loyalty OTP unlock | Default `6` |
+| `defaultAdults` | Search bar guests | Adults pre-filled for the first room and every room the guest adds, clamped to 1–4. Default `1` |
+| `prefillDefaultDates` | Search bar dates | `true` starts the search on tonight → tomorrow instead of empty dates. Default `false` |
 | `defaultMemberPromoCode` | Payment | Optional fallback promo code applied when a guest books a member rate with no promo entered — property-specific business data, no default |
 | `sessionTimeoutMs` | Member login session | Default `30 * 60 * 1000` (30 minutes) |
 | `fontFamily` | Visual only | Sets both `--be-font-serif` and `--be-font-sans` to this one value — for a consumer with a single brand font. No default (package fonts render untouched). |

@@ -1,5 +1,7 @@
 "use client";
 
+import { PROMO_CODE_MAX_LENGTH } from "../../utils/promoCode.js";
+
 export function PromoField({ value, onChange }) {
   return (
     <div className="be-form-group be-promo-group">
@@ -16,7 +18,7 @@ export function PromoField({ value, onChange }) {
             browser's much wider UA text-input size. width:100% (shared
             value-display rule) still makes it fill whatever that column
             ends up being once laid out. */}
-        <input id="be-promo-input" type="text" size="10" placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
+        <input id="be-promo-input" type="text" size="10" maxLength={PROMO_CODE_MAX_LENGTH} placeholder="Optional" value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );

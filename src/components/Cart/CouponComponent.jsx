@@ -7,6 +7,7 @@ import { useSearchContext } from "../../context/SearchContext.js";
 import { verifyPromoCode } from "../../api/rates.js";
 import { postBookingWidged } from "../../api/tracking.js";
 import { encodeBase64 } from "../../utils/base64.js";
+import { PROMO_CODE_MAX_LENGTH } from "../../utils/promoCode.js";
 import "./CartOverview.css";
 
 /**
@@ -138,6 +139,7 @@ export function CouponComponent({ isOpen, onClose }) {
           <input
             type="text"
             value={code}
+            maxLength={PROMO_CODE_MAX_LENGTH}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Enter Code"
             style={{
