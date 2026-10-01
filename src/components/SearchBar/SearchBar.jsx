@@ -15,6 +15,7 @@ import { useCalendarRates } from "../../hooks/useCalendarRates.js";
 import { resolveExternalRedirectUrl } from "../../utils/externalRedirect.js";
 import { postBookingWidged } from "../../api/tracking.js";
 import { encodeBase64 } from "../../utils/base64.js";
+import { formatIsoDate } from "../../utils/date.js";
 import "./SearchBar.css";
 
 /**
@@ -378,10 +379,23 @@ export function SearchBar({
     }
 
     // Ported from Filterbar.js:2580 — real's exact ctaName string
-    // ("Search Click"), fired unconditionally on a valid search submit.
+    // ("Search Click"), fired unconditionally on a valid search submit. Real's
+    // postBookingWidged reads the live search state into every beacon (city,
+    // check-in/out, total adults/children, room count, promo code — see its
+    // payload ~2210-2230), so the same values are sent here; without them the
+    // beacon went out with empty dates and "0" guests.
+    const rooms = search.searchRooms || [];
     postBookingWidged(config, {
       ctaName: "Search Click",
       propertyId: search.selectedPropertyId,
+      cityId: search.selectedCityId,
+      checkIn: formatIsoDate(search.selectedStartDate),
+      checkOut: formatIsoDate(search.selectedEndDate),
+      adults: rooms.reduce((sum, r) => sum + (r?.adults || 0), 0),
+      children: rooms.reduce((sum, r) => sum + (r?.children || 0), 0),
+      roomCount: rooms.length,
+      promoCode: promoCodeInput.trim(),
+      utmSource: search.utmSource || "",
     });
 
     onSearch?.({
