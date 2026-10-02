@@ -7,14 +7,31 @@ import "./ImageSlider.css";
  * Minimal background-image carousel with dot pagination + hover arrows.
  * Used anywhere a room can have more than one photo (room-row card, the
  * Read More details modal) — falls back to a single static image (no
- * controls) when there's nothing to page through.
+ * controls) when there's nothing to page through. `onClick` makes the photo
+ * itself clickable (the arrows/dots stop propagation, so they still only page).
  */
-export function ImageSlider({ images, className = "", style }) {
+export function ImageSlider({ images, className = "", style, onClick, clickLabel }) {
   const list = (images || []).filter(Boolean);
   const [index, setIndex] = useState(0);
 
+  // Click/Enter/Space on the photo itself (not on an arrow or dot inside it).
+  const clickProps = onClick
+    ? {
+        role: "button",
+        tabIndex: 0,
+        "aria-label": clickLabel,
+        onClick,
+        onKeyDown: (e) => {
+          if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          onClick(e);
+        },
+      }
+    : {};
+  const clickableClass = onClick ? " be-img-slider--clickable" : "";
+
   if (list.length === 0) {
-    return <div className={`be-img-slider ${className}`} style={style} />;
+    return <div className={`be-img-slider${clickableClass} ${className}`} style={style} {...clickProps} />;
   }
 
   const goTo = (i, e) => {
@@ -34,8 +51,9 @@ export function ImageSlider({ images, className = "", style }) {
 
   return (
     <div
-      className={`be-img-slider ${className}`}
+      className={`be-img-slider${clickableClass} ${className}`}
       style={{ backgroundImage: `url("${list[index]}")`, ...style }}
+      {...clickProps}
     >
       {list.length > 1 && (
         <>

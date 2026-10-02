@@ -877,7 +877,13 @@ function RoomRow({
       className={`be-room-row-card${isActiveSlotRoom ? " be-selected" : ""}`}
     >
       <div className="be-room-row-top">
-        <ImageSlider images={room?.Images} className="be-room-row-img" />
+        <ImageSlider
+          images={room?.Images}
+          className="be-room-row-img"
+          // Same as Read More: the photo opens the room details popup.
+          onClick={onOpenDetails ? () => onOpenDetails(room) : undefined}
+          clickLabel={room?.RoomName ? `View details for ${room.RoomName}` : "View room details"}
+        />
 
         <div className="be-room-row-details">
           <div>

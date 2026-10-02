@@ -81,3 +81,8 @@
     opacity: 1;
   }
 }
+
+/* Photo opens something on click (e.g. the room row's Read More details). */
+.be-img-slider--clickable {
+  cursor: pointer;
+}
