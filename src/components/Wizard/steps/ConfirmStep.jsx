@@ -419,27 +419,54 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           // Optional/secondary: persist the confirmed booking server-side.
           // Fire-and-forget — the receipt is already sourced from the
           // verified confirm response, so a failure here shouldn't block it.
+          //
+          // reservationJson has THREE fallback tiers, tried in order —
+          // client reported BookingResponse still failing "in some cases"
+          // even with the single sessionStorage fallback this used to have,
+          // so a second, server-sourced tier was added between it and the
+          // first choice:
+          //  1. completeResponseObject.reservationJson — the full room/
+          //     customer/pricing object STAAH's verify-token response (or
+          //     the stored pay_later th-payment-request2 response) echoes
+          //     back. Confirmed EMPTY for pay_later specifically (STAAH
+          //     doesn't echo it for that form_of_payment).
+          //  2. confirmResp's own reservationJson, alongside the
+          //     bookingDetailsJson already read into `details` above from
+          //     the exact same nested path — this call (POST
+          //     /api/payment/confirm) runs for every successful booking
+          //     regardless of pay_now/pay_later and regardless of whether
+          //     sessionStorage survived the STAAH redirect round-trip, so
+          //     it's the most reliable source when tier 1 is empty.
+          //  3. parsedBookingData.reservationPayload — DetailStep.jsx saves
+          //     the full submitted reservation object into be_bookingData
+          //     BEFORE ever redirecting to payment (same fallback
+          //     handleRetryClick already relies on, ~531), but this is lost
+          //     if sessionStorage didn't survive the round-trip (private
+          //     browsing, a webview losing tab state, etc.) — the one
+          //     remaining gap neither tier above can cover.
+          const hasOwnKeys = (obj) =>
+            obj && typeof obj === "object" && Object.keys(obj).length > 0;
+          const confirmReservationJson =
+            confirmResp?.result?.[0]?.confirmData?.result?.[0]
+              ?.reservationJson;
+          const resolvedReservationJson = hasOwnKeys(
+            completeResponseObject?.reservationJson,
+          )
+            ? completeResponseObject.reservationJson
+            : hasOwnKeys(confirmReservationJson)
+              ? confirmReservationJson
+              : parsedBookingData?.reservationPayload;
+
+          if (!hasOwnKeys(resolvedReservationJson)) {
+            console.warn(
+              "[booking-engine-new] BookingResponse: reservationJson could not be resolved from any of the 3 known sources (verify-token echo, confirm-call echo, or the pre-payment sessionStorage snapshot) — sending {} to BookingResponse. This booking's receipt still rendered fine; only the CMS-side BookingResponse record for it may be incomplete.",
+              { reservationNo: parsedResponseJson?.reservation_id },
+            );
+          }
+
           postBookingResponse(config, {
             reservationNo: parsedResponseJson?.reservation_id,
-            // NOT parsedResponseJson — that's the gateway's own payment-
-            // status echo (status/reservation_id/error_msg), not the actual
-            // submitted reservation. completeResponseObject.reservationJson
-            // (the full room/customer/pricing object STAAH echoes back,
-            // same source handleRetryClick's reservationJsonSrc already
-            // reads at ~382) is the real ReservationJson this record is
-            // actually meant to carry — BUT confirmed empty for a real
-            // pay_later booking (STAAH's verify-token response apparently
-            // doesn't echo it back for that form_of_payment, unlike
-            // pay_now). Same fallback handleRetryClick already relies on
-            // for this exact gap (~531: bookingData.reservationPayload) —
-            // DetailStep.jsx saves the full submitted reservation object
-            // into be_bookingData BEFORE ever redirecting to payment, so
-            // it's available unconditionally regardless of payment type.
-            reservationJson:
-              completeResponseObject?.reservationJson &&
-              Object.keys(completeResponseObject.reservationJson).length > 0
-                ? completeResponseObject.reservationJson
-                : parsedBookingData?.reservationPayload,
+            reservationJson: resolvedReservationJson,
             bookingDetailsJson: details || parsedBookingData,
           });
         }

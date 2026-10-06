@@ -158,6 +158,8 @@ export function computeRoomSurcharge(selectedRoomEntry) {
   const {
     adults = 0,
     children = 0,
+    childAges,
+    infantAge = 0,
     applicableAdult = 0,
     applicableChild = 0,
     applicableGuest = 0,
@@ -165,11 +167,24 @@ export function computeRoomSurcharge(selectedRoomEntry) {
     packageRateList,
   } = selectedRoomEntry;
 
+  // Ported from Trevon's chargeable-children rule (Filterbar.js ~507-511,
+  // repeated in StayStep.js/DetailStep.js) — a child whose age is AT OR
+  // UNDER the property's InfantAge rides free and shouldn't count toward
+  // extra-child pricing at all, only a child older than that does. Falls
+  // back to the raw `children` count (every child chargeable) when
+  // childAges isn't populated — e.g. a room selected before this feature
+  // existed, or a consumer that never wires the age picker in — so
+  // existing behavior is unchanged unless real age data is actually there.
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge))
+        .length
+    : children;
+
   let adjustedAdults = adults;
-  let adjustedChildren = children;
-  if (adults < applicableAdult && children > 0) {
+  let adjustedChildren = chargeableChildren;
+  if (adults < applicableAdult && chargeableChildren > 0) {
     const neededAdults = applicableAdult - adults;
-    const childrenToAdults = Math.min(neededAdults, children);
+    const childrenToAdults = Math.min(neededAdults, chargeableChildren);
     adjustedAdults += childrenToAdults;
     adjustedChildren -= childrenToAdults;
   }
@@ -307,12 +322,25 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
           console.log("Prem applicableChild",applicableChild);
           console.log("Prem applicableGuest",applicableGuest);
 
-          let adjustedAdults = adults;
-          let adjustedChildren = children;
+          // Same chargeable-children rule as computeRoomSurcharge/
+          // DetailStep.jsx (ported from Trevon's Filterbar.js ~507-511) —
+          // a child at or under the property's InfantAge is free and
+          // shouldn't count toward this day-rate extraChildren override
+          // either. Falls back to the raw `children` count when
+          // sel.childAges isn't populated, same fallback as the other two
+          // copies of this calculation.
+          const chargeableChildren = Array.isArray(sel.childAges)
+            ? sel.childAges.filter(
+                (age) => age !== "" && Number(age) > Number(sel.infantAge || 0),
+              ).length
+            : children;
 
-          if (adults < applicableAdult && children > 0) {
+          let adjustedAdults = adults;
+          let adjustedChildren = chargeableChildren;
+
+          if (adults < applicableAdult && chargeableChildren > 0) {
             const neededAdults = applicableAdult - adults;
-            const childrenToAdults = Math.min(neededAdults, children);
+            const childrenToAdults = Math.min(neededAdults, chargeableChildren);
             adjustedAdults += childrenToAdults;
             adjustedChildren -= childrenToAdults;
           }

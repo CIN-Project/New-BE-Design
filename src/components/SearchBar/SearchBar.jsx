@@ -64,7 +64,8 @@ export function SearchBar({
   const config = useConfig();
   const search = useSearchContext();
   const cart = useCartContext();
-  const { setActiveRoomSlotIndex, setSelectedRoom } = useStayContext();
+  const { setActiveRoomSlotIndex, setSelectedRoom, propertyChildAge, propertyInfantAge } =
+    useStayContext();
 
   const properties = config.properties || [];
   // Matches real Amritara's own GHA flow (FormContext.js's getPropertyList,
@@ -358,6 +359,14 @@ export function SearchBar({
           ? "Please select a date."
           : "Please select check-in and check-out dates.",
       );
+      return;
+    }
+
+    // Ported from Trevon's Filterbar.js (~1911-1918) — every child's age
+    // dropdown must be off its "Select Age" placeholder before a search is
+    // allowed to run at all, not just before payment.
+    if (search.hasMissingChildAges()) {
+      toast.error("Please select age for every child.");
       return;
     }
 
@@ -683,6 +692,9 @@ export function SearchBar({
           onAddRoom={search.addSearchRoom}
           onRemoveRoom={search.removeSearchRoom}
           onUpdateGuests={search.updateSearchRoomGuests}
+          onUpdateChildAge={search.updateChildAge}
+          minChildAge={propertyInfantAge}
+          maxChildAge={propertyChildAge}
           isOpen={showGuestsModal}
           onToggle={() => openOnly(setShowGuestsModal, 350)}
           onDone={() => {

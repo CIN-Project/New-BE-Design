@@ -30,8 +30,25 @@ import "./SearchBar.css";
  * max is intercepted (the count doesn't change), which is what surfaces the
  * message and disables that button going forward. Decrementing away from
  * the max (or re-adding a room at 0/1) clears it again.
+ *
+ * @param {number} [minChildAge] - youngest selectable age (Trevon's
+ *   PropertyData.InfantAge). Defaults to 0 when the caller doesn't know a
+ *   real property's value yet (e.g. the search bar's own Travelers field,
+ *   used before any property is necessarily chosen).
+ * @param {number} [maxChildAge] - oldest selectable age (Trevon's
+ *   PropertyData.ChildAge). Defaults to 12, matching this component's
+ *   pre-existing "(0-12 yrs)" sublabel.
  */
-export function GuestsPicker({ rooms, roomLimits, onAddRoom, onRemoveRoom, onUpdateGuests }) {
+export function GuestsPicker({
+  rooms,
+  roomLimits,
+  onAddRoom,
+  onRemoveRoom,
+  onUpdateGuests,
+  onUpdateChildAge,
+  minChildAge = 0,
+  maxChildAge = 12,
+}) {
   // { [roomId]: { adults: bool, children: bool } } — true once a blocked
   // attempt has actually happened for that counter.
   const [blocked, setBlocked] = useState({});
@@ -110,7 +127,9 @@ export function GuestsPicker({ rooms, roomLimits, onAddRoom, onRemoveRoom, onUpd
               <div className="be-counter-item">
                 <div className="be-counter-label-wrap">
                   <span className="be-counter-label">Children</span>
-                  <span className="be-counter-sublabel">(0-12 yrs)</span>
+                  <span className="be-counter-sublabel">
+                    ({minChildAge}-{maxChildAge} yrs)
+                  </span>
                 </div>
                 <div className="be-counter-control">
                   <button
@@ -138,6 +157,45 @@ export function GuestsPicker({ rooms, roomLimits, onAddRoom, onRemoveRoom, onUpd
                 )}
               </div>
             </div>
+            {/* One required age dropdown per child — ported from Trevon's
+                RoomManager.js (~341-366). `childAges` is kept position-
+                matched to `children` by SearchContext's
+                updateSearchRoomGuests, so its length always equals
+                room.children; this never falls back to room.children
+                itself. "" is the "Select Age" placeholder/sentinel, same
+                value Trevon uses, enforced before search (SearchBar.jsx)
+                and before payment (DetailStep.jsx). */}
+            {room.children > 0 && (
+              <div className="be-child-ages-wrap">
+                {(room.childAges || []).map((age, childIndex) => (
+                  <div key={childIndex} className="be-child-age-item">
+                    <label className="be-child-age-label">
+                      Child {childIndex + 1} Age{" "}
+                      <span className="be-child-age-required">*</span>
+                    </label>
+                    <select
+                      className="be-child-age-select"
+                      value={age}
+                      onChange={(e) =>
+                        onUpdateChildAge?.(room.id, childIndex, e.target.value)
+                      }
+                    >
+                      <option value="" disabled>
+                        Select Age
+                      </option>
+                      {Array.from(
+                        { length: maxChildAge - minChildAge + 1 },
+                        (_, i) => minChildAge + i,
+                      ).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}

@@ -48,6 +48,15 @@ const initialState = {
   ratePingChainName: null,
   ratePingMember: null,
   rateSearchPrice: 0,
+  // STAAH's PropertyData.ChildAge/InfantAge (GetRoomsRates content call) —
+  // the real, property-specific child-age dropdown range, same source
+  // Trevon's RoomManager.js reads (ChildAge=oldest selectable age,
+  // InfantAge=oldest age that's still free/non-"chargeable"). Set by
+  // StayStep.jsx once a property's content is fetched; defaults match
+  // GuestsPicker.jsx's own pre-existing "(0-12 yrs)" fallback sublabel so
+  // nothing looks broken before that fetch resolves.
+  propertyChildAge: 12,
+  propertyInfantAge: 0,
 };
 
 const { Provider, useDomainContext } = createDomainContext(

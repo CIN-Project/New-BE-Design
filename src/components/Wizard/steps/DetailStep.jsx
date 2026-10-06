@@ -411,6 +411,24 @@ export function GuestDetailsForm({ onComplete }) {
       return "Selected children are greater than the max children allowed in one or more rooms";
     }
 
+    // Ported from Trevon's DetailStep.js (~377-385, error at ~427-429) —
+    // last-chance check before payment, same as the search-time check
+    // already in SearchBar.jsx (handleSubmit), in case a room was already
+    // picked when a child was added/edited and the guest skips straight to
+    // Proceed to Pay without touching Search again.
+    const isChildAgeMissing = (rooms || []).some(
+      (room) =>
+        (room.children || 0) > 0 &&
+        ((room.childAges || []).length !== room.children ||
+          (room.childAges || []).some(
+            (age) => age === "" || age === null || age === undefined,
+          )),
+    );
+    if (isChildAgeMissing) {
+      toast.error("Select Child Age");
+      return "Select Child Age";
+    }
+
     const roomCountMap = (rooms || []).reduce((acc, room) => {
       if (!acc[room.roomId])
         acc[room.roomId] = {
@@ -643,16 +661,29 @@ export function GuestDetailsForm({ onComplete }) {
                   applicableChild,
                   applicableGuest
                 } = room;
+          // Same chargeable-children rule as ratePricing.js's
+          // computeRoomSurcharge (ported from Trevon's Filterbar.js
+          // ~507-511) — a child at or under the property's InfantAge is
+          // free and shouldn't count toward extraChild here either. Falls
+          // back to the raw `children` count when childAges isn't
+          // populated, same as computeRoomSurcharge's own fallback.
+          const childAges = searchRoom?.childAges;
+          const infantAge = room?.infantAge || 0;
+          const chargeableChildren = Array.isArray(childAges)
+            ? childAges.filter(
+                (age) => age !== "" && Number(age) > Number(infantAge),
+              ).length
+            : children;
           // --- Step 1: Adjust children if adults are less than applicableAdult ---
                 let adjustedAdults = adults;
-                let adjustedChildren = children;
-                
-                if (adults < applicableAdult && children > 0) {
+                let adjustedChildren = chargeableChildren;
+
+                if (adults < applicableAdult && chargeableChildren > 0) {
                   const neededAdults = applicableAdult - adults;
-                  const childrenToAdults = Math.min(neededAdults, children);
+                  const childrenToAdults = Math.min(neededAdults, chargeableChildren);
                   adjustedAdults += childrenToAdults;
                   adjustedChildren -= childrenToAdults;
-                }     
+                }
                 const extraChild =
                   adjustedChildren > applicableChild
                     ? Math.min(
@@ -731,9 +762,21 @@ export function GuestDetailsForm({ onComplete }) {
                 : [],
           amountaftertax: roomWiseTotal.toFixed(2),
           remarks: "No Smoking",
+          // GuestDetails ported from Trevon's DetailStep.js (~1408-1421) —
+          // STAAH wants each child's individual age, not just the count.
+          // Uses the raw childAges array (every child, infants included —
+          // the chargeable-children exemption above only ever affects
+          // PRICING, STAAH's own GuestCount still wants the true ages for
+          // every child in the room).
           GuestCount: [
             { AgeQualifyingCode: "10", Count: String(adults) },
-            { AgeQualifyingCode: "8", Count: String(children) },
+            {
+              AgeQualifyingCode: "8",
+              Count: String(children),
+              GuestDetails: (childAges || [])
+                .filter((age) => age !== "")
+                .map((age) => ({ Age: Number(age) })),
+            },
           ],
         };
       });

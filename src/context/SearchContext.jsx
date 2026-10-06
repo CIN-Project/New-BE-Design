@@ -20,7 +20,12 @@ const initialState = {
   isDateChanged: false,
   keyData: null,
   searchResults: [],
-  searchRooms: [{ id: 1, adults: 1, children: 0 }],
+  // `childAges` is position-matched to `children` (one entry per child, an
+  // empty-string placeholder until an age is actually picked) — ported
+  // from Trevon's cin_booking_engine/RoomManager.js + cin_context/
+  // BookingEngineContext.js (same per-child age dropdown pattern), since
+  // this package never carried per-child ages before, only a raw count.
+  searchRooms: [{ id: 1, adults: 1, children: 0, childAges: [] }],
   // Day Use booking — ported from Filterbar.js's day-use toggle. Kept as a
   // single flag (not Filterbar.js's two-tier "live filter state" vs
   // "committed context state" split) since this package doesn't have that
@@ -100,7 +105,7 @@ export function SearchProvider({ children }) {
     <Provider
       initialState={{
         keyData: config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : null,
-        searchRooms: [{ id: 1, adults: defaultAdultsFrom(config), children: 0 }],
+        searchRooms: [{ id: 1, adults: defaultAdultsFrom(config), children: 0, childAges: [] }],
         ...(config.prefillDefaultDates ? defaultStayDates() : {}),
       }}
     >
@@ -125,7 +130,7 @@ export function useSearchContext() {
   const addSearchRoom = () => {
     ctx.setSearchRooms((rooms) => [
       ...rooms,
-      { id: Date.now(), adults: defaultAdultsFrom(config), children: 0 },
+      { id: Date.now(), adults: defaultAdultsFrom(config), children: 0, childAges: [] },
     ]);
   };
 
@@ -157,7 +162,29 @@ export function useSearchContext() {
             : field === "adults"
               ? Math.max(1, current - 1)
               : Math.max(0, current - 1);
-        return { ...r, [field]: next };
+        if (field !== "children") return { ...r, [field]: next };
+        // Keep childAges position-matched to the new count — ported from
+        // Trevon's updateRoom (cin_context/BookingEngineContext.js): adding
+        // a child appends an empty "not yet picked" slot, removing one
+        // drops the LAST slot (not necessarily the one the guest meant, but
+        // matches Trevon's own behavior exactly).
+        const childAges = [...(r.childAges || [])];
+        while (childAges.length < next) childAges.push("");
+        while (childAges.length > next) childAges.pop();
+        return { ...r, children: next, childAges };
+      }),
+    );
+  };
+
+  // Ported from Trevon's updateChildAge (cin_context/BookingEngineContext.js
+  // ~46-79) — sets one child's age within a room's childAges array.
+  const updateChildAge = (id, childIndex, age) => {
+    ctx.setSearchRooms((rooms) =>
+      rooms.map((r) => {
+        if (r.id !== id) return r;
+        const childAges = [...(r.childAges || [])];
+        childAges[childIndex] = age;
+        return { ...r, childAges };
       }),
     );
   };
@@ -178,12 +205,20 @@ export function useSearchContext() {
     return `${totalAdults} Adult, ${totalChildren} Children - ${totalRooms} Room`;
   };
 
+  // Ported from Trevon's Filterbar.js (~1911-1918) — blocks a search while
+  // any child's age dropdown is still on its "Select Age" placeholder
+  // ("" is the not-yet-picked sentinel, same as Trevon's).
+  const hasMissingChildAges = () =>
+    ctx.searchRooms.some((r) => (r.childAges || []).some((age) => age === ""));
+
   return {
     ...ctx,
     setSelectedDates,
     addSearchRoom,
     removeSearchRoom,
     updateSearchRoomGuests,
+    updateChildAge,
+    hasMissingChildAges,
     getSearchGuestsSummary,
     commitSearch,
   };

@@ -1284,6 +1284,9 @@ export function StayStep({ onRoomsSelected }) {
     activeRoomSlotIndex: currentRoomIndex,
     setActiveRoomSlotIndex: setCurrentRoomIndex,
     setIsRatesRefreshing,
+    propertyInfantAge,
+    setPropertyChildAge,
+    setPropertyInfantAge,
   } = useStayContext();
   const { user } = useBookingEngineAuth();
 
@@ -1364,7 +1367,10 @@ export function StayStep({ onRoomsSelected }) {
   // `searchRooms`, so they kept computing against the stale prior guest
   // count until a room was added or removed for some unrelated reason.
   const searchRoomsKey = (searchRooms || [])
-    .map((r) => `${r.id}:${r.adults}:${r.children}`)
+    .map(
+      (r) =>
+        `${r.id}:${r.adults}:${r.children}:${(r.childAges || []).join("-")}`,
+    )
     .join(",");
   const nights = calcNights(selectedStartDate, selectedEndDate);
 
@@ -1379,6 +1385,11 @@ export function StayStep({ onRoomsSelected }) {
   // only ever mutates the specific room being edited, by id.
   useEffect(() => {
     if (!searchRooms?.length) return;
+    // childAges compared by VALUE (JSON.stringify), not reference — picking
+    // a child's age (SearchContext's updateChildAge) only ever mutates one
+    // slot of a room's childAges array, never adults/children themselves,
+    // so without this an age pick would never resync into selectedRoom at
+    // all (the id/adults/children comparison alone wouldn't notice it).
     const inSync =
       Array.isArray(selectedRoom) &&
       selectedRoom.length === searchRooms.length &&
@@ -1386,7 +1397,9 @@ export function StayStep({ onRoomsSelected }) {
         (sr, i) =>
           selectedRoom[i]?.id === sr.id &&
           selectedRoom[i]?.adults === sr.adults &&
-          selectedRoom[i]?.children === sr.children,
+          selectedRoom[i]?.children === sr.children &&
+          JSON.stringify(selectedRoom[i]?.childAges || []) ===
+            JSON.stringify(sr.childAges || []),
       );
 
     if (!inSync) {
@@ -1395,11 +1408,19 @@ export function StayStep({ onRoomsSelected }) {
         searchRooms.map((sr) => {
           const existing = existingById.get(sr.id);
           return existing
-            ? { ...existing, adults: sr.adults, children: sr.children }
+            ? {
+                ...existing,
+                adults: sr.adults,
+                children: sr.children,
+                childAges: sr.childAges,
+                infantAge: propertyInfantAge,
+              }
             : {
                 id: sr.id,
                 adults: sr.adults,
                 children: sr.children,
+                childAges: sr.childAges,
+                infantAge: propertyInfantAge,
                 roomId: "",
                 roomName: "",
                 roomImage: null,
@@ -1468,6 +1489,8 @@ export function StayStep({ onRoomsSelected }) {
           id: r.id,
           adults: r.adults,
           children: r.children,
+          childAges: r.childAges,
+          infantAge: r.infantAge,
           roomId: "",
           roomName: "",
           roomImage: null,
@@ -1505,6 +1528,8 @@ export function StayStep({ onRoomsSelected }) {
           id: r.id,
           adults: r.adults,
           children: r.children,
+          childAges: r.childAges,
+          infantAge: r.infantAge,
           roomId: "",
           roomName: "",
           roomImage: null,
@@ -1534,6 +1559,8 @@ export function StayStep({ onRoomsSelected }) {
           id: r.id,
           adults: r.adults,
           children: r.children,
+          childAges: r.childAges,
+          infantAge: r.infantAge,
           roomId: "",
           roomName: "",
           roomImage: null,
@@ -1703,6 +1730,8 @@ export function StayStep({ onRoomsSelected }) {
       id: r.id,
       adults: r.adults,
       children: r.children,
+      childAges: r.childAges,
+      infantAge: propertyInfantAge,
       roomId: "",
     }));
 
@@ -1827,6 +1856,17 @@ export function StayStep({ onRoomsSelected }) {
         if (staahAddress.PostalCode)
           setSelectedPropertyPostalCode(staahAddress.PostalCode);
       }
+
+      // Same response, Trevon's own child-age dropdown range source
+      // (Filterbar.js ~772-773: PropertyData.ChildAge/InfantAge) — only
+      // overridden when the property actually sends a value, same "leave
+      // the sane default alone otherwise" pattern as the Address fields
+      // above.
+      const propertyData = property?.PropertyData;
+      if (propertyData?.ChildAge != null)
+        setPropertyChildAge(Number(propertyData.ChildAge));
+      if (propertyData?.InfantAge != null)
+        setPropertyInfantAge(Number(propertyData.InfantAge));
     }
   }
 
@@ -1957,6 +1997,15 @@ export function StayStep({ onRoomsSelected }) {
       if (staahAddress.PostalCode)
         setSelectedPropertyPostalCode(staahAddress.PostalCode);
     }
+
+    // Same redundant-but-harmless mirroring as the Address extraction
+    // above — matches Trevon's own handleSelectRoom setting this at BOTH
+    // call sites.
+    const propertyData = rateResponse?.PropertyData;
+    if (propertyData?.ChildAge != null)
+      setPropertyChildAge(Number(propertyData.ChildAge));
+    if (propertyData?.InfantAge != null)
+      setPropertyInfantAge(Number(propertyData.InfantAge));
 
     // Ported from Filterbar.js:2913/3293 — real's exact ctaName string
     // ("Select Package And Cart Open"), fired whenever a room+rate is

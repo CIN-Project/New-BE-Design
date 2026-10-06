@@ -8,6 +8,9 @@ export function GuestsField({
   onAddRoom,
   onRemoveRoom,
   onUpdateGuests,
+  onUpdateChildAge,
+  minChildAge,
+  maxChildAge,
   isOpen,
   onToggle,
   onDone,
@@ -32,7 +35,15 @@ export function GuestsField({
       {isOpen && (
         <div ref={modalRef} className={`be-travelers-modal be-modal-anim ${openUpwards ? "be-modal--open-up" : ""}`}>
           <div className="be-travelers-modal-body">
-            <GuestsPicker rooms={rooms} onAddRoom={onAddRoom} onRemoveRoom={onRemoveRoom} onUpdateGuests={onUpdateGuests} />
+            <GuestsPicker
+              rooms={rooms}
+              onAddRoom={onAddRoom}
+              onRemoveRoom={onRemoveRoom}
+              onUpdateGuests={onUpdateGuests}
+              onUpdateChildAge={onUpdateChildAge}
+              minChildAge={minChildAge}
+              maxChildAge={maxChildAge}
+            />
           </div>
           <div className="be-modal-footer">
             <button type="button" className="be-btn-done" onClick={onDone}>
