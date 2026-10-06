@@ -13,7 +13,7 @@ import { useStayContext } from "../../context/StayContext.js";
  */
 export function GuestsModal({ isOpen, onClose }) {
   const search = useSearchContext();
-  const { selectedRoom, propertyChildAge, propertyInfantAge } = useStayContext();
+  const { selectedRoom, propertyChildAge } = useStayContext();
 
   // Position-matched to searchRooms, same index pairing DetailStep.jsx uses
   // between searchRooms and selectedRoom — a slot with no room picked yet
@@ -50,7 +50,6 @@ export function GuestsModal({ isOpen, onClose }) {
         onRemoveRoom={search.removeSearchRoom}
         onUpdateGuests={search.updateSearchRoomGuests}
         onUpdateChildAge={search.updateChildAge}
-        minChildAge={propertyInfantAge}
         maxChildAge={propertyChildAge}
       />
       <div className="be-modal-footer">

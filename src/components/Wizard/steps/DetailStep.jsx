@@ -675,20 +675,24 @@ export function GuestDetailsForm({ onComplete }) {
               ).length
             : children;
           // --- Step 1: Adjust children if adults are less than applicableAdult ---
+          // Same Trevon-ported order as ratePricing.js's computeRoomSurcharge:
+          // adjust using raw children first (infants can fill an adult
+          // slot too), clamp to chargeableChildren after.
                 let adjustedAdults = adults;
-                let adjustedChildren = chargeableChildren;
+                let adjustedChildren = children;
 
-                if (adults < applicableAdult && chargeableChildren > 0) {
+                if (adults < applicableAdult && children > 0) {
                   const neededAdults = applicableAdult - adults;
-                  const childrenToAdults = Math.min(neededAdults, chargeableChildren);
+                  const childrenToAdults = Math.min(neededAdults, children);
                   adjustedAdults += childrenToAdults;
                   adjustedChildren -= childrenToAdults;
                 }
+                const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
                 const extraChild =
-                  adjustedChildren > applicableChild
+                  adjustedChargeableChildren > applicableChild
                     ? Math.min(
-                        adjustedChildren - applicableChild,
-                        Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
+                        adjustedChargeableChildren - applicableChild,
+                        Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
                       )
                     : 0;
  let roomWiseTotal = 0;
@@ -713,7 +717,7 @@ export function GuestDetailsForm({ onComplete }) {
               console.log("Prem dateAmountAfterTax",dateAmountAfterTax,nightEntry,room?.roomRateWithTax)
             
               roomWiseTotal += dateAmountAfterTax + (extraChild > 0
-                    ? Math.round(extraChild * (room?.childRate || 0)) : 0);
+                    ? extraChild * Math.round(room?.childRate || 0) : 0);
               return {
               date,
               rate_id: room?.rateId,
@@ -725,18 +729,16 @@ export function GuestDetailsForm({ onComplete }) {
                 extraAdultRate: surcharge.extraAdultCharge
                   ? String(Math.round(surcharge.extraAdultCharge))
                   : "0",
-                // Amritara's own extraGuests.extraChildRate is
+                // Trevon's own extraGuests.extraChildRate is
                 // `extraChild * Math.round(room.childRate)` (StayStep.js/
                 // DetailStep.js) — room.childRate being a single flat,
-                // first-night, tax-INCLUSIVE rate, not the multi-night,
-                // tax-exclusive surcharge.extraChildRoomCharge used for the
-                // actual billed total below. This display field now matches
-                // that exactly instead of reusing the billed-total figure.
+                // first-night, tax-INCLUSIVE rate (ExtraChildRate.RateAfterTax,
+                // see ratePricing.js's buildRoomSelection), not the
+                // multi-night, tax-exclusive surcharge.extraChildRoomCharge
+                // used for the actual billed total below.
                 extraChildRate:
                   extraChild > 0
-                    ? String(
-                        Math.round(extraChild * (room?.childRate || 0)),
-                      )
+                    ? String(extraChild * Math.round(room?.childRate || 0))
                     : "0",
               },
               fees: [],

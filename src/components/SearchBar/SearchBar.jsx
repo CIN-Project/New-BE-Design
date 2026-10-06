@@ -64,7 +64,7 @@ export function SearchBar({
   const config = useConfig();
   const search = useSearchContext();
   const cart = useCartContext();
-  const { setActiveRoomSlotIndex, setSelectedRoom, propertyChildAge, propertyInfantAge } =
+  const { setActiveRoomSlotIndex, setSelectedRoom, propertyChildAge } =
     useStayContext();
 
   const properties = config.properties || [];
@@ -693,7 +693,6 @@ export function SearchBar({
           onRemoveRoom={search.removeSearchRoom}
           onUpdateGuests={search.updateSearchRoomGuests}
           onUpdateChildAge={search.updateChildAge}
-          minChildAge={propertyInfantAge}
           maxChildAge={propertyChildAge}
           isOpen={showGuestsModal}
           onToggle={() => openOnly(setShowGuestsModal, 350)}

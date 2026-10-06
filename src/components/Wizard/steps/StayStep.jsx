@@ -1390,6 +1390,14 @@ export function StayStep({ onRoomsSelected }) {
     // slot of a room's childAges array, never adults/children themselves,
     // so without this an age pick would never resync into selectedRoom at
     // all (the id/adults/children comparison alone wouldn't notice it).
+    // infantAge is compared too — propertyInfantAge starts at 0 and is only
+    // populated once the content fetch resolves (below), so if searchRooms
+    // (with ages already chosen) exists before that fetch finishes, this
+    // effect stamps a stale infantAge:0 onto every slot. Without re-checking
+    // it here, that stale 0 would never get corrected once the real value
+    // arrives — every child would price as chargeable regardless of age,
+    // since the surcharge calc reads infantAge off the stored slot, not
+    // live from context.
     const inSync =
       Array.isArray(selectedRoom) &&
       selectedRoom.length === searchRooms.length &&
@@ -1398,6 +1406,7 @@ export function StayStep({ onRoomsSelected }) {
           selectedRoom[i]?.id === sr.id &&
           selectedRoom[i]?.adults === sr.adults &&
           selectedRoom[i]?.children === sr.children &&
+          selectedRoom[i]?.infantAge === propertyInfantAge &&
           JSON.stringify(selectedRoom[i]?.childAges || []) ===
             JSON.stringify(sr.childAges || []),
       );
@@ -1435,7 +1444,7 @@ export function StayStep({ onRoomsSelected }) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchRoomsKey]);
+  }, [searchRoomsKey, propertyInfantAge]);
 
   // Raw API responses, kept outside React state so a guest-count change
   // (selectedRoom) can re-run the merge below without re-fetching either

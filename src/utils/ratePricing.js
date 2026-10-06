@@ -139,7 +139,12 @@ export function buildRoomSelection(room, mapping, rate, adults, options = {}) {
     roomAdultExtraCharge:
       Math.round(selectedGuestRate?.RateAfterTax || 0) -
       Math.round(baseGuestRate?.RateAfterTax || 0),
-    childRate: parseFloat(firstDateEntry?.ExtraChildRate?.RateBeforeTax) || 0,
+    // Trevon's StayStep.js ~489-491 sources this from RateAfterTax (a
+    // single flat, first-night, tax-INCLUSIVE rate) specifically because
+    // it's used to build the payload's per-date `amountaftertax` figure
+    // (DetailStep.jsx's roomWiseTotal below) — RateBeforeTax would
+    // understate the amount actually billed for an extra child.
+    childRate: parseFloat(firstDateEntry?.ExtraChildRate?.RateAfterTax) || 0,
     minInventory: room?.MinInventory,
     packageRateList: ratePlan?.Rates ?? null,
     savings,
@@ -180,20 +185,30 @@ export function computeRoomSurcharge(selectedRoomEntry) {
         .length
     : children;
 
+  // Ported exactly from Trevon's StayStep.js ~356-396 — the adults-shortfall
+  // adjustment runs on the RAW children count (infants included: an infant
+  // can still fill a missing-adult slot), and only AFTER that does the
+  // chargeable/free split get applied (adjustedChargeableChildren). Running
+  // the adjustment on chargeableChildren directly (the previous version
+  // here) silently under-counts extraChildren whenever an infant and an
+  // older child are both present and an adult slot needs filling — the
+  // infant should be "spent" filling that slot first, not the chargeable
+  // child.
   let adjustedAdults = adults;
-  let adjustedChildren = chargeableChildren;
-  if (adults < applicableAdult && chargeableChildren > 0) {
+  let adjustedChildren = children;
+  if (adults < applicableAdult && children > 0) {
     const neededAdults = applicableAdult - adults;
-    const childrenToAdults = Math.min(neededAdults, chargeableChildren);
+    const childrenToAdults = Math.min(neededAdults, children);
     adjustedAdults += childrenToAdults;
     adjustedChildren -= childrenToAdults;
   }
+  const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
 
   const extraChildren =
-    adjustedChildren > applicableChild
+    adjustedChargeableChildren > applicableChild
       ? Math.min(
-          adjustedChildren - applicableChild,
-          Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
+          adjustedChargeableChildren - applicableChild,
+          Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
         )
       : 0;
 
@@ -335,24 +350,26 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
               ).length
             : children;
 
+          // Same Trevon-ported order as computeRoomSurcharge: adjust using
+          // raw children first, clamp to chargeableChildren after.
           let adjustedAdults = adults;
-          let adjustedChildren = chargeableChildren;
+          let adjustedChildren = children;
 
-          if (adults < applicableAdult && chargeableChildren > 0) {
+          if (adults < applicableAdult && children > 0) {
             const neededAdults = applicableAdult - adults;
-            const childrenToAdults = Math.min(neededAdults, chargeableChildren);
+            const childrenToAdults = Math.min(neededAdults, children);
             adjustedAdults += childrenToAdults;
             adjustedChildren -= childrenToAdults;
           }
+          const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
 
           const extraChildren =
-            adjustedChildren > applicableChild
+            adjustedChargeableChildren > applicableChild
               ? Math.min(
-                  adjustedChildren - applicableChild,
-                  Math.max(0, adjustedAdults + adjustedChildren - applicableGuest)
+                  adjustedChargeableChildren - applicableChild,
+                  Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
                 )
               : 0;
-              console.log("Prem extraChildren",extraChildren)
 
           let guestRate = {};
           const obpKeys = Object.keys(rateValue.OBP || {});
@@ -595,12 +612,20 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
 
   let roomTaxTotal = 0;
   let extraChargeTotal = 0;
+  let extraChildChargeTotal = 0;
+  let extraAdultChargeTotal = 0;
   const taxByName = {};
   const roomSurcharges = roomBreakdowns.map(({ room: r, taxTotal: roomTax, taxByName: roomTaxByName }, i) => {
     const surcharge = roomSurchargesByRoom[i];
 
     roomTaxTotal += roomTax;
     extraChargeTotal += surcharge.extraChildRoomCharge + surcharge.extraAdultCharge;
+    // Ported from Trevon's StayStep.js ~1872-1887, which renders "Extra
+    // Child Rate" and "Extra Adult Rate" as two separate cart lines, not
+    // one combined figure — kept split here so CartOverview.jsx can do the
+    // same instead of mislabeling extra-adult money as child money.
+    extraChildChargeTotal += surcharge.extraChildRoomCharge;
+    extraAdultChargeTotal += surcharge.extraAdultCharge;
     for (const [name, amount] of Object.entries(roomTaxByName || {})) {
       taxByName[name] = (taxByName[name] || 0) + amount;
     }
@@ -668,6 +693,8 @@ export function computeStayTotals({ selectedRoom, selectedStartDate, selectedEnd
     roomTaxTotal,
     roomSurcharges,
     extraChargeTotal,
+    extraChildChargeTotal,
+    extraAdultChargeTotal,
     totalSavings,
     addonAmount,
     addonTax: addonTaxTotal || 0,

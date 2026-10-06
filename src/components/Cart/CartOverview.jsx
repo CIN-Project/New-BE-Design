@@ -140,7 +140,8 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     nights,
     roomBaseCost,
     gstTotal,
-    extraChargeTotal,
+    extraChildChargeTotal,
+    extraAdultChargeTotal,
     taxesAndFeesTotal,
     taxByName,
     addonAmount,
@@ -511,13 +512,21 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                 </div>
               ) : null}
               {/* Extra-child/extra-adult surcharge (computeRoomSurcharge) —
-                  real Amritara's cart shows this as its own "Extra Child
-                  Rate" line alongside GST under "Taxes & Fees", not folded
-                  invisibly into the base room price. */}
-              {extraChargeTotal > 0 ? (
+                  real Trevon's cart shows these as two separate lines,
+                  "Extra Child Rate" and "Extra Adult Rate" (StayStep.js
+                  ~1872-1887), not one figure folded under a single label —
+                  the combined total was mislabeling extra-adult money as
+                  child money whenever both applied to the same room. */}
+              {extraChildChargeTotal > 0 ? (
                 <div className="cart-night-line">
                   <span>Extra Child Rate</span>
-                  <span>{formatCurrency(extraChargeTotal)}</span>
+                  <span>{formatCurrency(extraChildChargeTotal)}</span>
+                </div>
+              ) : null}
+              {extraAdultChargeTotal > 0 ? (
+                <div className="cart-night-line">
+                  <span>Extra Adult Rate</span>
+                  <span>{formatCurrency(extraAdultChargeTotal)}</span>
                 </div>
               ) : null}
               {/* Per-room, per-night tax breakdown — this package's own
