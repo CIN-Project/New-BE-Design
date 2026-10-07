@@ -41,18 +41,25 @@ export function useRepriceSelectedRooms() {
   const config = useConfig();
   const { selectedPropertyId, selectedStartDate, selectedEndDate, searchRooms } =
     useSearchContext();
-  const { selectedRoom, setSelectedRoom, setIsRatesRefreshing } = useStayContext();
+  const { selectedRoom, setSelectedRoom, setIsRatesRefreshing, propertyInfantAge } =
+    useStayContext();
   const { promoCodeContext } = useCartContext();
 
   const checkInParam = selectedStartDate ? formatIsoDate(selectedStartDate) : "";
   const checkOutParam = selectedEndDate ? formatIsoDate(selectedEndDate) : "";
-  // Includes adults/children (not just id) — a guest-count edit on an
-  // existing slot has to trigger a reprice too, the same reasoning as
-  // StayStep.jsx's own searchRooms->selectedRoom sync key.
+  // Includes adults/children/childAges (not just id) — a guest-count OR
+  // child-age edit on an existing slot has to trigger a reprice too, the
+  // same reasoning as StayStep.jsx's own searchRooms->selectedRoom sync key.
+  // Without childAges here, picking a child's age from the cart sidebar's
+  // "Modify Guests" on step 2 never re-ran this hook at all (adults/children
+  // hadn't changed), so the Extra Child Rate never updated for that age pick.
   const searchRoomsKey = (searchRooms || [])
-    .map((r) => `${r.id}:${r.adults}:${r.children}`)
+    .map(
+      (r) =>
+        `${r.id}:${r.adults}:${r.children}:${(r.childAges || []).join("-")}`,
+    )
     .join(",");
-  const repriceKey = `${selectedPropertyId || ""}|${checkInParam}|${checkOutParam}|${searchRoomsKey}|${promoCodeContext || ""}`;
+  const repriceKey = `${selectedPropertyId || ""}|${checkInParam}|${checkOutParam}|${searchRoomsKey}|${promoCodeContext || ""}|${propertyInfantAge}`;
 
   const lastKeyRef = useRef(null);
   const isFirstRunRef = useRef(true);
@@ -105,6 +112,8 @@ export function useRepriceSelectedRooms() {
           id: sr.id,
           adults: sr.adults,
           children: sr.children,
+          childAges: sr.childAges,
+          infantAge: propertyInfantAge,
           roomId: "",
         }));
 
@@ -172,12 +181,20 @@ export function useRepriceSelectedRooms() {
                 isMemberRate: slot.isMemberRate,
                 savings: slot.savings,
               });
-              // Also carries the fresh adults/children onto the slot itself
-              // (buildRoomSelection's own return doesn't include them) — belt
-              // and suspenders alongside useSyncSelectedRoomsWithSearch.js's
-              // separate effect, so this hook's own output is self-consistent
-              // even in the render before that other effect commits.
-              return { ...slot, adults: fresh.adults, children: fresh.children, ...repriced };
+              // Also carries the fresh adults/children/childAges/infantAge
+              // onto the slot itself (buildRoomSelection's own return doesn't
+              // include them) — belt and suspenders alongside
+              // useSyncSelectedRoomsWithSearch.js's separate effect, so this
+              // hook's own output is self-consistent even in the render
+              // before that other effect commits.
+              return {
+                ...slot,
+                adults: fresh.adults,
+                children: fresh.children,
+                childAges: fresh.childAges,
+                infantAge: propertyInfantAge,
+                ...repriced,
+              };
             }),
         );
       } catch (err) {

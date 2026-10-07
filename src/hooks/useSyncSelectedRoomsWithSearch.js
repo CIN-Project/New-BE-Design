@@ -27,13 +27,24 @@ import { useStayContext } from "../context/StayContext.js";
  * same sync as well; both checking the same "already in sync?" condition
  * makes having both harmless (whichever runs second just no-ops), so this
  * is purely additive rather than a change to that existing, working effect.
+ *
+ * Also carries childAges/infantAge (same as StayStep.jsx's own copy) — this
+ * hook predates the child-age feature and originally only tracked adults/
+ * children, which meant picking a child's age from the cart sidebar's
+ * "Modify Guests" on step 2 (GuestsModal) updated searchRooms but never
+ * propagated into selectedRoom[i].childAges at all: the surcharge calc reads
+ * childAges/infantAge off selectedRoom, not searchRooms, so an age picked on
+ * step 2 silently never affected the price.
  */
 export function useSyncSelectedRoomsWithSearch() {
   const { searchRooms } = useSearchContext();
-  const { selectedRoom, setSelectedRoom } = useStayContext();
+  const { selectedRoom, setSelectedRoom, propertyInfantAge } = useStayContext();
 
   const searchRoomsKey = (searchRooms || [])
-    .map((r) => `${r.id}:${r.adults}:${r.children}`)
+    .map(
+      (r) =>
+        `${r.id}:${r.adults}:${r.children}:${(r.childAges || []).join("-")}`,
+    )
     .join(",");
 
   useEffect(() => {
@@ -45,7 +56,10 @@ export function useSyncSelectedRoomsWithSearch() {
         (sr, i) =>
           selectedRoom[i]?.id === sr.id &&
           selectedRoom[i]?.adults === sr.adults &&
-          selectedRoom[i]?.children === sr.children,
+          selectedRoom[i]?.children === sr.children &&
+          selectedRoom[i]?.infantAge === propertyInfantAge &&
+          JSON.stringify(selectedRoom[i]?.childAges || []) ===
+            JSON.stringify(sr.childAges || []),
       );
 
     if (!inSync) {
@@ -54,11 +68,19 @@ export function useSyncSelectedRoomsWithSearch() {
         searchRooms.map((sr) => {
           const existing = existingById.get(sr.id);
           return existing
-            ? { ...existing, adults: sr.adults, children: sr.children }
+            ? {
+                ...existing,
+                adults: sr.adults,
+                children: sr.children,
+                childAges: sr.childAges,
+                infantAge: propertyInfantAge,
+              }
             : {
                 id: sr.id,
                 adults: sr.adults,
                 children: sr.children,
+                childAges: sr.childAges,
+                infantAge: propertyInfantAge,
                 roomId: "",
                 roomName: "",
                 roomImage: null,
@@ -67,5 +89,5 @@ export function useSyncSelectedRoomsWithSearch() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchRoomsKey]);
+  }, [searchRoomsKey, propertyInfantAge]);
 }
