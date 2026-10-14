@@ -1,0 +1,32 @@
+@keyframes be-modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes be-modal-fade-in-upward {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.be-modal-anim {
+  /* animation: be-modal-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); */
+}
+
+.be-modal-anim.be-modal--open-up {
+  top: auto !important;
+  bottom: 121% !important;
+  box-shadow: 0 -20px 45px rgba(0, 0, 0, 0.12), 0 0 15px rgba(199, 163, 106, 0.05) !important;
+  /* animation: be-modal-fade-in-upward 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; */
+}

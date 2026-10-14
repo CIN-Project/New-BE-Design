@@ -1,0 +1,95 @@
+.be-wizard {
+  max-width: 1280px;
+  margin: 0 auto;
+  /* padding: 0 0 3rem; */
+  font-family: var(--be-font-sans, "Inter", sans-serif);
+  color: var(--be-color-text, #2b2b2b);
+}
+
+.be-cart-details-layout {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.be-cart-left-col {
+  flex: 2;
+  min-width: 0;
+  /* Scrolls independently within its own pane, matching the cart sidebar's
+     own sticky+internal-scroll behavior (CartOverview.css's .cart-sidebar/
+     .cart-body-scroll) instead of growing the whole page taller — same thin
+     scrollbar styling too, so both sides feel like one consistent split-pane
+     layout rather than one column scrolling the OS default way and the
+     other scrolling on its own.
+
+     position:sticky (not just max-height) is the part that actually makes
+     the scrollbar show up: without it, max-height is measured from the top
+     of the viewport regardless of how far down the page this column starts
+     (below the header/step indicator) — so it could render taller than the
+     visible viewport before its own content ever exceeded that too-generous
+     cap, meaning the page scrolled while this element's own overflow never
+     engaged. Sticky pins it at the same top offset as .cart-sidebar, so its
+     height is measured from where it's actually stuck — the real remaining
+     viewport space — matching .cart-sidebar's own top/max-height values
+     exactly so both columns are pinned at the same scroll position. */
+  position: sticky;
+  top: 92px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.be-cart-left-col::-webkit-scrollbar {
+  /* 8px read as too thick/dominant on this column — back down to a slim
+     but still-visible bar (was 5px before the 8px pass). */
+  width: 4px;
+}
+.be-cart-left-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+.be-cart-left-col::-webkit-scrollbar-thumb {
+  /* Literal, not var(--be-color-primary-light) — this is a specific shade
+     requested for scrollbars only, independent of the shared theme primary
+     color (which many other elements also read from and shouldn't shift
+     just because this one wants a different, lighter tone). */
+  background: #e9dcc7;
+  border-radius: 3px;
+}
+
+.be-cart-left-col::-webkit-scrollbar-thumb:hover {
+  background: var(--be-color-primary, #846836);
+}
+
+@media (max-width: 1024px) {
+  .be-cart-details-layout {
+    /* CartOverview (2nd in DOM) shown ABOVE the guest form on mobile,
+       matching real Amritara's collapsed "Booking Details" summary card
+       sitting above its "Guest Details" form. The pay/confirm buttons
+       themselves no longer live in that summary card on mobile though —
+       they moved to the END of the form itself (DetailStep.css's
+       be-mobile-pay-actions, hidden on desktop where CartOverview's own
+       sticky-sidebar buttons are still used instead), matching Amritara's
+       own button placement there. */
+    flex-direction: column-reverse;
+    gap: 1.8rem;
+    /* align-items:flex-start (base rule above) is for the side-by-side
+       desktop row — it top-aligns the two columns instead of stretching
+       them to match heights. In this stacked column-reverse layout the
+       cross axis is horizontal, so flex-start instead means each column
+       sizes to its own preferred (max-content) width rather than filling
+       the screen. Preferred-width sizing computes as if nothing wraps —
+       so e.g. DetailStep's trust-badges row (flex-wrap:wrap, 3 items)
+       sized as if laid out on one unbroken line, that width became this
+       column's width, and the whole page had to grow wide enough to
+       fit it, overflowing the viewport instead of ever actually wrapping. */
+    align-items: stretch;
+  }
+
+  .be-cart-left-col {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}

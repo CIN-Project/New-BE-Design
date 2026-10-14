@@ -1,0 +1,1570 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import toast, { Toaster } from "react-hot-toast";
+import { useConfig } from "../../../config/configContext.js";
+import { useCartContext } from "../../../context/CartContext.js";
+import { useStayContext } from "../../../context/StayContext.js";
+import { useSearchContext } from "../../../context/SearchContext.js";
+import { useBookingEngineAuth } from "../../../context/AuthContext.js";
+import {
+  generateReservationId,
+  postPaymentRequest,
+  redirectToPayment,
+  postUserEnrollment,
+} from "../../../api/payment.js";
+import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
+import { getOrCreateSessionId, setCtaCustomerId } from "../../../utils/session.js";
+import { formatIsoDate } from "../../../utils/date.js";
+import { postBookingWidged } from "../../../api/tracking.js";
+import { redirectToPayU } from "../../../utils/payu.js";
+import { getCachedPublicIp } from "../../../utils/clientInfo.js";
+import "./DetailStep.css";
+
+const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Dr"];
+const COUNTRY_CODES = ["+91", "+1", "+44", "+971", "+65"];
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3Z" />
+    </svg>
+  );
+}
+
+function BoltIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="var(--be-color-primary, #846836)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+const errorStyle = {
+  color: "#ea4335",
+  fontSize: "0.72rem",
+  lineHeight: "1.25",
+  marginTop: "2px",
+  marginBottom: "0",
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+};
+
+export function GuestDetailsForm({ onComplete }) {
+  const config = useConfig();
+  const {
+    userDetails,
+    updateUserDetails,
+    selectedAddOns,
+    addonAmountTotal,
+    addonTaxTotal,
+    promoCodeContext,
+  } = useCartContext();
+  const stay = useStayContext();
+  const { selectedRoom } = stay;
+  const search = useSearchContext();
+  const {
+    selectedPropertyId,
+    selectedCityId,
+    selectedPropertyName,
+    selectedPropertyPhone,
+    selectedPropertyEmail,
+    selectedPropertyAddress,
+    selectedPropertyCity,
+    selectedPropertyState,
+    selectedPropertyPostalCode,
+    selectedStartDate,
+    selectedEndDate,
+    searchRooms,
+    keyData,
+    isDayUse,
+    dayUseArrivalTime,
+    setDayUseArrivalTime,
+    utmSource,
+  } = search;
+  const { user } = useBookingEngineAuth();
+  const [isDayUseTimePickerOpen, setIsDayUseTimePickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isDayUse) setIsDayUseTimePickerOpen(false);
+  }, [isDayUse]);
+
+  // 13 hourly slots, 10 AM through 10 PM — same range as Filterbar.js's
+  // reference implementation.
+  const dayUseTimeOptions = useMemo(
+    () =>
+      Array.from({ length: 13 }, (_, i) => {
+        const hour = i + 10;
+        const hour12 = ((hour + 11) % 12) + 1;
+        const period = hour < 12 ? "AM" : "PM";
+        return `${String(hour12).padStart(2, "0")}:00 ${period}`;
+      }),
+    [],
+  );
+
+  // "hh:mm AM/PM" -> 24h "HH:mm" for the reservation payload's arrival_time.
+  const to24HourTime = (time12h) => {
+    if (!time12h) return "00:00";
+    const match = String(time12h).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return "00:00";
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+    if (period === "AM" && hours === 12) hours = 0;
+    if (period === "PM" && hours !== 12) hours += 12;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  };
+
+  const [formData, setFormData] = useState({
+    title: userDetails?.title || "",
+    firstName: userDetails?.firstName || user?.FirstName || "",
+    lastName: userDetails?.lastName || user?.LastName || "",
+    email: userDetails?.email || user?.EmailId || "",
+    countryCode: userDetails?.countryCode || user?.MobilePrifix || "+91",
+    phone: userDetails?.phone || user?.MobileNo || "",
+    gstNumber: userDetails?.gstNumber || "",
+    specialRequests: userDetails?.specialRequests || "",
+    agreeToTerms: userDetails?.agreeToTerms || false,
+    customerGuid: userDetails?.customerGuid || "",
+  });
+  const [errors, setErrors] = useState({});
+  const [isLookingUpPhone, setIsLookingUpPhone] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        setIsProcessing(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setFormData((prev) => ({
+      ...prev,
+      firstName: prev.firstName || user?.FirstName || "",
+      lastName: prev.lastName || user?.LastName || "",
+      email: prev.email || user?.EmailId || "",
+      phone: prev.phone || user?.MobileNo || "",
+      countryCode: prev.countryCode || user?.MobilePrifix || "+91",
+    }));
+  }, [user]);
+
+  // Common postBookingWidged fields for every CTA fired from this step —
+  // mirrors real DetailStep.js's own postBookingWidged (~403-440), which
+  // rebuilds adults/children/rooms/cityId/checkIn/checkOut/roomsName/
+  // packageName/CustomerGuid fresh on EVERY call, not just one. `extra` can
+  // still override any of these per call site.
+  const trackCta = (ctaName, extra = {}) => {
+    const totalAdults = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.adults || 0),
+      0,
+    );
+    const totalChildren = (selectedRoom || []).reduce(
+      (sum, r) => sum + (r?.children || 0),
+      0,
+    );
+    postBookingWidged(config, {
+      ctaName,
+      propertyId: selectedPropertyId,
+      cityId: selectedCityId,
+      checkIn: formatIsoDate(selectedStartDate),
+      checkOut: formatIsoDate(selectedEndDate),
+      adults: totalAdults,
+      children: totalChildren,
+      roomCount: selectedRoom?.length,
+      roomsName: (selectedRoom || [])
+        .map((r) => r?.roomName)
+        .filter(Boolean)
+        .join(", "),
+      packageName: (selectedRoom || [])
+        .map((r) => r?.roomPackage)
+        .filter(Boolean)
+        .join(", "),
+      customerGuid: formData.customerGuid,
+      utmSource,
+      ...extra,
+    });
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+    if (name === "phone") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  // Returning-guest CRM lookup by phone (non-fatal — a convenience autofill,
+  // never blocks the form). Mirrors Amritara's getUserEnrollment/handlePhoneBlur.
+  const handlePhoneBlur = async () => {
+    if (!formData.phone || formData.phone.trim().length < 7) return;
+    setIsLookingUpPhone(true);
+    try {
+      const keyData =
+        search.keyData ||
+        (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const roomNames = (stay.selectedRoom || [])
+        .map((r) => r?.roomName)
+        .filter(Boolean)
+        .join(", ");
+      const packageNames = (stay.selectedRoom || [])
+        .map((r) => r?.roomPackage)
+        .filter(Boolean)
+        .join(", ");
+      // Same source the tracker (tracking.js's postBookingWidged) uses for
+      // its own `ip` field — getCachedPublicIp() fetches api64.ipify.org
+      // once per tab and caches the promise, so this costs nothing extra
+      // if the tracker already resolved it earlier in the session.
+      const clientIp = await getCachedPublicIp();
+      const result = await postUserEnrollment(config, {
+        payload: {
+          MobileNo: formData.phone,
+          PropertyId: search.selectedPropertyId?.toString(),
+          // Matches the documented payload shape (see payment.js's
+          // postUserEnrollment doc comment) — bookingSessionId reuses the
+          // same getOrCreateSessionId() session used for this booking
+          // everywhere else in this file (finalRequestData2, ~line 842).
+          SessionId: getOrCreateSessionId(),
+          Ip: clientIp,
+          Room: roomNames,
+          Package: packageNames,
+        },
+        keyData,
+      });
+      const row = result?.result?.[0];
+      if (row) {
+        setFormData((prev) => ({
+          ...prev,
+          title: row?.memberTitle || prev.title,
+          firstName: row?.firstName || prev.firstName,
+          lastName: row?.lastName || prev.lastName,
+          email: row?.email || prev.email,
+          customerGuid: row?.guid || prev.customerGuid,
+        }));
+        // Mirrors real DetailStep.js (~389-392): once a real CRM guid is
+        // known, it replaces the session-scoped tracking guid for every
+        // postBookingWidged call from here on — from ANY wizard step, not
+        // just this one, and even if the guest navigates back to an earlier
+        // step afterward (see getCtaCustomerId's own doc comment).
+        if (row?.guid) setCtaCustomerId(row.guid);
+      }
+      // Ported from DetailStep.js's getUserEnrollment (~529-583) — real's
+      // exact ctaName/apiName for this endpoint.
+      trackCta("Post User Enrollment", {
+        apiName: "user-enrollment",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
+        apiStatus: "200",
+        apiMessage: "Success",
+        customerGuid: row?.guid || formData.customerGuid,
+      });
+    } catch (err) {
+      // Swallowed on purpose: a failed lookup should never block checkout.
+      trackCta("Post User Enrollment", {
+        apiName: "user-enrollment",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/user-enrollment`,
+        apiStatus: err?.status ?? err?.message ?? "Error",
+        apiErrorCode: err?.status ?? "1166",
+        apiMessage: err?.status ? "Data not found" : err?.message || "Error",
+      });
+    } finally {
+      setIsLookingUpPhone(false);
+    }
+  };
+
+  const validate = () => {
+    const next = {};
+    if (!formData.title) next.title = "Please select a title.";
+    if (!formData.firstName.trim())
+      next.firstName = "Please enter your first name.";
+    else if (!/^[a-zA-Z\s]+$/.test(formData.firstName))
+      next.firstName = "First name can only contain letters and spaces.";
+    if (!formData.lastName.trim())
+      next.lastName = "Please enter your last name.";
+    else if (!/^[a-zA-Z\s]+$/.test(formData.lastName))
+      next.lastName = "Last name can only contain letters and spaces.";
+    if (!formData.email.trim()) next.email = "Please enter your email.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      next.email = "Please enter a valid email address.";
+    if (!formData.phone.trim()) next.phone = "Please enter your phone number.";
+    else if (!/^\d{10}$/.test(formData.phone.trim()))
+      next.phone = "Please enter a valid 10-digit phone number.";
+    if (!formData.agreeToTerms)
+      next.agreeToTerms = "You must agree to the privacy policy.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const proceedToPay = (rooms) => {
+    // Modify Dates (DateRangeModal.jsx) commits check-in/check-out together
+    // in one atomic setSelectedDates(start, end) call ONLY once a full
+    // range is picked — but the guest can also just close the modal (X/
+    // backdrop) right after picking only check-in, which leaves
+    // selectedEndDate null (see DateRangeModal.jsx's own handleChangeRange:
+    // the two-step start-then-null-end branch). Nothing downstream ever
+    // checked for that before proceeding to payment. Day Use only ever
+    // shows one date field to begin with (see SearchBar.jsx's matching
+    // check-in-only message), so it only needs selectedStartDate.
+    if (!selectedStartDate || (!isDayUse && !selectedEndDate)) {
+      const message = isDayUse
+        ? "Please select a date."
+        : !selectedStartDate
+          ? "Please select check-in and check-out dates."
+          : "Please select a check-out date.";
+      toast.error(message);
+      return message;
+    }
+
+    const isSelected = (rooms || []).every((room) => room?.roomId);
+    if (!isSelected) {
+      toast.error("Select your room(s)");
+      return "Select your room(s)";
+    }
+
+    const isInStock = (rooms || []).every(
+      (room) => Number(room?.roomRateWithTax) > 0,
+    );
+    if (!isInStock) {
+      toast.error("One or more room(s) are out of stock.");
+      return "One or more room(s) are out of stock.";
+    }
+
+    const isGuestLimitExceeded = (rooms || []).some(
+      (room) => (room.adults || 0) + (room.children || 0) > room.maxGuest,
+    );
+    if (isGuestLimitExceeded) {
+      toast.error(
+        "Selected guests are greater than the max guest allowed in one or more rooms",
+      );
+      return "Selected guests are greater than the max guest allowed in one or more rooms";
+    }
+
+    const isAdultLimitExceeded = (rooms || []).some(
+      (room) => room.adults > room.maxAdult,
+    );
+    if (isAdultLimitExceeded) {
+      toast.error(
+        "Selected adults are greater than the max adults allowed in one or more rooms",
+      );
+      return "Selected adults are greater than the max adults allowed in one or more rooms";
+    }
+
+    const isChildLimitExceeded = (rooms || []).some(
+      (room) => room.children > room.maxChildren,
+    );
+    if (isChildLimitExceeded) {
+      toast.error(
+        "Selected children are greater than the max children allowed in one or more rooms",
+      );
+      return "Selected children are greater than the max children allowed in one or more rooms";
+    }
+
+    // Ported from Trevon's DetailStep.js (~377-385, error at ~427-429) —
+    // last-chance check before payment, same as the search-time check
+    // already in SearchBar.jsx (handleSubmit), in case a room was already
+    // picked when a child was added/edited and the guest skips straight to
+    // Proceed to Pay without touching Search again.
+    const isChildAgeMissing = (rooms || []).some(
+      (room) =>
+        (room.children || 0) > 0 &&
+        ((room.childAges || []).length !== room.children ||
+          (room.childAges || []).some(
+            (age) => age === "" || age === null || age === undefined,
+          )),
+    );
+    if (isChildAgeMissing) {
+      toast.error("Select Child Age");
+      return "Select Child Age";
+    }
+
+    const roomCountMap = (rooms || []).reduce((acc, room) => {
+      if (!acc[room.roomId])
+        acc[room.roomId] = {
+          count: 0,
+          roomName: room.roomName,
+          minInventory: room.minInventory,
+        };
+      acc[room.roomId].count += 1;
+      return acc;
+    }, {});
+    const exceededRoomId = Object.keys(roomCountMap).find(
+      (roomId) =>
+        roomCountMap[roomId].count > roomCountMap[roomId].minInventory,
+    );
+    if (exceededRoomId) {
+      const { roomName, minInventory } = roomCountMap[exceededRoomId];
+      const message = `inventory exceeded for "${roomName}". Available: ${minInventory}`;
+      toast.error(message);
+      return message;
+    }
+
+    return "success";
+  };
+
+  // Most "Book Now" entry points across a consumer site (mega menu, hotel
+  // cards, offers, ...) land here via a direct URL carrying propertyId/
+  // propertyName only — SearchContext's phone/email/address fields are
+  // only ever populated by SearchBar.jsx's own handleSelectProperty (the
+  // Location dropdown), which never runs for that far more common direct-
+  // link path. config.properties (the same list SearchBar's dropdown is
+  // built from) already carries phone/email/addressLine per property, so
+  // it's a reliable fallback lookup here regardless of which way this
+  // property actually got selected.
+  const resolvedProperty = (config.properties || []).find(
+    (p) =>
+      String(p.staahPropertyId) === String(selectedPropertyId) ||
+      String(p.propertyId) === String(selectedPropertyId),
+  );
+  console.log("resolvedProperty",resolvedProperty)
+  const resolvedPropertyPhone =
+    selectedPropertyPhone ?? resolvedProperty?.phone ?? null;
+  const resolvedPropertyEmail =
+    selectedPropertyEmail ?? resolvedProperty?.email ?? null;
+  const resolvedPropertyAddress =
+    selectedPropertyAddress ?? resolvedProperty?.addressLine ?? null;
+  const resolvedPropertyCity =
+    selectedPropertyCity ?? resolvedProperty?.city ?? null;
+  const resolvedPropertyState =
+    selectedPropertyState ?? resolvedProperty?.state ?? null;
+  const resolvedPropertyPostalCode =
+    selectedPropertyPostalCode ?? resolvedProperty?.postalCode ?? null;
+
+  // PayU: Wizard.jsx leaves this flag when the guest comes back from PayU
+  // without a successful payment (failed / cancelled).
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("be_payuFailed")) {
+        window.sessionStorage.removeItem("be_payuFailed");
+        toast.error("Your payment was not completed. Please try again.");
+      }
+    } catch {
+      // sessionStorage unavailable — non-fatal.
+    }
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formOfPayment =
+      e.nativeEvent?.submitter?.value === "pay_later"
+        ? "pay_later"
+        : "pay_now";
+    // PayU mode: the guest still clicks "Pay Now", but the money is collected
+    // by PayU (not STAAH), so the reservation is staged with STAAH the same way
+    // Pay Later does (th-payment-request2, no STAAH gateway) and only confirmed
+    // once PayU reports success. `stagingMode` is what STAAH is told;
+    // `formOfPayment` stays what the guest actually clicked (tracking etc.).
+    const isPayU = config?.paymentGateway === "payu" && formOfPayment === "pay_now";
+    const stagingMode = isPayU ? "pay_later" : formOfPayment;
+    console.log(
+      `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
+      { selectedPropertyId },
+    );
+    const proceedResult = proceedToPay(selectedRoom);
+    if (proceedResult !== "success") {
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — proceedToPay check failed (room/guest mismatch)");
+      // Ported from DetailStep.js's handleSubmit (~1364-1372) — real
+      // Amritara passes proceedToPay's own returned failure STRING directly
+      // as ctaName (it's always one of: "Select your room(s)", "One or
+      // more room(s) are out of stock.", the three "Selected
+      // adults/children/guests are greater than..." messages, or an
+      // inventory-exceeded message) — same here, this one call site covers
+      // every proceedToPay failure reason, not just this specific message.
+      trackCta(proceedResult, {
+        apiErrorCode: proceedResult === "Failed to fetch" ? "1165" : "1166",
+        apiMessage: proceedResult,
+      });
+      return;
+    }
+    if (!validate()) {
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: BLOCKED — form validation failed", { errors });
+      const formEl = document.getElementById("be-guest-details-form");
+      if (formEl) {
+        const header = document.querySelector(".main-header");
+        const headerOffset = header
+          ? header.getBoundingClientRect().height
+          : 0;
+        const top =
+          formEl.getBoundingClientRect().top +
+          window.scrollY -
+          headerOffset -
+          16;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+      return;
+    }
+    updateUserDetails({ ...formData });
+    setIsProcessing(true);
+    try {
+      let reservationResp;
+      try {
+        reservationResp = await generateReservationId(config, selectedPropertyId);
+      } catch (reservationErr) {
+        // Ported from DetailStep.js's generateReservationIdFromAPI
+        // (~662-719) — fires on both outcomes; caught locally here (rather
+        // than falling through to handleSubmit's own generic catch below)
+        // specifically so the failure beacon gets this real ctaName
+        // instead of a generic "Payment failed" one.
+        trackCta("Fetch reservation ID", {
+          apiName: "reservation-id",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
+          apiStatus: reservationErr?.message || "Error",
+          apiErrorCode: "1166",
+          apiMessage: reservationErr?.message || "Could not generate a reservation ID.",
+        });
+        throw reservationErr;
+      }
+      const reservationId = reservationResp?.reservation_id;
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: generateReservationId result", { reservationResp, reservationId });
+      if (!reservationId) {
+        trackCta("Fetch reservation ID", {
+          apiName: "reservation-id",
+          apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
+          apiErrorCode: "1166",
+          apiMessage: "Could not generate a reservation ID.",
+        });
+        throw new Error(
+          "Could not generate a reservation ID. Please try again.",
+        );
+      }
+      trackCta("Fetch reservation ID", {
+        apiName: "reservation-id",
+        apiUrl: `${config?.staahBaseUrl || ""}/api/reservation-id`,
+        apiStatus: "Success",
+        apiMessage: "Success",
+        customField1: reservationId,
+      });
+
+      // Ported from real Amritara's DetailStep.js (~1392):
+      // postBookingWidged("","", false,"Pay Now Click","", "", "", "","",newReservationId)
+      // — fired right after a reservation_id is obtained, for both submit
+      // buttons here (real only ever has a working Pay Now button; this
+      // package's Pay Later is a real, separate submit path, so it gets
+      // its own "Pay Later Click" ctaName rather than being silently
+      // folded into "Pay Now Click").
+      trackCta(formOfPayment === "pay_later" ? "Pay Later Click" : "Pay Now Click", {
+        customField1: reservationId,
+      });
+
+      const numberOfDays = calculateNumberOfDays(
+        selectedStartDate,
+        selectedEndDate,
+      );
+
+      const { gstTotal, grandTotal, roomSurcharges, nights } =
+        computeStayTotals({
+          selectedRoom,
+          selectedStartDate,
+          selectedEndDate,
+          addonAmountTotal,
+          addonTaxTotal,
+        });
+      const totalTaxAmount = gstTotal;
+      const surchargeByRoomId = new Map(
+        (roomSurcharges || []).map((s) => [s.roomId, s]),
+      );
+
+      const promocode = promoCodeContext
+        ? atob(promoCodeContext)
+        : (selectedRoom || []).some((r) => r?.isMemberRate)
+          ? config.defaultMemberPromoCode || ""
+          : "";
+
+      const dateRange = getDateRange(selectedStartDate, selectedEndDate);
+      const mappedAddons = (selectedAddOns || []).map((addon) =>
+        mapAddon(addon, numberOfDays),
+      );
+
+      const selectedRoomSummary = (selectedRoom || []).map((room, index) => {
+        const searchRoom = (searchRooms || [])[index];
+        return {
+          roomName: room?.roomName,
+          roomId: room?.roomId,
+          roomImage: room?.roomImage || "no_image.jpg",
+          roomPackage: room?.roomPackage,
+          adults: searchRoom?.adults ?? room?.applicableAdult ?? 1,
+          children: searchRoom?.children ?? room?.applicableChild ?? 0,
+        };
+      });
+
+      const roomPayload = (selectedRoom || []).map((room, index) => {
+        const searchRoom = (searchRooms || [])[index];
+        const adults = searchRoom?.adults ?? room?.applicableAdult ?? 1;
+        const children = searchRoom?.children ?? room?.applicableChild ?? 0;
+        const surcharge = surchargeByRoomId.get(room?.roomId) || {};
+        const extraAdultCount =
+          room?.maxAdult != null && adults > room.maxAdult
+            ? adults - room.maxAdult
+            : 0;
+
+        const nightlyBreakdown = getRoomNightlyBreakdown(
+          room,
+          nights || 1,
+          surcharge.extraChildren || 0,
+        );
+        const nightByDateKey = new Map(
+          nightlyBreakdown.nights
+            .filter((n) => n.dateKey)
+            .map((n) => [n.dateKey, n]),
+        );
+
+        // getRoomNightlyBreakdown is now the single source of truth for
+        // this room's tax (real STAAH Tax array when there's no extra
+        // child, the extra-child GST-slab formula only when there is one —
+        // see that function's own doc comment) — no separate ternary
+        // needed here any more.
+        const roomTaxAmount = nightlyBreakdown.taxTotal;
+
+        const roomAddonAmount = index === 0 ? addonAmountTotal || 0 : 0;
+        const roomTotal =
+          nightlyBreakdown.baseTotal +
+          (surcharge.extraChildRoomCharge || 0) +
+          (surcharge.extraAdultCharge || 0) +
+          roomTaxAmount +
+          roomAddonAmount;
+
+            const {
+                  // adults,
+                  // children,
+                  applicableAdult,
+                  applicableChild,
+                  applicableGuest
+                } = room;
+          // Same chargeable-children rule as ratePricing.js's
+          // computeRoomSurcharge (ported from Trevon's Filterbar.js
+          // ~507-511) — a child at or under the property's InfantAge is
+          // free and shouldn't count toward extraChild here either. Falls
+          // back to the raw `children` count when childAges isn't
+          // populated, same as computeRoomSurcharge's own fallback.
+          const childAges = searchRoom?.childAges;
+          const infantAge = room?.infantAge || 0;
+          const chargeableChildren = Array.isArray(childAges)
+            ? childAges.filter(
+                (age) => age !== "" && Number(age) > Number(infantAge),
+              ).length
+            : children;
+          // --- Step 1: Adjust children if adults are less than applicableAdult ---
+          // Same Trevon-ported order as ratePricing.js's computeRoomSurcharge:
+          // adjust using raw children first (infants can fill an adult
+          // slot too), clamp to chargeableChildren after.
+                let adjustedAdults = adults;
+                let adjustedChildren = children;
+
+                if (adults < applicableAdult && children > 0) {
+                  const neededAdults = applicableAdult - adults;
+                  const childrenToAdults = Math.min(neededAdults, children);
+                  adjustedAdults += childrenToAdults;
+                  adjustedChildren -= childrenToAdults;
+                }
+                const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
+                const extraChild =
+                  adjustedChargeableChildren > applicableChild
+                    ? Math.min(
+                        adjustedChargeableChildren - applicableChild,
+                        Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
+                      )
+                    : 0;
+ let roomWiseTotal = 0;
+        return {
+          room_id: room?.roomId?.toString() ?? "",
+          room_name: room?.roomName ?? "",
+          arrival_date: formatIsoDate(selectedStartDate),
+          departure_date: formatIsoDate(selectedEndDate),
+          arrival_time: isDayUse ? to24HourTime(dayUseArrivalTime) : "00:00",
+          sepcial_request: formData.specialRequests || "",
+          bedding: { BedId: "", BedType: "", Beds: "" },
+          salutation: formData.title || "",
+          first_name: formData.firstName || "",
+          last_name: formData.lastName || "",
+          price: dateRange.map((date, dateIndex) => {
+            
+            console.log("Prem dateRange",date,nightByDateKey,nightlyBreakdown)
+            const nightEntry = nightByDateKey.get(date);
+            const dateAmountAfterTax = nightEntry
+              ? nightEntry.amount + nightEntry.totalTaxes
+              : Number(room?.roomRateWithTax) || 0;
+              console.log("Prem dateAmountAfterTax",dateAmountAfterTax,nightEntry,room?.roomRateWithTax)
+            
+              roomWiseTotal += dateAmountAfterTax + (extraChild > 0
+                    ? extraChild * Math.round(room?.childRate || 0) : 0);
+              return {
+              date,
+              rate_id: room?.rateId,
+              rate_name: room?.roomPackage,
+              amountaftertax: Math.round(dateAmountAfterTax || 0).toString(),
+              extraGuests: {
+                extraAdult: String(extraAdultCount),
+                extraChild: String(surcharge.extraChildren || 0),
+                extraAdultRate: surcharge.extraAdultCharge
+                  ? String(Math.round(surcharge.extraAdultCharge))
+                  : "0",
+                // Trevon's own extraGuests.extraChildRate is
+                // `extraChild * Math.round(room.childRate)` (StayStep.js/
+                // DetailStep.js) — room.childRate being a single flat,
+                // first-night, tax-INCLUSIVE rate (ExtraChildRate.RateAfterTax,
+                // see ratePricing.js's buildRoomSelection), not the
+                // multi-night, tax-exclusive surcharge.extraChildRoomCharge
+                // used for the actual billed total below.
+                extraChildRate:
+                  extraChild > 0
+                    ? String(extraChild * Math.round(room?.childRate || 0))
+                    : "0",
+              },
+              fees: [],
+              Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
+            };
+          }),
+          // Itemized by real STAAH tax Name (matches real Amritara's own
+          // DetailStep.js ~1097-1126, which sends every named tax key
+          // present on the room, not just a single hardcoded "GST") —
+          // falls back to one "GST" line only if taxByName somehow ended
+          // up empty despite a non-zero roomTaxAmount, so tax is never
+          // silently dropped from the payload.
+          taxes:
+            Object.keys(nightlyBreakdown.taxByName || {}).length > 0
+              ? Object.entries(nightlyBreakdown.taxByName)
+                  .filter(([, amount]) => amount > 0)
+                  .map(([name, amount]) => ({
+                    name,
+                    value: String(Math.round(amount)),
+                  }))
+              : roomTaxAmount > 0
+                ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
+                : [],
+          amountaftertax: roomWiseTotal.toFixed(2),
+          remarks: "No Smoking",
+          // GuestDetails ported from Trevon's DetailStep.js (~1408-1421) —
+          // STAAH wants each child's individual age, not just the count.
+          // Uses the raw childAges array (every child, infants included —
+          // the chargeable-children exemption above only ever affects
+          // PRICING, STAAH's own GuestCount still wants the true ages for
+          // every child in the room).
+          GuestCount: [
+            { AgeQualifyingCode: "10", Count: String(adults) },
+            {
+              AgeQualifyingCode: "8",
+              Count: String(children),
+              GuestDetails: (childAges || [])
+                .filter((age) => age !== "")
+                .map((age) => ({ Age: Number(age) })),
+            },
+          ],
+        };
+      });
+
+      const payload = {
+        PropertyId: selectedPropertyId?.toString(),
+        reservations: {
+          reservation: [
+            {
+              reservation_datetime: new Date().toISOString().split("T")[0],
+              reservation_id: reservationId,
+              DayuseBooking: isDayUse ? true : false,
+              // Matches real Amritara's DetailStep.js (~903) — empty string
+              // for every ordinary booking, only ever populated when this
+              // search originated from a resolved GHA deep-link (see
+              // utils/ghaDeepLink.js), so STAAH can attribute commission
+              // back to Google Hotel Ads for that reservation.
+              utm_source: utmSource || "",
+              commissionamount: "0.00",
+              deposit: stagingMode === "pay_later"? "0" : grandTotal.toString(),
+              totalamountaftertax: grandTotal.toString(),
+              totaltax: Math.round(totalTaxAmount).toString(),
+              promocode,
+              payment_required: stagingMode === "pay_later"? grandTotal.toString() : "0" ,
+              payment_type: stagingMode === "pay_later"? "Hotel Collect":"Channel Collect",
+              currencycode: "INR",
+              status: "Confirm",
+              is_subscribed: false,
+              customer: {
+                email: formData.email || "",
+                salutation: formData.title || "",
+                first_name: formData.firstName || "",
+                last_name: formData.lastName || "",
+                remarks: formData.specialRequests || "",
+                telephone: formData.phone || "",
+              },
+              paymentcarddetail: {
+                CardHolderName: "",
+                CardType: "",
+                ExpireDate: "",
+                CardNumber: "",
+                cvv: "",
+                PaymentRefenceId: Math.floor(
+                  Math.random() * 1000000000,
+                ).toString(),
+              },
+              room: roomPayload,
+            },
+          ],
+        },
+      };
+
+      const finalKeyData =
+        keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const bookingSessionId = getOrCreateSessionId();
+      // Same source the tracker (tracking.js's postBookingWidged) uses for
+      // its own `ip` field — cached after the first call, so this is free
+      // if the tracker (or handlePhoneBlur's enrollment lookup above)
+      // already resolved it earlier in the session.
+      const clientIp = await getCachedPublicIp();
+
+      const finalRequestData2 = {
+        property_id: selectedPropertyId?.toString(),
+        property_name: selectedPropertyName,
+        property_tel: resolvedPropertyPhone,
+        cust_name:
+          `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+        cust_email: formData.email || "",
+        cust_phone: formData.phone || "",
+        cust_address: formData.customerGuid || "N/A",
+        cust_city: "N/A",
+        cust_state: "N/A",
+        cust_country: "N/A",
+        cust_postalcode: "N/A",
+        reservation_id: reservationId,
+        amount: Math.round(grandTotal),
+        currency: "INR",
+        BookingDetailsJson: JSON.stringify({
+          formData,
+          totalPrice: grandTotal,
+          selectedRoom: selectedRoomSummary,
+          selectedAddonList: mappedAddons,
+          selectedStartDate: formatIsoDate(selectedStartDate),
+          selectedEndDate: isDayUse
+            ? formatIsoDate(selectedStartDate)
+            : formatIsoDate(selectedEndDate),
+          promoCode: promoCodeContext,
+          sessionId: bookingSessionId,
+          property: {
+            PropertyName: selectedPropertyName,
+            Address: {
+              // Matches real Amritara's own Address shape exactly (Location/
+              // AddressLine/City/State/Country/CountryCode/Email/Phone/
+              // PostalCode — see property?.Address in its DetailStep.js).
+              // City/State/PostalCode are recovered from this consumer's
+              // own single combined address string (properties.js's
+              // parseIndianAddress — verified against its real live CMS
+              // response, every one of its 6 hotel addresses follows the
+              // same "..., City, State - PIN" pattern), not fabricated.
+              // Location stays null — nothing in this consumer's data maps
+              // to it at all (real Amritara's own likely carries lat/long
+              // or a place-id, neither of which exists here). Country/
+              // CountryCode are safe to hardcode — every property this
+              // package serves for this consumer is in India, same
+              // reasoning already used for the hotel JSON-LD schema's own
+              // addressCountry.
+              Location: null,
+              AddressLine: resolvedPropertyAddress,
+              City: resolvedPropertyCity,
+              State: resolvedPropertyState,
+              Country: "India",
+              CountryCode: "IN",
+              Email: resolvedPropertyEmail,
+              Phone: resolvedPropertyPhone,
+              PostalCode: resolvedPropertyPostalCode,
+            },
+          },
+          cancellationPolicyState: stay.cancellationPolicyState || "",
+          termsAndConditions: "_",
+        }),
+        
+        ReservationJson: JSON.stringify(payload),
+        SessionId: bookingSessionId,
+        Ip: clientIp,
+        CtaCustomerId: formData.customerGuid || "",
+        Room: (selectedRoom || []).map((room) => room?.roomName).join(", "),
+        Package: (selectedRoom || [])
+          .map((room) => room?.roomPackage)
+          .join(", "),
+        form_of_payment: stagingMode,
+      };
+
+      console.log(
+        `[PAYMENT-FLOW] DetailStep.jsx: calling postPaymentRequest (${stagingMode === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"})`,
+        { reservationId, amount: finalRequestData2.amount, formOfPayment },
+      );
+      const paymentResp = await postPaymentRequest(config, {
+        finalRequestData2,
+        reservationPayload: payload,
+        keyData: finalKeyData,
+        formOfPayment: stagingMode,
+      });
+      console.log("[PAYMENT-FLOW] DetailStep.jsx: postPaymentRequest result", { paymentResp });
+      // Ported from DetailStep.js's handleJson (~787-1334) — beacon covers
+      // both outcomes of the th-payment-request call (this package's own
+      // equivalent of real Amritara's PaymentRequest endpoint).
+      trackCta("Post payment request", {
+        apiName: "th-payment-request",
+        apiUrl: `${config?.staahBaseUrl || ""}${stagingMode === "pay_later" ? "/api/th-payment-request2" : "/api/th-payment-request"}`,
+        apiStatus: paymentResp?.errorMessage || "Error",
+        apiErrorCode: paymentResp?.errorMessage === "success" ? "200" : "1166",
+        apiMessage: paymentResp?.errorMessage || "Payment request failed.",
+        customField1: reservationId,
+      });
+      if (paymentResp?.errorMessage !== "success") {
+        throw new Error(
+          paymentResp?.errorMessage ||
+            "Payment request failed. Please try again.",
+        );
+      }
+
+      console.log(
+        "[PAYMENT-FLOW] DetailStep.jsx: saving be_bookingData snapshot",
+        {
+          hasSelectedRoom: Array.isArray(selectedRoom),
+          selectedRoomLength: Array.isArray(selectedRoom)
+            ? selectedRoom.length
+            : null,
+          selectedRoom,
+        },
+      );
+      sessionStorage.setItem(
+        "be_bookingData",
+        JSON.stringify({
+          formData,
+          totalPrice: grandTotal,
+          selectedRoom: selectedRoomSummary,
+          selectedAddonList: mappedAddons,
+          selectedStartDate,
+          selectedEndDate,
+          promoCode: promoCodeContext,
+          reservationId,
+          property: {
+            PropertyName: selectedPropertyName,
+            Address: {
+              // Matches real Amritara's own Address shape exactly (Location/
+              // AddressLine/City/State/Country/CountryCode/Email/Phone/
+              // PostalCode — see property?.Address in its DetailStep.js).
+              // City/State/PostalCode are recovered from this consumer's
+              // own single combined address string (properties.js's
+              // parseIndianAddress — verified against its real live CMS
+              // response, every one of its 6 hotel addresses follows the
+              // same "..., City, State - PIN" pattern), not fabricated.
+              // Location stays null — nothing in this consumer's data maps
+              // to it at all (real Amritara's own likely carries lat/long
+              // or a place-id, neither of which exists here). Country/
+              // CountryCode are safe to hardcode — every property this
+              // package serves for this consumer is in India, same
+              // reasoning already used for the hotel JSON-LD schema's own
+              // addressCountry.
+              Location: null,
+              AddressLine: resolvedPropertyAddress,
+              City: resolvedPropertyCity,
+              State: resolvedPropertyState,
+              Country: "India",
+              CountryCode: "IN",
+              Email: resolvedPropertyEmail,
+              Phone: resolvedPropertyPhone,
+              PostalCode: resolvedPropertyPostalCode,
+            },
+          },
+          cancellationPolicyState: stay.cancellationPolicyState || "",
+          termsAndConditions: "",
+          // Restored back into SearchContext on both the pay-now-gated
+          // mount fallback and "Back to Cart" (Wizard.jsx) — without this,
+          // a day-use booking that bounces off STAAH came back looking
+          // like a normal overnight stay (wrong Check-in/Check-out pairing
+          // in CartOverview, wrong nightly-vs-flat pricing) since isDayUse
+          // itself, unlike selectedStartDate/selectedEndDate, was never
+          // part of this snapshot at all.
+          isDayUse,
+          // Everything below is unused by the receipt itself — it's what
+          // lets ConfirmStep.jsx's "Try Again" button actually retry the
+          // SAME payment (re-POST to STAAH + redirect again) instead of
+          // just sending the guest home. Without these, handleRetryClick's
+          // fallback path (used whenever the gateway's own verify-token
+          // response doesn't carry a usable reservationJson/bookingDetailsJson
+          // to retry from directly) has nothing to rebuild a payment
+          // request from and always bails straight to homeUrl — this is
+          // exactly the "Try Again just goes to the home page" bug.
+          selectedPropertyId,
+          selectedCityId,
+          utmSource,
+          formOfPayment,
+          keyData: finalKeyData,
+          reservationPayload: payload,
+          finalRequestData2,
+          // The FULL StayContext room objects (roomId, roomRateWithTax,
+          // maxGuest/maxAdult/maxChildren, minInventory, nightly
+          // breakdown, etc.) — NOT the flattened `selectedRoom` above
+          // (that's a display-only summary for the receipt: just
+          // roomName/roomImage/roomPackage/adults/children). CartOverview
+          // and proceedToPay's own validation both read straight off
+          // StayContext.selectedRoom, so restoring FROM this on Back is
+          // what lets step 2 show the real cart (rooms + price breakdown)
+          // and stay fully editable, instead of an empty "Select Room" /
+          // ₹0 cart that looks broken even though the guest already
+          // picked everything.
+          rawSelectedRoom: selectedRoom,
+          // SearchContext's own per-slot adults/children — a SEPARATE piece
+          // of state from rawSelectedRoom above (which has its own copy,
+          // but only inside each already-selected room's slot). CartOverview
+          // 's "Stay & Guests" guest count, and useRepriceSelectedRooms.js's
+          // "fresh" adults/children lookup on every subsequent reprice, both
+          // read THIS, not rawSelectedRoom — without restoring it too, a
+          // real round-trip to the STAAH-hosted payment page and back reset
+          // it to SearchContext's default guest count (losing e.g. a
+          // selected child), which then got read as the guest's real,
+          // current selection by the very next reprice and silently
+          // overwrote the correctly-restored room's own adults/children
+          // (and its Extra Child Rate) right back down to match.
+          searchRooms,
+          // Wizard.jsx's mount-effect fallback only trusts this snapshot
+          // for a short window after it's saved — see that file's own
+          // comment — so a stale/abandoned attempt from a much earlier
+          // visit can't resurrect a fake in-progress checkout indefinitely.
+          savedAt: Date.now(),
+        }),
+      );
+
+      const resolvedKeyData =
+        keyData || (config.tokenDbKey ? `dbKey=${config.tokenDbKey}` : "");
+      const paramvalues = JSON.stringify({
+        property_id: selectedPropertyId,
+        property_name: selectedPropertyName,
+        property_tel: resolvedPropertyPhone,
+        cust_name:
+          `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+        cust_email: formData.email || "",
+        cust_phone: formData.phone || "",
+        cust_address: "N/A",
+        cust_city: "N/A",
+        cust_state: "N/A",
+        cust_country: "N/A",
+        cust_postalcode: "N/A",
+        reservation_id: reservationId,
+        amount: grandTotal,
+        keyData: resolvedKeyData,
+        form_of_payment: formOfPayment,
+      });
+
+      // For pay_later, skip STAAH gateway entirely — create properly formatted payment response
+      // from th-payment-request2 data, then jump to confirmation step
+      if (stagingMode === "pay_later") {
+        console.log("[PAYMENT-FLOW] DetailStep.jsx: pay_later detected — skipping STAAH redirect, formatting th-payment-request2 response for confirmation");
+        try {
+          // th-payment-request2 already staged the reservation with payment_type="Hotel Collect"
+          // Extract all data from th-payment-request2 response
+          const thPaymentResp = paymentResp?.result?.[0] || paymentResp;
+          const responseJson = thPaymentResp?.responseJson || paymentResp;
+
+          // For pay_later, populate ALL required fields from th-payment-request2 response
+          // These fields are sent to /api/payment/confirm to finalize the booking
+          const formattedResponse = {
+            result: [{
+              form_of_payment: "pay_later",
+              responseJson: {
+                status: responseJson?.status || "paylater",
+                status_code: responseJson?.status_code || "0000",
+                reservation_id: responseJson?.reservation_id || reservationId,
+                amount: responseJson?.amount !== undefined ? responseJson.amount.toString() : grandTotal.toString(),
+                currency: responseJson?.currency || "INR",
+                // These fields come from th-payment-request2 response (backend response)
+                partner_id: responseJson?.partner_id || config?.partnerId || "7",
+                // hash_key from th-payment-request2 or generate one for pay_later
+                hash_key: responseJson?.hash_key || `paylater_${reservationId}`,
+                pg_transaction_id: responseJson?.pg_transaction_id || reservationId,
+                ipn_flag: responseJson?.ipn_flag || "0", // No IPN for pay_later
+                error_msg: responseJson?.error_msg || "paylater", // Set to "paylater" for pay_later flow
+                property_id: responseJson?.property_id || selectedPropertyId?.toString(),
+              },
+              // Include full reservation data if available
+              reservationJson: thPaymentResp?.reservationJson || null,
+              bookingDetailsJson: thPaymentResp?.bookingDetailsJson || null,
+            }]
+          };
+
+          console.log("[PAYMENT-FLOW] DetailStep.jsx: formatting pay_later response", {
+            fromThPayment: responseJson,
+            formatted: formattedResponse.result[0].responseJson,
+          });
+
+          if (isPayU) {
+            // NOT be_paymentResponse / payLaterMode yet: if the guest hits Back
+            // from PayU without paying, those would make the Wizard jump to the
+            // confirmation step and book them unpaid. Wizard.jsx promotes this
+            // to be_paymentResponse only after PayU reports success.
+            window.sessionStorage.setItem("be_payuPending", JSON.stringify(formattedResponse));
+          } else {
+            window.sessionStorage.setItem("be_paymentResponse", JSON.stringify(formattedResponse));
+            window.sessionStorage.setItem("payLaterMode", "true");
+          }
+          console.log("[PAYMENT-FLOW] DetailStep.jsx: formatted pay_later response stored in sessionStorage", { formattedResponse, isPayU });
+        } catch (e) {
+          console.error("[PAYMENT-FLOW] DetailStep.jsx: failed to store pay_later response", e);
+          // For PayU we must NOT send the guest off to pay if we couldn't save
+          // what's needed to confirm the booking when they come back.
+          if (isPayU) throw e;
+        }
+        if (isPayU) {
+          onComplete?.();
+          console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to PayU NOW", { reservationId, amount: grandTotal });
+          await redirectToPayU(config, {
+            reservationId,
+            amount: grandTotal,
+            firstname: formData.firstName || "Guest",
+            email: formData.email || "",
+            phone: formData.phone || "",
+            productinfo: selectedPropertyName || "Hotel Booking",
+          });
+          return;
+        }
+        onComplete?.();
+        // Navigate with pay-now marker to trigger mount-time restoration, Wizard will detect payLaterMode and jump to step 4
+        const marker = new URLSearchParams(window.location.search);
+        marker.set("pay-now", "1");
+        window.history.replaceState({}, "", `${window.location.pathname}?${marker.toString()}`);
+        window.location.reload();
+      } else {
+        // Pay now: proceed with STAAH gateway redirect as normal
+        onComplete?.();
+        console.log("[PAYMENT-FLOW] DetailStep.jsx: redirecting browser to STAAH hosted payment page NOW", { reservationId, formOfPayment, staahBaseUrl: config?.staahBaseUrl, paramvalues });
+        redirectToPayment(config, paramvalues, resolvedKeyData);
+      }
+    } catch (err) {
+      console.error("[PAYMENT-FLOW] DetailStep.jsx: handleSubmit FAILED before reaching payment gateway", err);
+      setIsProcessing(false);
+      toast.error(err?.message || "Payment failed. Please try again.");
+      // Ported from DetailStep.js's handleSubmit catch block (~1484-1489) —
+      // real gives "Load failed" its own ApiErrorCode ("1167"), distinct
+      // from every other failure message ("1166").
+      trackCta(err?.message || "Payment failed", {
+        apiErrorCode: err?.message === "Load failed" ? "1167" : "1166",
+        apiMessage: err?.message || "Payment failed",
+      });
+    }
+  };
+
+  return (
+    <div className="be-guest-details-step">
+      <h3
+        style={{
+          fontSize: "0.85rem",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: "var(--be-color-primary, #846836)",
+          margin: "0 0 0.6rem",
+          fontFamily: "var(--be-font-sans)",
+        }}
+      >
+        Guest Profile Details
+      </h3>
+
+      <form
+        id="be-guest-details-form"
+        className="be-form-card"
+        onSubmit={handleSubmit}
+        noValidate
+      >
+        <h4
+          style={{
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            color: "#1a1a1a",
+            margin: "0 0 0.7rem",
+            textTransform: "uppercase",
+            fontFamily: "var(--be-font-sans)"
+          }}
+        >
+          Guest Contact Details
+        </h4>
+
+        <div className="be-form-grid">
+          <div className="be-detail-form-group" style={{ minWidth: 0 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "82px minmax(0, 1fr)",
+                gap: "6px",
+                width: "100%",
+              }}
+            >
+              <select
+                name="countryCode"
+                value={formData.countryCode}
+                onChange={handleChange}
+                style={{ width: "100%", minWidth: 0 }}
+                aria-label="Country code"
+              >
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Phone Number*"
+                value={formData.phone}
+                onChange={handleChange}
+                onBlur={handlePhoneBlur}
+                disabled={isLookingUpPhone}
+                inputMode="numeric"
+                maxLength={10}
+                style={{ width: "100%", minWidth: 0 }}
+              />
+            </div>
+            {errors.phone && <span style={errorStyle}>{errors.phone}</span>}
+          </div>
+
+          <div className="be-detail-form-group">
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address*"
+              value={formData.email}
+              onChange={handleChange}
+            />
+            {errors.email && <span style={errorStyle}>{errors.email}</span>}
+          </div>
+
+          <div className="be-detail-form-group">
+            <select
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              aria-label="Title"
+            >
+              <option value="">Title</option>
+              {TITLE_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            {errors.title && <span style={errorStyle}>{errors.title}</span>}
+          </div>
+
+          <div className="be-detail-form-group">
+            <input
+              type="text"
+              name="firstName"
+              placeholder="First Name*"
+              value={formData.firstName}
+              onChange={handleChange}
+            />
+            {errors.firstName && (
+              <span style={errorStyle}>{errors.firstName}</span>
+            )}
+          </div>
+
+          <div className="be-detail-form-group">
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Last Name*"
+              value={formData.lastName}
+              onChange={handleChange}
+            />
+            {errors.lastName && (
+              <span style={errorStyle}>{errors.lastName}</span>
+            )}
+          </div>
+
+          <div className="be-detail-form-group">
+            <input
+              type="text"
+              name="gstNumber"
+              placeholder="GST Number (optional)"
+              value={formData.gstNumber}
+              onChange={handleChange}
+            />
+          </div>
+
+          {isDayUse && (
+            <div className="be-detail-form-group be-full-width">
+              <label>Expected Arrival Time</label>
+              <button
+                type="button"
+                className="be-dayuse-time-trigger"
+                onClick={() => setIsDayUseTimePickerOpen(true)}
+              >
+                <span className="be-dayuse-time-value">
+                  {dayUseArrivalTime || "12:00 PM"}
+                </span>
+                <span className="be-dayuse-time-caret">⌄</span>
+              </button>
+            </div>
+          )}
+
+          <div className="be-detail-form-group be-full-width">
+            <textarea
+              name="specialRequests"
+              placeholder="Special Requests (optional)"
+              rows={2}
+              value={formData.specialRequests}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        <div className="be-privacy-row">
+          <input
+            id="be-agree-terms"
+            type="checkbox"
+            name="agreeToTerms"
+            className="be-privacy-checkbox"
+            checked={formData.agreeToTerms}
+            onChange={handleChange}
+          />
+          <label
+            htmlFor="be-agree-terms"
+            style={{ fontSize: "0.82rem", color: "#666", cursor: "pointer" }}
+          >
+            I agree to the{" "}
+            <a href="/privacy-policy" target="_blank" rel="noreferrer">
+              privacy policy
+            </a>
+          </label>
+        </div>
+        {errors.agreeToTerms && (
+          <span style={{ ...errorStyle, display: "block" }}>
+            {errors.agreeToTerms}
+          </span>
+        )}
+
+        {/* Mobile-only (see DetailStep.css) — desktop keeps using
+            CartOverview's own sticky-sidebar buttons (hidden here via CSS)
+            since scrolling to the very end of a long form to find the pay
+            button there would be a real regression on a tall viewport. On
+            mobile there's no sticky sidebar to keep it visible in anyway
+            (CartOverview stacks above this form instead), so real
+            Amritara's own placement — end of the form, after the privacy
+            checkbox, before the trust badges — is what this matches. Same
+            form/name/value wiring as CartOverview's buttons: handleSubmit
+            tells them apart via e.submitter either way. */}
+        <div className="be-mobile-pay-actions">
+          <button
+            type="submit"
+            name="formOfPayment"
+            value="pay_now"
+            className="be-mobile-pay-btn"
+            disabled={stay.isRatesRefreshing}
+            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
+          >
+            Confirm &amp; Pay
+          </button>
+          <div className="be-mobile-pay-divider" role="separator">
+            <span>OR</span>
+          </div>
+          <button
+            type="submit"
+            name="formOfPayment"
+            value="pay_later"
+            className="be-mobile-pay-later-btn"
+            disabled={stay.isRatesRefreshing}
+            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
+          >
+            Pay Later
+          </button>
+        </div>
+
+        <div className="be-trust-badges-row">
+          <div className="be-trust-badge-item">
+            <CheckIcon /> Best Price Guaranteed
+          </div>
+          <div className="be-trust-badge-item">
+            <ShieldIcon /> 100% Secure Payment
+          </div>
+          <div className="be-trust-badge-item">
+            <BoltIcon /> Instant Confirmation
+          </div>
+        </div>
+      </form>
+
+      {/* react-hot-toast's toast.error(...) calls (proceedToPay above, e.g.
+          "Select your room(s)") are global, but only actually render where
+          a <Toaster> is mounted — StayStep.jsx and SearchBar.jsx each have
+          their own, but neither is mounted once the guest reaches this
+          step (step 2), so a validation failure here previously fired the
+          toast into thin air: the submit was correctly blocked, but the
+          guest saw no feedback explaining why nothing happened. */}
+      <Toaster position="top-right" />
+
+      {isProcessing &&
+        mounted &&
+        createPortal(
+          <div className="be-processing-overlay">
+            <div className="be-loading-dial" />
+            <p>Processing your secure payment...</p>
+          </div>,
+          document.body,
+        )}
+
+      {isDayUse &&
+        isDayUseTimePickerOpen &&
+        mounted &&
+        createPortal(
+          <div
+            className="be-dayuse-time-modal"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setIsDayUseTimePickerOpen(false);
+            }}
+          >
+            <div
+              className="be-dayuse-time-sheet"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="be-dayuse-time-sheet-head">
+                <span className="be-dayuse-time-sheet-title">Select arrival time</span>
+                <button
+                  type="button"
+                  className="be-dayuse-time-close"
+                  onClick={() => setIsDayUseTimePickerOpen(false)}
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div className="be-dayuse-time-grid">
+                {dayUseTimeOptions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`be-dayuse-time-option ${t === dayUseArrivalTime ? "be-dayuse-time-option--active" : ""}`}
+                    onClick={() => {
+                      setDayUseArrivalTime(t);
+                      setIsDayUseTimePickerOpen(false);
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+/**
+ * Every calendar date of the stay (mirrors Amritara's getDateRange). Must
+ * format with local getters (formatIsoDate), NOT `.toISOString()` — this
+ * package's calendar (RangeCalendar.jsx's getMonthDays) builds
+ * selectedStartDate/selectedEndDate as local-midnight Date objects, and
+ * `.toISOString()` converts those to UTC before slicing the date out. For
+ * any guest browsing from IST (UTC+5:30 — bawahotels' entire userbase),
+ * local midnight is 18:30 the PREVIOUS day in UTC, so every date sent to
+ * STAAH (arrival_date, departure_date, every price[].date) silently landed
+ * one day earlier than what the guest actually picked. Amritara never hit
+ * this because its selectedStartDate/selectedEndDate are already
+ * pre-formatted "YYYY-MM-DD" strings (Filterbar.js's own local-getter
+ * formatingDate) by the time its identical-looking getDateRange re-parses
+ * them — round-tripping a date-only string through `new Date()` /
+ * `.toISOString()` is safe; doing the same to a local-time Date object
+ * is not.
+ */
+function getDateRange(startDate, endDate) {
+  if (!startDate || !endDate)
+    return startDate ? [formatIsoDate(startDate)] : [];
+  const dates = [];
+  let current = new Date(startDate);
+  const last = new Date(endDate);
+  while (current < last) {
+    dates.push(formatIsoDate(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates.length ? dates : [formatIsoDate(startDate)];
+}
+
+function calculateNumberOfDays(startDate, endDate) {
+  if (!startDate || !endDate) return 1;
+  const diff = Math.abs(new Date(endDate) - new Date(startDate));
+  return Math.ceil(diff / (1000 * 60 * 60 * 24)) || 1;
+}
+
+/** Pull `.INR[field]` out of a Rate/AdultRate/ChildRate array entry (same shape AddOnsStep.jsx reads). */
+function extractRateField(rateArray, field) {
+  if (!rateArray || rateArray.length === 0) return null;
+  const inr = rateArray.find((r) => r?.INR)?.INR;
+  return inr && inr[field] != null ? Number(inr[field]) : null;
+}
+
+function getAddonUnitAmount(addon) {
+  return (
+    extractRateField(addon?.Rate, "amountAfterTax") ??
+    extractRateField(addon?.AdultRate, "amountAfterTax") ??
+    extractRateField(addon?.ChildRate, "amountAfterTax") ??
+    0
+  );
+}
+
+function mapAddon(addon, numberOfDays) {
+  const unit = getAddonUnitAmount(addon);
+  const quantity = addon?.quantity || 1;
+  const nights = addon?.Type === "R" ? numberOfDays : 1;
+  const amount = unit * quantity * nights;
+  return {
+    AddonId: addon?.AddonId ?? "",
+    AddonName: addon?.AddonName ?? "",
+    AddonType: addon?.Type ?? "",
+    PriceType: addon?.Applicable ?? "",
+    AmountAfterTax: amount.toFixed(2),
+  };
+}
+
+export const DetailStep = {
+  GuestDetailsForm,
+};

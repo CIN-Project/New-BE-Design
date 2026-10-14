@@ -1,0 +1,420 @@
+/* Guest details form (wizard step 2) — ported 1:1 from bawa-hotels-next. */
+
+.be-form-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.8rem;
+}
+
+.be-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.5rem;
+}
+
+.be-form-grid .be-full-width {
+  grid-column: 1 / -1;
+}
+
+.be-detail-form-group {
+  display: flex;
+  /* column, not row: each group's only siblings are its field and its
+     (optional) error <span> — row direction was placing the error text
+     beside the field instead of below it, and on the 2-column .be-form-grid
+     that made it visually bleed toward the next field over. */
+  flex-direction: column;
+  /* Every group here is also a grid item of .be-form-grid, and grid items
+     default to min-width:auto — refusing to shrink below their content's
+     min-content size. The phone group already had this patched via an
+     inline style (its own nested country-code+phone grid needed the same
+     fix one level deeper), but every *other* group here (email, name, GST,
+     etc.) was still exposed to it: on a narrow phone the 2-column grid
+     couldn't actually shrink groups down to fit, so .be-form-card (and
+     everything alongside it) got pushed wider than the viewport instead of
+     wrapping to one column. */
+  min-width: 0;
+}
+
+.be-detail-form-group label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--be-color-primary-light, #c7a36a);
+  margin-bottom: 0.3rem;
+}
+
+.be-detail-form-group input,
+.be-detail-form-group textarea {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  outline: none;
+  background: #ffffff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1a1a1a;
+  height: 34px;
+  font-family: inherit;
+}
+
+.be-detail-form-group textarea {
+  height: auto;
+  padding: 0.5rem 0.65rem;
+}
+
+.be-detail-form-group input:focus,
+.be-detail-form-group textarea:focus {
+  border-color: #1a1a1a;
+  background: white;
+}
+
+.be-detail-form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.be-detail-form-group select {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  outline: none;
+  background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+  color: #1a1a1a;
+  height: 34px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.be-detail-form-group select:focus {
+  border-color: #1a1a1a;
+}
+
+.be-privacy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.85rem;
+}
+
+.be-privacy-row a{
+  color: var(--be-color-primary, #846836);
+}
+
+.be-privacy-checkbox {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #cccccc;
+  border-radius: 3px;
+  cursor: pointer;
+  accent-color: var(--be-color-primary, #846836);
+}
+
+.be-trust-badges-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e5e7eb;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Mobile-only pay actions at the end of the form — see the JSX's own doc
+   comment above these buttons. Hidden by default (desktop keeps using
+   CartOverview's sticky-sidebar buttons instead, hidden there on mobile —
+   see CartOverview.css's matching 1024px rule). */
+.be-mobile-pay-actions {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .be-mobile-pay-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-top: 1rem;
+  }
+
+  .be-mobile-pay-btn {
+    width: 100%;
+    background: var(--be-color-primary, #846836);
+    border: 1px solid var(--be-color-primary, #846836);
+    color: #ffffff !important;
+    padding: 0.75rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .be-mobile-pay-btn:hover {
+    background: var(--be-color-primary-hover, #bfa15f);
+    border-color: var(--be-color-primary-hover, #bfa15f);
+  }
+
+  .be-mobile-pay-btn:disabled,
+  .be-mobile-pay-later-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .be-mobile-pay-btn:disabled:hover {
+    background: var(--be-color-primary, #846836);
+    border-color: var(--be-color-primary, #846836);
+  }
+
+  .be-mobile-pay-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--be-color-text-muted, #8a8a8a);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .be-mobile-pay-divider::before,
+  .be-mobile-pay-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--be-color-border, rgba(0, 0, 0, 0.1));
+  }
+
+  .be-mobile-pay-later-btn {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid var(--be-color-primary, #846836);
+    color: var(--be-color-primary, #846836) !important;
+    padding: 0.75rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .be-mobile-pay-later-btn:hover {
+    background: var(--be-color-primary, #846836);
+    color: #ffffff !important;
+  }
+
+  .be-mobile-pay-later-btn:disabled:hover {
+    background: #ffffff;
+    color: var(--be-color-primary, #846836) !important;
+  }
+}
+
+.be-trust-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Full-screen submit-in-progress overlay, shown while GuestDetailsForm's
+   combined guest-details+payment submit is in flight (DetailStep.jsx). */
+
+.be-processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Must clear the host site's fixed header (z-index: 99999, e.g.
+     bawahotels-nextjs-new's .main-header) — at 9999 the header sat on top
+     of this overlay, showing through the "Processing your secure
+     payment..." spinner. Matches ConfirmStep.css's .be-voucher-overlay,
+     which has the exact same requirement. */
+  z-index: 9999999;
+  color: white;
+}
+
+.be-loading-dial {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(191, 161, 95, 0.2);
+  border-top: 4px solid var(--be-color-primary-hover, #bfa15f);
+  border-radius: 50%;
+  animation: be-spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes be-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Day Use: "Expected Arrival Time" field + bottom-sheet time picker
+   (guest-details step only) — matches the same field look as the inputs
+   above it (border/height/radius/font-size) rather than a bare button. */
+.be-dayuse-time-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 34px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.be-dayuse-time-trigger:hover,
+.be-dayuse-time-trigger:focus-visible {
+  border-color: #1a1a1a;
+  outline: none;
+}
+
+.be-dayuse-time-value {
+  font-weight: 600;
+}
+
+.be-dayuse-time-caret {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1;
+}
+
+.be-dayuse-time-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.be-dayuse-time-sheet {
+  width: min(480px, 100%);
+  max-height: 65vh;
+  background: #ffffff;
+  border-radius: 18px 18px 0 0;
+  padding: 14px 16px 22px;
+  overflow: auto;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.be-dayuse-time-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.be-dayuse-time-sheet-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-family: var(--be-font-sans);
+}
+
+.be-dayuse-time-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.be-dayuse-time-close:hover {
+  background: var(--be-color-surface, #f8f5ef);
+}
+
+.be-dayuse-time-grid {
+  padding-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.be-dayuse-time-option {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.7);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--be-transition-fast, all 0.3s ease);
+}
+
+.be-dayuse-time-option:hover {
+  border-color: var(--be-color-primary-light, #c7a36a);
+  color: #1a1a1a;
+}
+
+.be-dayuse-time-option--active {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+  color: #ffffff;
+}
+
+@media (min-width: 576px) {
+  .be-dayuse-time-modal {
+    align-items: center;
+  }
+  .be-dayuse-time-sheet {
+    border-radius: 14px;
+    max-height: 70vh;
+  }
+  .be-dayuse-time-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .be-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .be-trust-badges-row {
+    justify-content: flex-start;
+  }
+}
