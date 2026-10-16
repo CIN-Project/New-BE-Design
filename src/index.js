@@ -27,3 +27,4 @@ export * as authApi from "./api/auth.js";
 
 export { resolveGhaDeepLink } from "./utils/ghaDeepLink.js";
 export { postBookingWidged } from "./api/tracking.js";
+export { verifyVoiceBotInventoryAndPay } from "./utils/voiceBot.js";
