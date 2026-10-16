@@ -470,6 +470,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
             bookingDetailsJson: details || parsedBookingData,
           });
         }
+        
       } catch (err) {
         console.error(
           "[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment call THREW — treating as failed",
