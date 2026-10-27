@@ -564,6 +564,7 @@ function RateCard({
   mapping,
   ratePlan,
   adults,
+  childrenCount,
   nights,
   isDayUse,
   cancellationPolicyPackage,
@@ -582,9 +583,9 @@ function RateCard({
     rate,
   );
 
-  const standardTotals = computeRatePlanTotals(ratePlan, mapping, adults);
+  const standardTotals = computeRatePlanTotals(ratePlan, mapping, adults, childrenCount);
   const memberTotals = memberRatePlan
-    ? computeRatePlanTotals(memberRatePlan, memberMapping, adults)
+    ? computeRatePlanTotals(memberRatePlan, memberMapping, adults, childrenCount)
     : null;
 
   const memberSavings = memberTotals
@@ -693,6 +694,17 @@ function RateCard({
                   for {nights} night{nights > 1 ? "s" : ""}
                 </div>
               )}
+              {/* Ported from Amritara's Filterbar.js/StayStep.js (commit
+                  "extra child price added in package rate", 2026-10-27) —
+                  a visible breakout of how much of the price above is the
+                  extra-child surcharge, not folded invisibly into one
+                  number. Only shown when this guest count actually
+                  triggered one (computeRatePlanTotals's own gate). */}
+              {standardTotals.extraChildCartValue > 0 && (
+                <div className="be-rate-extra-child-price">
+                  Child Price: &#8377;{formatMoney(standardTotals.extraChildCartValue)}
+                </div>
+              )}
             </span>
           </div>
 
@@ -738,6 +750,11 @@ function RateCard({
                 {!isDayUse && (
                   <div className="be-rate-unit">
                     for {nights} night{nights > 1 ? "s" : ""}
+                  </div>
+                )}
+                {memberTotals.extraChildCartValue > 0 && (
+                  <div className="be-rate-extra-child-price">
+                    Child Price: &#8377;{formatMoney(memberTotals.extraChildCartValue)}
                   </div>
                 )}
               </span>
@@ -788,6 +805,7 @@ function RoomRow({
   fromPriceStrike,
   standardEntries,
   adults,
+  childrenCount,
   nights,
   cancellationPolicyPackage,
   activeTabMap,
@@ -1041,6 +1059,7 @@ function RoomRow({
                         mapping={mapping}
                         ratePlan={ratePlan}
                         adults={adults}
+                        childrenCount={childrenCount}
                         nights={nights}
                         isDayUse={isDayUse}
                         cancellationPolicyPackage={cancellationPolicyPackage}
@@ -2415,6 +2434,7 @@ export function StayStep({ onRoomsSelected }) {
               fromPriceStrike={fromPriceInfo?.strikePrice ?? null}
               standardEntries={standardEntries}
               adults={activeSlot?.adults ?? 1}
+              childrenCount={activeSlot?.children ?? 0}
               nights={nights}
               cancellationPolicyPackage={cancellationPolicyPackage}
               activeTabMap={activeTabMap}

@@ -77,16 +77,47 @@ export function findMemberRatePlan(property, room, standardRate) {
   return { memberRate, memberMapping, memberRatePlan };
 }
 
-export function computeRatePlanTotals(ratePlan, mapping, adults) {
+/**
+ * Ported from Amritara's Filterbar.js (~5736-5820, commit "extra child
+ * price added in package rate", 2026-10-27) — a package's LISTED price
+ * (shown while still browsing rate cards, before a room is actually
+ * selected) should already include the extra-child surcharge whenever this
+ * guest count needs one, so the guest sees the true total up front instead
+ * of a price that silently grows once they get to checkout. Gated the same
+ * way Amritara's own condition is: (adults+children) over the rate's
+ * ApplicableGuest limit, AND at least one child — not just "has children"
+ * (a child within the normal guest limit doesn't trigger a surcharge).
+ *
+ * `extraChildCartValue`/`extraChildSavings` are also returned on their own
+ * (not just folded into totalCartValue/totalSavings) so a consumer can
+ * render them as their own "Child Price" line, matching Amritara's new
+ * display — without this, they'd be indistinguishable from the base rate
+ * once summed.
+ *
+ * Note: deliberately does NOT port Amritara's own `increasedPricePerRoom`
+ * accumulator from the same commit — that re-adds the RUNNING total of
+ * totalExtraChildCartValue/totalExtraChildSavings on every date iteration
+ * (not a per-date increment), which inflates multi-night stays
+ * quadratically. This package doesn't need that separate accumulator at
+ * all: the "original price before discount" shown next to a package is
+ * already just totalCartValue + totalSavings (see RateCard.jsx's own
+ * strikethrough), which comes out correct here without it.
+ */
+export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0) {
   let totalCartValue = 0;
   let cartValueWithTax = 0;
   let totalSavings = 0;
+  let extraChildCartValue = 0;
+  let extraChildSavings = 0;
 
   if (!ratePlan?.Rates) {
-    return { totalCartValue, cartValueWithTax, totalSavings };
+    return { totalCartValue, cartValueWithTax, totalSavings, extraChildCartValue, extraChildSavings };
   }
 
   const adultKey = String(adults || 1);
+  const needsExtraChild =
+    Number(adults || 0) + Number(children || 0) > Number(mapping?.ApplicableGuest || 0) &&
+    Number(children || 0) > 0;
 
   Object.values(ratePlan.Rates).forEach((dateData) => {
     const obp = getRateObpEntry(dateData?.OBP, mapping?.RateId);
@@ -96,10 +127,20 @@ export function computeRatePlanTotals(ratePlan, mapping, adults) {
       totalCartValue += parseFloat(guestRate?.RateBeforeTax || "0");
       totalSavings += parseFloat(guestRate?.Savings || "0");
       cartValueWithTax += parseFloat(obp?.TotalRate || "0");
+      if (needsExtraChild) {
+        extraChildCartValue += parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0");
+        extraChildSavings += parseFloat(dateData?.ExtraChildRate?.Savings || "0");
+      }
     }
   });
 
-  return { totalCartValue, cartValueWithTax, totalSavings };
+  return {
+    totalCartValue: totalCartValue + extraChildCartValue,
+    cartValueWithTax,
+    totalSavings: totalSavings + extraChildSavings,
+    extraChildCartValue,
+    extraChildSavings,
+  };
 }
 
 

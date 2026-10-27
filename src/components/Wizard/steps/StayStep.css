@@ -813,6 +813,12 @@
   font-weight: 400;
 }
 
+.be-rate-extra-child-price {
+  font-size: 0.62rem;
+  color: var(--be-color-primary, #846836);
+  font-weight: 500;
+}
+
 .be-rate-select-btn {
   width: 100%;
   background: var(--be-color-primary, #846836);
