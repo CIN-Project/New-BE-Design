@@ -373,7 +373,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         if (cancelled) return;
 
         const confirmedSuccess =
-          confirmResp?.result?.[0]?.confirmData?.errorMessage === "success";
+          confirmResp?.errorMessage === "success";
         console.log(
           "[PAYMENT-FLOW] ConfirmStep.jsx: FINAL reservationStatus decided",
           { confirmedSuccess, errorMessage: confirmResp?.errorMessage },
@@ -381,8 +381,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         setReservationStatus(confirmedSuccess ? "success" : "failed");
 
         const details = parseBookingData(
-          confirmResp?.result?.[0]?.confirmData?.result?.[0]
-            ?.bookingDetailsJson,
+          confirmResp?.result?.[0]?.bookingDetailsJson,
         );
         setConfirmedBookingData(details);
 
