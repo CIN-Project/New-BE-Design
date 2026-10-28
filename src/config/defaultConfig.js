@@ -11,6 +11,9 @@ export const defaultConfig = {
   // When true, each booking step (room selection → guest details → …) gets its own browser history
   // entry, so the browser's Back button returns to the previous step instead of leaving the page.
   syncWizardStepToUrl: false,
+  // When true, the hotel's STAAH add-ons are offered under the guest details form, per room, and
+  // sent with the booking.
+  enableAddOns: false,
   properties: [],
   debug: false,
 };

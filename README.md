@@ -135,6 +135,7 @@ Fonts can also be set via `config` instead of `theme` — see `fontFamily`/`font
 | `defaultAdults` | Search bar guests | Adults pre-filled for the first room and every room the guest adds, clamped to 1–4. Default `1` |
 | `syncWizardStepToUrl` | Booking steps | `true` gives each step its own browser history entry (`?step=N`), so the browser's Back button returns to the previous step instead of leaving the page. Default `false` |
 | `prefillDefaultDates` | Search bar dates | `true` starts the search on tonight → tomorrow instead of empty dates. Default `false` |
+| `enableAddOns` | Guest details step, payment | `true` shows the hotel's STAAH add-ons (`/api/cin-api/add-ons`) under the guest details form: chosen per room with a quantity (per-night add-ons once, one-time ones up to 20), added to the cart total, and sent with the booking per room and night (as Amritara). Hotels without add-ons show nothing. Default `false` |
 | `defaultMemberPromoCode` | Payment | Optional fallback promo code applied when a guest books a member rate with no promo entered — property-specific business data, no default |
 | `sessionTimeoutMs` | Member login session | Default `30 * 60 * 1000` (30 minutes) |
 | `fontFamily` | Visual only | Sets both `--be-font-serif` and `--be-font-sans` to this one value — for a consumer with a single brand font. No default (package fonts render untouched). |

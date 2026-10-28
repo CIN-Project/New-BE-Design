@@ -6,6 +6,7 @@ import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
 import { formatDisplayDate } from "../../utils/date.js";
 import { computeStayTotals } from "../../utils/ratePricing.js";
+import { addonStayCharge } from "../../utils/addonPricing.js";
 import { CouponComponent } from "./CouponComponent.js";
 import { DateRangeModal } from "../SearchBar/DateRangeModal.js";
 import { GuestsModal } from "../SearchBar/GuestsModal.js";
@@ -496,9 +497,34 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                 </div>
               ) : null}
               {addonCount > 0 ? (
-                <div className="cart-night-header cart-night-header-total">
-                  <span>Stay Add-ons ({addonCount})</span>
-                  <span>{formatCurrency(addonAmount)}</span>
+                <div className="cart-night-block">
+                  <div className="cart-night-header cart-night-header-total">
+                    <span>Stay Add-ons ({addonCount})</span>
+                    <span>{formatCurrency(addonAmount)}</span>
+                  </div>
+                  {/* Each chosen add-on, priced like the total above (before
+                      tax; its tax is under Taxes & Fees). */}
+                  {selectedAddOns.map((addon) => {
+                    const roomIndex = addon?.roomIndex ?? 0;
+                    const searchRoom = searchRooms?.[roomIndex] || {};
+                    const { amount } = addonStayCharge(addon, {
+                      adults: searchRoom.adults ?? 1,
+                      children: searchRoom.children ?? 0,
+                      nights: nights || 1,
+                    });
+                    const quantity = Number(addon?.quantity) > 1 ? ` × ${addon.quantity}` : "";
+                    const room = (searchRooms?.length || 0) > 1 ? ` (Room ${roomIndex + 1})` : "";
+                    return (
+                      <div className="cart-night-line" key={`${roomIndex}-${addon?.AddonId}`}>
+                        <span>
+                          {addon?.AddonName}
+                          {quantity}
+                          {room}
+                        </span>
+                        <span>{formatCurrency(amount)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>

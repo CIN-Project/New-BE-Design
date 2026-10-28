@@ -15,6 +15,7 @@ import {
   postUserEnrollment,
 } from "../../../api/payment.js";
 import { computeStayTotals, getRoomNightlyBreakdown } from "../../../utils/ratePricing.js";
+import { addonSummary, roomNightAddons } from "../../../utils/addonPricing.js";
 import { getOrCreateSessionId, setCtaCustomerId } from "../../../utils/session.js";
 import { formatIsoDate } from "../../../utils/date.js";
 import { postBookingWidged } from "../../../api/tracking.js";
@@ -602,9 +603,6 @@ export function GuestDetailsForm({ onComplete }) {
           : "";
 
       const dateRange = getDateRange(selectedStartDate, selectedEndDate);
-      const mappedAddons = (selectedAddOns || []).map((addon) =>
-        mapAddon(addon, numberOfDays),
-      );
 
       const selectedRoomSummary = (selectedRoom || []).map((room, index) => {
         const searchRoom = (searchRooms || [])[index];
@@ -618,7 +616,18 @@ export function GuestDetailsForm({ onComplete }) {
         };
       });
 
-      const roomPayload = (selectedRoom || []).map((room, index) => {
+      // Chosen add-ons for the whole stay (booking details JSON / voucher),
+      // priced with their own room's guests (utils/addonPricing.js).
+      const mappedAddons = (selectedAddOns || []).map((addon) => {
+        const roomSummary = selectedRoomSummary[addon?.roomIndex ?? 0] || {};
+        return addonSummary(addon, {
+          adults: roomSummary.adults ?? 1,
+          children: roomSummary.children ?? 0,
+          nights: numberOfDays,
+        });
+      });
+
+      const roomPayload =(selectedRoom || []).map((room, index) => {
         const searchRoom = (searchRooms || [])[index];
         const adults = searchRoom?.adults ?? room?.applicableAdult ?? 1;
         const children = searchRoom?.children ?? room?.applicableChild ?? 0;
@@ -718,6 +727,19 @@ export function GuestDetailsForm({ onComplete }) {
             
               roomWiseTotal += dateAmountAfterTax + (extraChild > 0
                     ? extraChild * Math.round(room?.childRate || 0) : 0);
+              // As Amritara: this room's per-night add-ons on every night,
+              // its one-time add-ons on the check-in night, counted in the
+              // room's total.
+              const nightAddons = roomNightAddons(selectedAddOns, {
+                roomIndex: index,
+                nightIndex: dateIndex,
+                adults,
+                children,
+              });
+              roomWiseTotal += nightAddons.reduce(
+                (sum, addon) => sum + Number(addon.AmountAfterTax),
+                0,
+              );
               return {
               date,
               rate_id: room?.rateId,
@@ -742,7 +764,7 @@ export function GuestDetailsForm({ onComplete }) {
                     : "0",
               },
               fees: [],
-              Addons: index === 0 && dateIndex === 0 ? mappedAddons : [],
+              Addons: nightAddons,
             };
           }),
           // Itemized by real STAAH tax Name (matches real Amritara's own
@@ -957,6 +979,8 @@ export function GuestDetailsForm({ onComplete }) {
           totalPrice: grandTotal,
           selectedRoom: selectedRoomSummary,
           selectedAddonList: mappedAddons,
+          // Restored by Wizard.jsx when the guest comes back to the cart.
+          rawSelectedAddOns: selectedAddOns || [],
           selectedStartDate,
           selectedEndDate,
           promoCode: promoCodeContext,
@@ -1488,36 +1512,6 @@ function calculateNumberOfDays(startDate, endDate) {
   if (!startDate || !endDate) return 1;
   const diff = Math.abs(new Date(endDate) - new Date(startDate));
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) || 1;
-}
-
-/** Pull `.INR[field]` out of a Rate/AdultRate/ChildRate array entry (same shape AddOnsStep.jsx reads). */
-function extractRateField(rateArray, field) {
-  if (!rateArray || rateArray.length === 0) return null;
-  const inr = rateArray.find((r) => r?.INR)?.INR;
-  return inr && inr[field] != null ? Number(inr[field]) : null;
-}
-
-function getAddonUnitAmount(addon) {
-  return (
-    extractRateField(addon?.Rate, "amountAfterTax") ??
-    extractRateField(addon?.AdultRate, "amountAfterTax") ??
-    extractRateField(addon?.ChildRate, "amountAfterTax") ??
-    0
-  );
-}
-
-function mapAddon(addon, numberOfDays) {
-  const unit = getAddonUnitAmount(addon);
-  const quantity = addon?.quantity || 1;
-  const nights = addon?.Type === "R" ? numberOfDays : 1;
-  const amount = unit * quantity * nights;
-  return {
-    AddonId: addon?.AddonId ?? "",
-    AddonName: addon?.AddonName ?? "",
-    AddonType: addon?.Type ?? "",
-    PriceType: addon?.Applicable ?? "",
-    AmountAfterTax: amount.toFixed(2),
-  };
 }
 
 export const DetailStep = {

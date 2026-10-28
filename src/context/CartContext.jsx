@@ -6,6 +6,8 @@ const initialState = {
   selectedAddOns: [],
   addonAmountTotal: 0,
   addonList: [],
+  // Hotel the loaded addonList belongs to (AddOnsStep refetches when the guest picks another).
+  addonPropertyId: null,
   selectedAddonList: [],
   selectedRateDataList: [],
   selectedTaxList: [],

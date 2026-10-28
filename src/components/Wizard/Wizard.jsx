@@ -11,6 +11,7 @@ import { SearchBar } from "../SearchBar/SearchBar.js";
 import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
 import { useSearchContext } from "../../context/SearchContext.js";
+import { useConfig } from "../../config/configContext.js";
 import { useRepriceSelectedRooms } from "../../hooks/useRepriceSelectedRooms.js";
 import { useSyncSelectedRoomsWithSearch } from "../../hooks/useSyncSelectedRoomsWithSearch.js";
 import "./Wizard.css";
@@ -26,7 +27,8 @@ import "./Wizard.css";
 export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
   const [step, setStep] = useState(1);
   const { setActiveRoomSlotIndex, setSelectedRoom, selectedRoom } = useStayContext();
-  const { updateUserDetails } = useCartContext();
+  const config = useConfig();
+  const { updateUserDetails, setSelectedAddOns } = useCartContext();
   const {
     setSelectedPropertyId,
     setSelectedPropertyName,
@@ -124,6 +126,11 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         }
         if (parsed?.formData) {
           updateUserDetails(parsed.formData);
+        }
+        // Chosen add-ons (per room, with quantities) — DetailStep saves them
+        // alongside the rooms so the cart comes back as the guest left it.
+        if (Array.isArray(parsed?.rawSelectedAddOns)) {
+          setSelectedAddOns(parsed.rawSelectedAddOns);
         }
         // Bouncing off STAAH is always a full page reload of this app, so
         // SearchContext's property/dates — plain in-memory React state,
@@ -341,6 +348,9 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
         );
         updateUserDetails(pendingBookingData.formData);
       }
+      if (Array.isArray(pendingBookingData?.rawSelectedAddOns)) {
+        setSelectedAddOns(pendingBookingData.rawSelectedAddOns);
+      }
       // Same SearchContext restoration as handleBackToCart below (property/
       // dates/isDayUse) — this fallback is a raw browser-Back bounce landing
       // straight on step 2, a different path than that button, but the same
@@ -492,11 +502,11 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
                 step — real Amritara's "Confirm & Pay" flow doesn't collect
                 card details in-app either (see DetailStep.jsx's doc comment
                 on GuestDetailsForm). Add-ons always render below guest
-                details per request. The actual submit button lives in
-                CartOverview's sidebar, wired to this form via the `form`
-                attribute. */}
+                details, only for sites that turn them on (config.enableAddOns).
+                The actual submit button lives in CartOverview's sidebar, wired
+                to this form via the `form` attribute. */}
             <DetailStep.GuestDetailsForm onComplete={onComplete} />
-            {/* <AddOnsStep /> */}
+            {config?.enableAddOns ? <AddOnsStep /> : null}
           </div>
           <CartOverview
             onModifyRooms={(slotIndex) => {

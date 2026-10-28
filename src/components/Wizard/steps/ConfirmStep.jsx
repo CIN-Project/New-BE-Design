@@ -887,9 +887,15 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
 
   const formData = bookingData?.formData;
   const rooms = bookingData?.selectedRoom || [];
-  const addonsText = formatList(bookingData?.selectedAddonList, (addon) =>
-    typeof addon === "string" ? addon : addon?.AddonName || addon?.name || "",
-  );
+  // "Breakfast × 2 (Room 1)": quantity above 1, and the room on multi-room stays.
+  const addonsText = formatList(bookingData?.selectedAddonList, (addon) => {
+    if (typeof addon === "string") return addon;
+    const name = addon?.AddonName || addon?.name || "";
+    if (!name) return "";
+    const quantity = Number(addon?.Quantity) > 1 ? ` × ${addon.Quantity}` : "";
+    const room = rooms.length > 1 && addon?.RoomNo ? ` (Room ${addon.RoomNo})` : "";
+    return `${name}${quantity}${room}`;
+  });
   const guestName = [formData?.title, formData?.firstName, formData?.lastName]
     .filter(Boolean)
     .join(" ");

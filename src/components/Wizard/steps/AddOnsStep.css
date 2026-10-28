@@ -230,8 +230,120 @@
   transition: all 0.2s ease;
 }
 
+/* White tick on the brand-colour circle (the svg strokes currentColor, which
+   otherwise inherits the card's dark text colour). */
 .addon-card.selected .addon-card-checkbox-overlay svg {
-  /* color: white; */
+  color: #ffffff;
   opacity: 1;
   transform: scale(1);
+}
+
+/* Cards are no longer click-to-toggle: the footer button / quantity stepper picks them. */
+.addon-card {
+  cursor: default;
+}
+
+button.addon-select-indicator {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.addon-select-indicator:hover {
+  border-color: var(--be-color-primary, #846836);
+  color: var(--be-color-primary, #846836);
+}
+
+.addon-card.selected button.addon-select-indicator:hover {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.addon-card-price-unit {
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: #888;
+}
+
+/* --- quantity stepper (one-time add-ons, up to 20 per room) --- */
+
+.addon-qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--be-color-primary, #846836);
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.addon-qty button {
+  border: 0;
+  background: #ffffff;
+  color: var(--be-color-primary, #846836);
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+}
+
+.addon-qty button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.addon-qty span {
+  min-width: 1.5rem;
+  padding: 0.2rem 0.35rem;
+  text-align: center;
+  background: var(--be-color-primary, #846836);
+  color: #ffffff;
+}
+
+/* --- room tabs (multi-room bookings: add-ons are chosen per room) --- */
+
+.addons-room-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.addons-room-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #444;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addons-room-tab:hover {
+  border-color: var(--be-color-primary, #846836);
+}
+
+.addons-room-tab.active {
+  background: var(--be-color-primary, #846836);
+  border-color: var(--be-color-primary, #846836);
+  color: #ffffff;
+}
+
+.addons-room-tab-count {
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 0.62rem;
+  text-align: center;
+}
+
+.addons-room-tab:not(.active) .addons-room-tab-count {
+  background: var(--be-color-primary, #846836);
+  color: #ffffff;
 }
