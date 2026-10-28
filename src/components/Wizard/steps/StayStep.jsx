@@ -365,9 +365,10 @@ function getStandardRateEntries(property, room) {
 
 /** Rate-plan entries sorted by the stay total each card displays, cheapest first (ties keep their
  * original order). Entries with no positive price sort last. */
-function sortRateEntriesByPrice(entries, adults) {
+function sortRateEntriesByPrice(entries, adults, children = 0, childAges = null, infantAge = 0) {
   const priceOf = ({ ratePlan, mapping }) => {
-    const total = computeRatePlanTotals(ratePlan, mapping, adults)?.totalCartValue;
+    const total = computeRatePlanTotals(ratePlan, mapping, adults, children, childAges, infantAge)
+      ?.totalCartValue;
     return total > 0 ? total : Infinity;
   };
   return entries
@@ -409,35 +410,67 @@ function getRoomMinRate(room, adults = 1) {
   return minRate;
 }
 
-function getRoomFromPrice(property, room, adults = 1) {
+/**
+ * Extra-child amount/savings to fold into a single date's rate — same gate
+ * as ratePricing.js's computeRatePlanTotals (`(adults+chargeableChildren) >
+ * mapping.ApplicableGuest && chargeableChildren > 0`), applied here too so
+ * this "Rates Starting From" teaser price agrees with what the expanded
+ * rate card for the same plan actually charges, instead of quoting a lower
+ * "from" price than every card underneath it.
+ *
+ * `childAges`/`infantAge` matter here, not just the raw count — a child
+ * at/under the property's InfantAge rides free and must NOT trigger this
+ * surcharge (same "chargeable children" rule computeRoomSurcharge already
+ * applies to the actual cart charge; confirmed against the real
+ * STAAH-hosted widget, which visibly prices a young child differently from
+ * an older one for the same room).
+ */
+function extraChildForDate(dateData, mapping, adults, children, childAges, infantAge) {
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge || 0)).length
+    : children;
+  const needsExtraChild =
+    Number(adults || 0) + Number(chargeableChildren || 0) > Number(mapping?.ApplicableGuest || 0) &&
+    Number(chargeableChildren || 0) > 0;
+  if (!needsExtraChild) return { amount: 0, savings: 0 };
+  return {
+    amount: parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0"),
+    savings: parseFloat(dateData?.ExtraChildRate?.Savings || "0"),
+  };
+}
+
+function getRoomFromPrice(property, room, adults = 1, children = 0, childAges = null, infantAge = 0) {
   const entries = getStandardRateEntries(property, room);
-  console.log('Prem getStandardRateEntries',entries)
   let min = Infinity;
   let minIsMemberRate = false;
   let minSavings = 0;
 
-  entries.forEach(({ rate, ratePlan }) => {
+  entries.forEach(({ rate, mapping, ratePlan }) => {
     const firstKey = Object.keys(ratePlan?.Rates || {})[0];
-    const obp = ratePlan?.Rates?.[firstKey]?.OBP;
+    const dateData = ratePlan?.Rates?.[firstKey];
+    const obp = dateData?.OBP;
     const guestRate = getGuestRateFromObp(obp, adults);
-    const val = parseFloat(guestRate?.RateBeforeTax || "0");
+    const extraChild = extraChildForDate(dateData, mapping, adults, children, childAges, infantAge);
+    const val = parseFloat(guestRate?.RateBeforeTax || "0") + extraChild.amount;
 
     if (val > 0 && val < min) {
       min = val;
       minIsMemberRate = false;
-      minSavings = parseFloat(guestRate?.Savings || "0");
+      minSavings = parseFloat(guestRate?.Savings || "0") + extraChild.savings;
     }
 
-    const { memberRatePlan } = findMemberRatePlan(property, room, rate);
+    const { memberRatePlan, memberMapping } = findMemberRatePlan(property, room, rate);
     if (!memberRatePlan) return;
     const memberFirstKey = Object.keys(memberRatePlan?.Rates || {})[0];
-    const memberObp = memberRatePlan?.Rates?.[memberFirstKey]?.OBP;
+    const memberDateData = memberRatePlan?.Rates?.[memberFirstKey];
+    const memberObp = memberDateData?.OBP;
     const memberGuestRate = getGuestRateFromObp(memberObp, adults);
-    const memberVal = parseFloat(memberGuestRate?.RateBeforeTax || "0");
+    const memberExtraChild = extraChildForDate(memberDateData, memberMapping, adults, children, childAges, infantAge);
+    const memberVal = parseFloat(memberGuestRate?.RateBeforeTax || "0") + memberExtraChild.amount;
     if (memberVal > 0 && memberVal < min) {
       min = memberVal;
       minIsMemberRate = true;
-      minSavings = parseFloat(memberGuestRate?.Savings || "0");
+      minSavings = parseFloat(memberGuestRate?.Savings || "0") + memberExtraChild.savings;
     }
   });
 
@@ -565,6 +598,8 @@ function RateCard({
   ratePlan,
   adults,
   childrenCount,
+  childAges,
+  infantAge,
   nights,
   isDayUse,
   cancellationPolicyPackage,
@@ -583,9 +618,23 @@ function RateCard({
     rate,
   );
 
-  const standardTotals = computeRatePlanTotals(ratePlan, mapping, adults, childrenCount);
+  const standardTotals = computeRatePlanTotals(
+    ratePlan,
+    mapping,
+    adults,
+    childrenCount,
+    childAges,
+    infantAge,
+  );
   const memberTotals = memberRatePlan
-    ? computeRatePlanTotals(memberRatePlan, memberMapping, adults, childrenCount)
+    ? computeRatePlanTotals(
+        memberRatePlan,
+        memberMapping,
+        adults,
+        childrenCount,
+        childAges,
+        infantAge,
+      )
     : null;
 
   const memberSavings = memberTotals
@@ -806,6 +855,8 @@ function RoomRow({
   standardEntries,
   adults,
   childrenCount,
+  childAges,
+  infantAge,
   nights,
   cancellationPolicyPackage,
   activeTabMap,
@@ -1060,6 +1111,8 @@ function RoomRow({
                         ratePlan={ratePlan}
                         adults={adults}
                         childrenCount={childrenCount}
+                        childAges={childAges}
+                        infantAge={infantAge}
                         nights={nights}
                         isDayUse={isDayUse}
                         cancellationPolicyPackage={cancellationPolicyPackage}
@@ -2296,11 +2349,23 @@ export function StayStep({ onRoomsSelected }) {
       if (b?.RoomId === pinnedRoomId && a?.RoomId !== pinnedRoomId) return 1;
     }
     const priceA =
-      getRoomFromPrice(rateResponse, a, activeSlot?.adults ?? 1)?.price ??
-      Infinity;
+      getRoomFromPrice(
+        rateResponse,
+        a,
+        activeSlot?.adults ?? 1,
+        activeSlot?.children ?? 0,
+        activeSlot?.childAges,
+        propertyInfantAge,
+      )?.price ?? Infinity;
     const priceB =
-      getRoomFromPrice(rateResponse, b, activeSlot?.adults ?? 1)?.price ??
-      Infinity;
+      getRoomFromPrice(
+        rateResponse,
+        b,
+        activeSlot?.adults ?? 1,
+        activeSlot?.children ?? 0,
+        activeSlot?.childAges,
+        propertyInfantAge,
+      )?.price ?? Infinity;
     if (priceA !== priceB) return priceA - priceB;
     return (a?.RoomName || "").localeCompare(b?.RoomName || "");
   });
@@ -2398,11 +2463,17 @@ export function StayStep({ onRoomsSelected }) {
           const standardEntries = sortRateEntriesByPrice(
             getStandardRateEntries(rateResponse, room),
             activeSlot?.adults ?? 1,
+            activeSlot?.children ?? 0,
+            activeSlot?.childAges,
+            propertyInfantAge,
           );
           const fromPriceInfo = getRoomFromPrice(
             rateResponse,
             room,
             activeSlot?.adults ?? 1,
+            activeSlot?.children ?? 0,
+            activeSlot?.childAges,
+            propertyInfantAge,
           );
 
           return (
@@ -2435,6 +2506,8 @@ export function StayStep({ onRoomsSelected }) {
               standardEntries={standardEntries}
               adults={activeSlot?.adults ?? 1}
               childrenCount={activeSlot?.children ?? 0}
+              childAges={activeSlot?.childAges}
+              infantAge={propertyInfantAge}
               nights={nights}
               cancellationPolicyPackage={cancellationPolicyPackage}
               activeTabMap={activeTabMap}

@@ -138,7 +138,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
 
   const {
     nights,
+    rooms,
     roomBaseCost,
+    roomSurcharges,
     gstTotal,
     extraChildChargeTotal,
     extraAdultChargeTotal,
@@ -158,6 +160,13 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
 
   const addonCount = (selectedAddOns || []).length;
   const totalPayable = grandTotal;
+
+  // Extra-child surcharge is shown folded into Base Stay Cost, room-wise,
+  // not as its own Taxes & Fees line — these two are display-only
+  // re-buckets of the same figures; grandTotal/taxesAndFeesTotal (what
+  // DetailStep.jsx actually charges) are untouched.
+  const baseStayCostDisplay = roomBaseCost + extraChildChargeTotal;
+  const taxesAndFeesDisplay = taxesAndFeesTotal - extraChildChargeTotal;
 
   return (
     <div className="cart-sidebar">
@@ -433,7 +442,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
               <ChevronIcon open={isBaseCostOpen} />
             </span>
             <span className="cart-accordion-value">
-              {formatCurrency(roomBaseCost)}
+              {formatCurrency(baseStayCostDisplay)}
             </span>
           </div>
 
@@ -465,6 +474,27 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   </div>
                 );
               })}
+              {/* Extra-child surcharge, room-wise — shown here (base stay
+                  cost) rather than under Taxes & Fees, since it's part of
+                  what's charged for occupying the room, not a tax. */}
+              {extraChildChargeTotal > 0 ? (
+                <div className="cart-night-block">
+                  <div className="cart-night-header">
+                    <span>Extra Child Rate</span>
+                    <span>{formatCurrency(extraChildChargeTotal)}</span>
+                  </div>
+                  {(roomSurcharges || []).map((s, i) =>
+                    s.extraChildRoomCharge > 0 ? (
+                      <div className="cart-night-line" key={s.roomId ?? i}>
+                        <span>
+                          Room {i + 1}: {rooms?.[i]?.roomName}
+                        </span>
+                        <span>{formatCurrency(s.extraChildRoomCharge)}</span>
+                      </div>
+                    ) : null,
+                  )}
+                </div>
+              ) : null}
               {addonCount > 0 ? (
                 <div className="cart-night-header cart-night-header-total">
                   <span>Stay Add-ons ({addonCount})</span>
@@ -482,7 +512,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
               Taxes &amp; Fees <ChevronIcon open={isGstOpen} />
             </span>
             <span className="cart-accordion-value">
-              {formatCurrency(taxesAndFeesTotal)}
+              {formatCurrency(taxesAndFeesDisplay)}
             </span>
           </div>
 
@@ -511,18 +541,9 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                   <span>{formatCurrency(gstTotal)}</span>
                 </div>
               ) : null}
-              {/* Extra-child/extra-adult surcharge (computeRoomSurcharge) —
-                  real Trevon's cart shows these as two separate lines,
-                  "Extra Child Rate" and "Extra Adult Rate" (StayStep.js
-                  ~1872-1887), not one figure folded under a single label —
-                  the combined total was mislabeling extra-adult money as
-                  child money whenever both applied to the same room. */}
-              {extraChildChargeTotal > 0 ? (
-                <div className="cart-night-line">
-                  <span>Extra Child Rate</span>
-                  <span>{formatCurrency(extraChildChargeTotal)}</span>
-                </div>
-              ) : null}
+              {/* Extra-adult surcharge (computeRoomSurcharge) — extra-child
+                  surcharge is shown under Base Stay Cost instead (room-wise),
+                  not here; see that section above. */}
               {extraAdultChargeTotal > 0 ? (
                 <div className="cart-night-line">
                   <span>Extra Adult Rate</span>

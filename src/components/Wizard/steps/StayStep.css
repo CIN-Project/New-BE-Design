@@ -784,7 +784,7 @@
 
 .be-rate-option-price {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   /* Matches .be-room-row-price's own color (the "Rates Starting From"
      figure) — was briefly Amritara's text-green-600, reverted back to the
      brand's own gold for consistency between the two prices. */

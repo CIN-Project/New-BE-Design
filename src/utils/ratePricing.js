@@ -102,8 +102,19 @@ export function findMemberRatePlan(property, room, standardRate) {
  * all: the "original price before discount" shown next to a package is
  * already just totalCartValue + totalSavings (see RateCard.jsx's own
  * strikethrough), which comes out correct here without it.
+ *
+ * `childAges`/`infantAge` gate which children actually count toward the
+ * surcharge — Amritara's own source (and this function, before this fix)
+ * used the raw `children` count with no age check at all, so even an
+ * infant at/under the property's InfantAge triggered "Child Price". That
+ * disagreed both with the real STAAH-hosted booking widget (swiftbook.io),
+ * which visibly prices a young child differently from an older one for the
+ * same room, and with this package's own computeRoomSurcharge (the actual
+ * cart charge), which already applies this exact "chargeable children"
+ * rule. Falls back to the raw `children` count when childAges isn't
+ * populated, same fallback computeRoomSurcharge uses.
  */
-export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0) {
+export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0, childAges = null, infantAge = 0) {
   let totalCartValue = 0;
   let cartValueWithTax = 0;
   let totalSavings = 0;
@@ -114,10 +125,14 @@ export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0) {
     return { totalCartValue, cartValueWithTax, totalSavings, extraChildCartValue, extraChildSavings };
   }
 
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge)).length
+    : children;
+
   const adultKey = String(adults || 1);
   const needsExtraChild =
-    Number(adults || 0) + Number(children || 0) > Number(mapping?.ApplicableGuest || 0) &&
-    Number(children || 0) > 0;
+    Number(adults || 0) + Number(chargeableChildren || 0) > Number(mapping?.ApplicableGuest || 0) &&
+    Number(chargeableChildren || 0) > 0;
 
   Object.values(ratePlan.Rates).forEach((dateData) => {
     const obp = getRateObpEntry(dateData?.OBP, mapping?.RateId);
