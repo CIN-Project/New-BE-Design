@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useConfig } from "../../../config/configContext.js";
 import { useCartContext } from "../../../context/CartContext.js";
 import { useSearchContext } from "../../../context/SearchContext.js";
@@ -17,6 +17,89 @@ import "./AddOnsStep.css";
 
 function formatCurrency(value) {
   return `₹${Math.round(value || 0).toLocaleString("en-IN")}`;
+}
+
+const DESC_LINES = 3;
+
+// The first `length` characters, cut at a whole word, without dangling punctuation.
+function previewOf(text, length) {
+  const cut = text.slice(0, length);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:–-]+$/, "");
+}
+
+/**
+ * An add-on's description: 3 lines ending in an inline "… Read more" when it's longer, expanding
+ * in place ("Read less" collapses it). The cut is measured at the card's real width (a hidden copy
+ * of the paragraph), so "Read more" sits right after the "…" on the last line.
+ */
+function AddonDescription({ text }) {
+  const boxRef = useRef(null);
+  const measureRef = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  // Characters shown while collapsed; null = the whole text fits.
+  const [cut, setCut] = useState(null);
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure) return;
+    const fit = () => {
+      const style = getComputedStyle(measure);
+      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.35;
+      const maxHeight = lineHeight * DESC_LINES + 1;
+      measure.textContent = text;
+      if (measure.offsetHeight <= maxHeight) {
+        setCut(null);
+        return;
+      }
+      // Longest preview that still fits with the "… Read more" after it.
+      let lo = 0;
+      let hi = text.length;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        measure.textContent = `${previewOf(text, mid)}… READ MORE`;
+        if (measure.offsetHeight <= maxHeight) lo = mid;
+        else hi = mid - 1;
+      }
+      setCut(lo);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [text]);
+
+  const toggle = (
+    <button
+      type="button"
+      className="addon-card-read-more"
+      onClick={() => setExpanded((open) => !open)}
+      aria-expanded={expanded}
+    >
+      {expanded ? "Read less" : "Read more"}
+    </button>
+  );
+
+  return (
+    <div ref={boxRef} className="addon-card-desc-wrap">
+      <div className="addon-card-desc">
+        {cut === null ? (
+          text
+        ) : expanded ? (
+          <>
+            {text} {toggle}
+          </>
+        ) : (
+          <>
+            {previewOf(text, cut)}… {toggle}
+          </>
+        )}
+      </div>
+      {/* Hidden copy at the same width, used only to measure where to cut. */}
+      <div ref={measureRef} className="addon-card-desc addon-card-desc-measure" aria-hidden="true" />
+    </div>
+  );
 }
 
 function calculateNumberOfDays(startDate, endDate) {
@@ -248,7 +331,7 @@ export function AddOnsStep() {
                   </div>
                   <div className="addon-content">
                     <div className="addon-card-name">{addon.AddonName}</div>
-                    {description ? <div className="addon-card-desc">{description}</div> : null}
+                    {description ? <AddonDescription text={description} /> : null}
                     <div className="addon-card-footer">
                       <span className="addon-card-price">
                         +{formatCurrency(addonDisplayPrice(addon))}

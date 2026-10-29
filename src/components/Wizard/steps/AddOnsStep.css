@@ -40,8 +40,11 @@
   overflow-x: auto;
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
-  padding: 0.25rem 0.25rem 0.6rem;
-  margin: 0 -0.25rem;
+  /* Room for the cards' border and shadow inside the scroller (a negative margin got clipped by
+     the guest-details column, cutting off the first card's left edge). */
+  padding: 0.5rem 2px 0.75rem;
+  margin: 0;
+  scroll-padding-inline: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -110,8 +113,8 @@
   }
 }
 
+/* No lift on hover: a lifted card sat out of line with the others. */
 .addon-card:hover {
-  transform: translateY(-4px);
   border-color: var(--be-color-primary, #846836);
   box-shadow: 0 10px 25px rgba(132, 104, 54, 0.08);
 }
@@ -124,7 +127,8 @@
 
 .addon-image-wrap {
   width: 100%;
-  height: 100px;
+  height: 180px;
+  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: #f3f4f6;
@@ -158,10 +162,48 @@
   margin-bottom: 0.1rem;
 }
 
+/* AddonDescription cuts the text to 3 lines ending in an inline "… Read more", so a long
+   description doesn't make one card much taller than the rest. */
+.addon-card-desc-wrap {
+  position: relative;
+}
+
 .addon-card-desc {
   font-size: 0.68rem;
   color: #666;
   line-height: 1.35;
+}
+
+/* Same width and font as the visible paragraph; never shown. */
+.addon-card-desc-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Theme colour. Scoped to .addon-card so it beats the engine's [data-be-root] button
+   { color: inherit } base rule (which made it the grey description colour). */
+.addon-card .addon-card-read-more {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--be-color-primary, #846836);
+  cursor: pointer;
+}
+
+.addon-card .addon-card-read-more:hover {
+  color: var(--be-color-primary-hover, var(--be-color-primary, #846836));
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .addon-card-footer {
