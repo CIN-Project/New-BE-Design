@@ -484,8 +484,9 @@ export function GuestDetailsForm({ onComplete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // With Pay Now turned off (config.enablePayNow) every submit is Pay Later, e.g. Enter in a field.
     const formOfPayment =
-      e.nativeEvent?.submitter?.value === "pay_later"
+      config.enablePayNow === false || e.nativeEvent?.submitter?.value === "pay_later"
         ? "pay_later"
         : "pay_now";
     console.log(
@@ -1368,24 +1369,29 @@ export function GuestDetailsForm({ onComplete }) {
             form/name/value wiring as CartOverview's buttons: handleSubmit
             tells them apart via e.submitter either way. */}
         <div className="be-mobile-pay-actions">
-          <button
-            type="submit"
-            name="formOfPayment"
-            value="pay_now"
-            className="be-mobile-pay-btn"
-            disabled={stay.isRatesRefreshing}
-            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
-          >
-            Confirm &amp; Pay
-          </button>
-          <div className="be-mobile-pay-divider" role="separator">
-            <span>OR</span>
-          </div>
+          {/* config.enablePayNow false → Pay Later alone, in the primary button's style. */}
+          {config.enablePayNow !== false ? (
+            <>
+              <button
+                type="submit"
+                name="formOfPayment"
+                value="pay_now"
+                className="be-mobile-pay-btn"
+                disabled={stay.isRatesRefreshing}
+                title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
+              >
+                Confirm &amp; Pay
+              </button>
+              <div className="be-mobile-pay-divider" role="separator">
+                <span>OR</span>
+              </div>
+            </>
+          ) : null}
           <button
             type="submit"
             name="formOfPayment"
             value="pay_later"
-            className="be-mobile-pay-later-btn"
+            className={config.enablePayNow !== false ? "be-mobile-pay-later-btn" : "be-mobile-pay-btn"}
             disabled={stay.isRatesRefreshing}
             title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
           >

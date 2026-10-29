@@ -14,6 +14,9 @@ export const defaultConfig = {
   // When true, the hotel's STAAH add-ons are offered under the guest details form, per room, and
   // sent with the booking.
   enableAddOns: false,
+  // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
+  // only (primary-styled) way to book.
+  enablePayNow: true,
   properties: [],
   debug: false,
 };

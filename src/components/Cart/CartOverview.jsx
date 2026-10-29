@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchContext } from "../../context/SearchContext.js";
 import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
+import { useConfig } from "../../config/configContext.js";
 import { formatDisplayDate } from "../../utils/date.js";
 import { computeStayTotals } from "../../utils/ratePricing.js";
 import { addonStayCharge } from "../../utils/addonPricing.js";
@@ -84,6 +85,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     isDayUse,
   } = useSearchContext();
   const { selectedRoom, cancellationPolicyState, isRatesRefreshing } = useStayContext();
+  const payNowEnabled = useConfig().enablePayNow !== false;
   const { addonAmountTotal, addonTaxTotal, selectedAddOns, promoCodeContext } =
     useCartContext();
 
@@ -671,30 +673,35 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
             e.submitter (the actual button clicked), keyed off name/value —
             same reservation-creation call either way, only the
             form_of_payment sent to the payment redirect differs. */}
-        <button
-          type="submit"
-          form="be-guest-details-form"
-          name="formOfPayment"
-          value="pay_now"
-          className="cart-pay-btn"
-          disabled={isRatesRefreshing}
-          // Room/rate data is mid-refresh (a property/date change just
-          // triggered a refetch, or the guest hit Search) — submitting
-          // against it here would book whatever was selected under the
-          // OLD rates, not what's about to load in.
-          title={isRatesRefreshing ? "Updating rates…" : undefined}
-        >
-          Pay &amp; Confirm Booking <span aria-hidden="true">&rarr;</span>
-        </button>
-        <div className="cart-pay-divider" role="separator">
-          <span>OR</span>
-        </div>
+        {/* config.enablePayNow false → Pay Later alone, in the primary button's style. */}
+        {payNowEnabled ? (
+          <>
+            <button
+              type="submit"
+              form="be-guest-details-form"
+              name="formOfPayment"
+              value="pay_now"
+              className="cart-pay-btn"
+              disabled={isRatesRefreshing}
+              // Room/rate data is mid-refresh (a property/date change just
+              // triggered a refetch, or the guest hit Search) — submitting
+              // against it here would book whatever was selected under the
+              // OLD rates, not what's about to load in.
+              title={isRatesRefreshing ? "Updating rates…" : undefined}
+            >
+              Pay &amp; Confirm Booking <span aria-hidden="true">&rarr;</span>
+            </button>
+            <div className="cart-pay-divider" role="separator">
+              <span>OR</span>
+            </div>
+          </>
+        ) : null}
         <button
           type="submit"
           form="be-guest-details-form"
           name="formOfPayment"
           value="pay_later"
-          className="cart-pay-later-btn"
+          className={payNowEnabled ? "cart-pay-later-btn" : "cart-pay-btn"}
           disabled={isRatesRefreshing}
           title={isRatesRefreshing ? "Updating rates…" : undefined}
         >
