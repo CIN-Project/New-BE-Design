@@ -17,6 +17,12 @@ export const defaultConfig = {
   // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
   // only (primary-styled) way to book.
   enablePayNow: true,
+  // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
+  // icon; the compact recap bar always keeps the icon.
+  searchButtonLabel: "",
+  // When true, the full search bar is a slimmer rounded rectangle (not a pill): narrower, less
+  // padding, smaller labels/values/icons, and a rounded-rectangle text button. Compact bar unchanged.
+  slimSearchBar: false,
   properties: [],
   debug: false,
 };

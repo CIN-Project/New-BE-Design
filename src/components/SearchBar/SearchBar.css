@@ -666,6 +666,90 @@
   display: none;
 }
 
+/* Text button (config.searchButtonLabel, e.g. "Find Hotels") instead of the
+   magnifier circle: a rounded rectangle with the label always shown. Width is
+   only set on wide screens; at <=1200px the existing full-width rule applies. */
+.be-btn-booking-pill.be-btn-booking-pill--text {
+  border-radius: var(--be-radius-md, 12px);
+}
+.be-btn-booking-pill--text .be-btn-booking-pill-label {
+  display: inline;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.be-btn-booking-pill--text:hover {
+  transform: none;
+}
+@media (min-width: 1201px) {
+  .be-btn-booking-pill.be-btn-booking-pill--text {
+    width: auto;
+    height: 2.9rem;
+    padding: 0 1.4rem;
+  }
+}
+
+/* Slim bar (config.slimSearchBar): a rounded rectangle instead of the pill, and
+   from 1201px (the one-row desktop layout) narrower with smaller padding,
+   labels, values, icons and button. Two-class selectors so these beat the
+   single-class base/breakpoint rules regardless of source order. BookingFlow's
+   mobile sheet (.be-booking-flow-mobile-modal) keeps its own reset. */
+.be-booking-widget-wrap.be-booking-widget-wrap--slim {
+  border-radius: 16px;
+}
+.be-booking-widget-wrap--slim .be-btn-booking-pill.be-btn-booking-pill--text {
+  border-radius: 10px;
+}
+@media (min-width: 1201px) {
+  .be-booking-widget-wrap.be-booking-widget-wrap--slim {
+    max-width: min(1100px, 86vw);
+    padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+  }
+  /* Travelers always fits its full summary; Location and the dates give way. */
+  .be-booking-widget-wrap--slim .be-booking-form {
+    grid-template-columns: auto minmax(150px, 1fr) minmax(200px, 1fr) minmax(max-content, 1fr) max-content auto;
+  }
+  .be-booking-widget-wrap--slim .be-booking-form.be-booking-form--dayuse {
+    grid-template-columns: auto minmax(150px, 1fr) minmax(120px, 1fr) minmax(max-content, 1fr) max-content auto;
+  }
+  .be-booking-widget-wrap--slim .be-form-group {
+    gap: 10px;
+    padding: 0.2rem 0.55rem;
+  }
+  .be-booking-widget-wrap--slim .be-form-field-inputs label,
+  .be-booking-widget-wrap--slim .be-stay-mode-label {
+    font-size: 0.55rem;
+    margin-bottom: 1px;
+  }
+  .be-booking-widget-wrap--slim .be-form-field-inputs input,
+  .be-booking-widget-wrap--slim .be-custom-date-display,
+  .be-booking-widget-wrap--slim .be-custom-guests-display,
+  .be-booking-widget-wrap--slim .be-custom-select-display {
+    height: 1.5rem;
+    font-size: 0.8rem !important;
+  }
+  .be-booking-widget-wrap--slim svg.be-field-icon[width="18"] {
+    width: 16px;
+    height: 16px;
+  }
+  .be-booking-widget-wrap--slim .be-stay-mode-switch {
+    transform: scale(0.85);
+  }
+  .be-booking-widget-wrap--slim .be-btn-booking-pill.be-btn-booking-pill--text {
+    height: 2.75rem;
+    padding: 0 1.75rem;
+    margin-left: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    font-family: inherit;
+  }
+  .be-booking-widget-wrap--slim .be-btn-booking-pill--text .be-btn-booking-pill-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+  }
+}
+
 .be-btn-booking-pill::before {
   content: "";
   position: absolute;

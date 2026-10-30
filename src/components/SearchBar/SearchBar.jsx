@@ -160,6 +160,10 @@ export function SearchBar({
   });
 
   const isCompact = variant === "compact";
+  // config.searchButtonLabel turns the round magnifier into a text button (full variant only).
+  const searchButtonLabel = !isCompact ? (config.searchButtonLabel || "").trim() : "";
+  // config.slimSearchBar: slimmer, rounded-rectangle full bar (see SearchBar.css, --slim).
+  const isSlim = !isCompact && config.slimSearchBar === true;
 
   // Keeps this field in sync with promo changes that didn't originate from
   // THIS instance's own typing — cleared via CouponComponent's "Remove"
@@ -525,7 +529,7 @@ export function SearchBar({
   const widget = (
     <div
       ref={widgetRef}
-      className={`be-booking-widget-wrap ${isCompact ? "be-booking-widget-wrap--compact" : ""} ${visible ? "be-visible" : ""} ${isCompact && mobileEditOpen ? "be-mobile-editing" : ""}`}
+      className={`be-booking-widget-wrap ${isCompact ? "be-booking-widget-wrap--compact" : ""} ${isSlim ? "be-booking-widget-wrap--slim" : ""} ${visible ? "be-visible" : ""} ${isCompact && mobileEditOpen ? "be-mobile-editing" : ""}`}
     >
       {isCompact && (
         <div className="be-compact-summary">
@@ -710,26 +714,28 @@ export function SearchBar({
 
         <button
           type="submit"
-          className="be-btn-booking-pill"
-          aria-label="Search availability"
+          className={`be-btn-booking-pill ${searchButtonLabel ? "be-btn-booking-pill--text" : ""}`}
+          aria-label={searchButtonLabel ? undefined : "Search availability"}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          {!searchButtonLabel && (
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          )}
           {/* Hidden by default (see SearchBar.css) — every existing layout
               (desktop capsule, compact recap bar) keeps its icon-only
-              circular button untouched. BookingFlow's mobileModal sheet is
-              the only place this becomes visible, via a descendant
-              selector on its own wrapper class. */}
-          <span className="be-btn-booking-pill-label">Search</span>
+              circular button untouched. BookingFlow's mobileModal sheet and
+              the text button (config.searchButtonLabel) are the only places
+              this becomes visible. */}
+          <span className="be-btn-booking-pill-label">{searchButtonLabel || "Search"}</span>
         </button>
       </form>
 

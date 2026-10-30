@@ -80,6 +80,10 @@
   transform: none;
   padding: 1rem 1.5rem 2rem;
 }
+/* The slim bar's rounded corners (SearchBar.css) don't apply inside the full-screen sheet. */
+.be-booking-flow-mobile-modal .be-booking-widget-wrap.be-booking-widget-wrap--slim {
+  border-radius: 0;
+}
 
 /* Default submit button is an icon-only circle (matches the desktop
    capsule/compact recap bar, both untouched) — the mobile sheet gets the
