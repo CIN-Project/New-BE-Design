@@ -77,7 +77,7 @@ export function buildSwiftbookRedirectUrl({
  * properties into.
  */
 export function buildLegacyBookingRedirectUrl({
-  baseUrl = "https://bookings.amritara.co.in/",
+  baseUrl = "https://qt.cinuniverse.com/alwar-hotels",
   chainId = 5971,
   propertyId,
   checkIn,
