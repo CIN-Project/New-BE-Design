@@ -974,9 +974,20 @@
 .be-compact-summary-text {
   min-width: 0;
   flex: 1;
+  /* A button (tapping it opens the editor): drop the native button look. */
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .be-compact-summary-property {
+  display: block;
   margin: 0 0 2px;
   font-family: var(--be-font-serif, "Cormorant Garamond", Georgia, serif);
   font-size: 1rem;
@@ -988,6 +999,7 @@
 }
 
 .be-compact-summary-meta {
+  display: block;
   margin: 0;
   font-size: 0.72rem;
   color: #666;

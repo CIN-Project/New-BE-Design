@@ -534,11 +534,19 @@ export function SearchBar({
       {isCompact && (
         <div className="be-compact-summary">
           {stayModeToggle}
-          <div className="be-compact-summary-text">
-            <p className="be-compact-summary-property">
+          {/* The whole summary (hotel, dates, guests) opens the editor, not
+              only the pencil button. Spans, not <p>: a button may only hold
+              phrasing content. */}
+          <button
+            type="button"
+            className="be-compact-summary-text"
+            onClick={() => setMobileEditOpen(true)}
+            aria-label="Edit hotel, dates and guests"
+          >
+            <span className="be-compact-summary-property">
               {search.selectedPropertyName || "Select a hotel"}
-            </p>
-            <p className="be-compact-summary-meta">
+            </span>
+            <span className="be-compact-summary-meta">
               {search.selectedStartDate && (search.isDayUse || search.selectedEndDate)
                 ? search.isDayUse
                   ? formatShort(search.selectedStartDate)
@@ -546,8 +554,8 @@ export function SearchBar({
                 : "Select dates"}
               {" · "}
               {search.getSearchGuestsSummary()}
-            </p>
-          </div>
+            </span>
+          </button>
           <div className="be-compact-summary-actions">
             {onBack && (
               <button
