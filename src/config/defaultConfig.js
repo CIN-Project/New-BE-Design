@@ -23,10 +23,14 @@ export const defaultConfig = {
   // When true, the full search bar is a slimmer rounded rectangle (not a pill): narrower, less
   // padding, smaller labels/values/icons, and a rounded-rectangle text button. Compact bar unchanged.
   slimSearchBar: false,
-  // When true, the full search bar's Location / dates / Travelers dropdowns always open downward;
-  // when there isn't room below, the page scrolls up just enough to fit them instead of flipping
-  // them above the bar. False keeps the flip-up-when-short-of-room behaviour.
-  dropdownsOpenDown: false,
+  // When true, the full search bar's Location / dates / Travelers dropdowns open on the side with
+  // room: below the bar when they fit there, otherwise above it only if there is more room above
+  // than below. False keeps the old rule (flip up whenever short of room below, even with no room
+  // above).
+  dropdownsFitToScreen: false,
+  // Height covered at the top of the screen (e.g. a fixed site header), in px, not counted as room
+  // above the bar by dropdownsFitToScreen. A number, or a function returning one (measured on open).
+  dropdownTopOffset: 0,
   properties: [],
   debug: false,
 };

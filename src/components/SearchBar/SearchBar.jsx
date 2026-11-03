@@ -235,6 +235,19 @@ export function SearchBar({
     return spaceBelow < threshold;
   };
 
+  // config.dropdownsFitToScreen: open below when the dropdown (about
+  // `threshold` px) fits there; otherwise above only when there is more room
+  // above (less any fixed header, config.dropdownTopOffset) than below.
+  const roomAboveIsBetter = (threshold) => {
+    if (!widgetRef.current) return false;
+    const rect = widgetRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow >= threshold) return false;
+    const offset = config?.dropdownTopOffset;
+    const topOffset = Number(typeof offset === "function" ? offset() : offset) || 0;
+    return rect.top - topOffset > spaceBelow;
+  };
+
   const openOnly = (setter, threshold) => {
     // The compact bar (both the tablet 3-column recap and the mobile
     // expanded edit form) always sits pinned near the top of the viewport
@@ -244,14 +257,13 @@ export function SearchBar({
     // which has nowhere to go if the trigger itself is already near y:0).
     // The full hero variant can be anywhere on a tall page, so it keeps
     // the real space-below check.
-    // config.dropdownsOpenDown: never flip up; scroll the page so the dropdown
-    // (about `threshold` px tall) fits below the bar instead.
-    const openDown = isCompact || alwaysOpenDown || Boolean(config?.dropdownsOpenDown);
-    setOpenUpwards(openDown ? false : checkSpace(threshold));
-    if (config?.dropdownsOpenDown && !isCompact && widgetRef.current) {
-      const shortBy = widgetRef.current.getBoundingClientRect().bottom + threshold - window.innerHeight;
-      if (shortBy > 0) window.scrollBy({ top: shortBy + 16, behavior: "smooth" });
-    }
+    setOpenUpwards(
+      isCompact || alwaysOpenDown
+        ? false
+        : config?.dropdownsFitToScreen
+          ? roomAboveIsBetter(threshold)
+          : checkSpace(threshold),
+    );
     setShowDestModal(false);
     setShowCalModal(false);
     setShowGuestsModal(false);
