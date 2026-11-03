@@ -244,7 +244,14 @@ export function SearchBar({
     // which has nowhere to go if the trigger itself is already near y:0).
     // The full hero variant can be anywhere on a tall page, so it keeps
     // the real space-below check.
-    setOpenUpwards(isCompact || alwaysOpenDown ? false : checkSpace(threshold));
+    // config.dropdownsOpenDown: never flip up; scroll the page so the dropdown
+    // (about `threshold` px tall) fits below the bar instead.
+    const openDown = isCompact || alwaysOpenDown || Boolean(config?.dropdownsOpenDown);
+    setOpenUpwards(openDown ? false : checkSpace(threshold));
+    if (config?.dropdownsOpenDown && !isCompact && widgetRef.current) {
+      const shortBy = widgetRef.current.getBoundingClientRect().bottom + threshold - window.innerHeight;
+      if (shortBy > 0) window.scrollBy({ top: shortBy + 16, behavior: "smooth" });
+    }
     setShowDestModal(false);
     setShowCalModal(false);
     setShowGuestsModal(false);

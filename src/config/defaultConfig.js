@@ -23,6 +23,10 @@ export const defaultConfig = {
   // When true, the full search bar is a slimmer rounded rectangle (not a pill): narrower, less
   // padding, smaller labels/values/icons, and a rounded-rectangle text button. Compact bar unchanged.
   slimSearchBar: false,
+  // When true, the full search bar's Location / dates / Travelers dropdowns always open downward;
+  // when there isn't room below, the page scrolls up just enough to fit them instead of flipping
+  // them above the bar. False keeps the flip-up-when-short-of-room behaviour.
+  dropdownsOpenDown: false,
   properties: [],
   debug: false,
 };
