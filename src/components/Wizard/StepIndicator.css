@@ -114,22 +114,34 @@
   box-shadow: 0 4px 10px rgba(191, 161, 95, 0.1);
 }
 
-@media (max-width: 640px) {
-  .be-step-num{
-    width: 32px;
-    height: 28px;
+/* Phones: one slim row (both steps side by side, each label on one line), smaller circles and text. */
+@media (max-width: 768px) {
+  .be-step-num {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    font-size: 0.68rem;
+  }
+  .be-step-item--active .be-step-num,
+  .be-step-item--completed .be-step-num {
+    box-shadow: none;
   }
   .be-step-indicator {
-    padding: 0.8rem 0.6rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
   }
   .be-step-connector-line {
     display: none;
   }
   .be-step-item {
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
     padding: 0;
     background: none;
+    min-width: 0;
   }
 }

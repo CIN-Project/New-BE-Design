@@ -14,6 +14,10 @@ export const defaultConfig = {
   // When true, the hotel's STAAH add-ons are offered under the guest details form, per room, and
   // sent with the booking.
   enableAddOns: false,
+  // When true (with enableAddOns), on phones (≤768px) the add-ons open as a drawer sliding in from
+  // the right when the guest details step loads, with Skip / Continue, instead of the carousel under
+  // the form; the cart's summary gets an "Add-ons … Modify" row that opens the drawer again.
+  mobileAddOnsDrawer: false,
   // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
   // only (primary-styled) way to book.
   enablePayNow: true,

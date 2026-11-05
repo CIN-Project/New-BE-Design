@@ -132,6 +132,7 @@ export function AddOnsStep() {
     setAddonPropertyId,
     setAddonAmountTotal,
     setAddonTaxTotal,
+    addonsDrawerRequest,
   } = useCartContext();
   const { selectedPropertyId, selectedStartDate, selectedEndDate, searchRooms } = useSearchContext();
   const { selectedRoom } = useStayContext();
@@ -139,6 +140,58 @@ export function AddOnsStep() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeRoom, setActiveRoom] = useState(0);
   const carouselRef = useRef(null);
+
+  // Phone drawer (config.mobileAddOnsDrawer): the add-ons slide in from the right once each time the
+  // step loads with add-ons; Skip / Continue / ✕ / backdrop / Esc close it, and on phones nothing is
+  // shown under the form after that. The cart's "Add-ons … Modify" row opens it again.
+  const isPhone = useMediaQuery(DRAWER_QUERY, !!config?.mobileAddOnsDrawer);
+  const drawerMode = !!config?.mobileAddOnsDrawer && isPhone;
+  const [drawer, setDrawer] = useState("closed"); // "closed" | "open" | "closing"
+  const autoOpened = useRef(false);
+  const seenRequest = useRef(addonsDrawerRequest);
+  const hasAddons = !isLoading && addonList?.length > 0;
+
+  useEffect(() => {
+    if (drawerMode && hasAddons && !autoOpened.current) {
+      autoOpened.current = true;
+      setDrawer("open");
+    }
+  }, [drawerMode, hasAddons]);
+
+  useEffect(() => {
+    if (addonsDrawerRequest === seenRequest.current) return;
+    seenRequest.current = addonsDrawerRequest;
+    if (drawerMode && hasAddons) setDrawer("open");
+  }, [addonsDrawerRequest, drawerMode, hasAddons]);
+
+  // Left phone width while it was open (rotated / resized): back to the inline carousel.
+  useEffect(() => {
+    if (!drawerMode) setDrawer("closed");
+  }, [drawerMode]);
+
+  const closeDrawer = () => {
+    setDrawer((current) => (current === "open" ? "closing" : current));
+  };
+
+  useEffect(() => {
+    if (drawer !== "closing") return;
+    const timer = setTimeout(() => setDrawer("closed"), DRAWER_CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [drawer]);
+
+  useEffect(() => {
+    if (drawer === "closed") return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => {
+      if (event.key === "Escape") closeDrawer();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawer === "closed"]);
 
   const numberOfDays = calculateNumberOfDays(selectedStartDate, selectedEndDate);
   const rooms = searchRooms?.length ? searchRooms : [{ adults: 1, children: 0 }];
@@ -253,11 +306,25 @@ export function AddOnsStep() {
     return null;
   }
 
-  return (
-    <div className="be-addons-step">
+  if (drawerMode && drawer === "closed") return null;
+
+  const selectedCount = chosen.reduce((sum, a) => sum + (a.quantity || 0), 0);
+
+  const section = (
+    <div
+      className={`be-addons-step${drawerMode ? " be-addons-drawer" : ""}${drawer === "closing" ? " be-addons-drawer--closing" : ""}`}
+      {...(drawerMode ? { role: "dialog", "aria-modal": "true", "aria-label": "Enhance your stay with add-ons" } : {})}
+    >
       <div className="addons-step-header">
         <h3 className="addons-step-title">Enhance Your Stay (Add-ons)</h3>
-        {!isLoading && addonList.length > 1 ? (
+        {drawerMode ? (
+          <button type="button" className="be-addons-drawer-close" onClick={closeDrawer} aria-label="Close add-ons">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        ) : !isLoading && addonList.length > 1 ? (
           <div className="addons-header-actions">
             <button
               type="button"
@@ -378,6 +445,48 @@ export function AddOnsStep() {
           </div>
         </div>
       )}
+
+      {drawerMode ? (
+        <div className="be-addons-drawer-footer">
+          <button type="button" className="be-addons-drawer-skip" onClick={closeDrawer}>
+            Skip
+          </button>
+          <button type="button" className="be-addons-drawer-continue" onClick={closeDrawer}>
+            {selectedCount > 0 ? `Continue (${selectedCount} selected)` : "Continue"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
+
+  if (!drawerMode) return section;
+
+  return (
+    <>
+      <div
+        className={`be-addons-drawer-backdrop${drawer === "closing" ? " be-addons-drawer-backdrop--closing" : ""}`}
+        onClick={closeDrawer}
+        aria-hidden="true"
+      />
+      {section}
+    </>
+  );
+}
+
+const DRAWER_QUERY = "(max-width: 768px)";
+const DRAWER_CLOSE_MS = 280;
+
+// Whether the media query matches (false on the server and until mounted). `enabled` false skips
+// listening altogether.
+function useMediaQuery(query, enabled) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined" || !window.matchMedia) return;
+    const list = window.matchMedia(query);
+    const update = () => setMatches(list.matches);
+    update();
+    list.addEventListener("change", update);
+    return () => list.removeEventListener("change", update);
+  }, [query, enabled]);
+  return matches;
 }

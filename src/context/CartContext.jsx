@@ -8,6 +8,9 @@ const initialState = {
   addonList: [],
   // Hotel the loaded addonList belongs to (AddOnsStep refetches when the guest picks another).
   addonPropertyId: null,
+  // Bumped by the cart's "Add-ons … Modify" row to open the phone add-ons drawer again
+  // (config.mobileAddOnsDrawer).
+  addonsDrawerRequest: 0,
   selectedAddonList: [],
   selectedRateDataList: [],
   selectedTaxList: [],

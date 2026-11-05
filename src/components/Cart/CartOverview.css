@@ -554,3 +554,10 @@
   }
 }
 
+
+/* The "Add-ons … Modify" row opens the phone add-ons drawer, which is used up to 768px only. */
+@media (min-width: 769px) {
+  .cart-mobile-collapsed-row--addons {
+    display: none;
+  }
+}

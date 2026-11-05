@@ -85,9 +85,20 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     isDayUse,
   } = useSearchContext();
   const { selectedRoom, cancellationPolicyState, isRatesRefreshing } = useStayContext();
-  const payNowEnabled = useConfig().enablePayNow !== false;
-  const { addonAmountTotal, addonTaxTotal, selectedAddOns, promoCodeContext } =
-    useCartContext();
+  const config = useConfig();
+  const payNowEnabled = config.enablePayNow !== false;
+  const {
+    addonAmountTotal,
+    addonTaxTotal,
+    selectedAddOns,
+    promoCodeContext,
+    addonList,
+    addonsDrawerRequest,
+    setAddonsDrawerRequest,
+  } = useCartContext();
+  // Phone add-ons drawer (config.mobileAddOnsDrawer): an "Add-ons … Modify" row reopens it.
+  const showAddonsRow = !!config.enableAddOns && !!config.mobileAddOnsDrawer && addonList?.length > 0;
+  const addonsCount = (selectedAddOns || []).reduce((sum, addon) => sum + (addon.quantity || 0), 0);
 
   const [isBaseCostOpen, setIsBaseCostOpen] = useState(false);
   const [isGstOpen, setIsGstOpen] = useState(false);
@@ -255,6 +266,25 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
               Modify
             </span>
           </div>
+          {showAddonsRow ? (
+            <div className="cart-mobile-collapsed-row cart-mobile-collapsed-row--addons">
+              <span>{addonsCount > 0 ? `Add-ons: ${addonsCount} selected` : "No add-ons selected"}</span>
+              <span
+                style={modifyLinkStyle}
+                role="button"
+                tabIndex={0}
+                onClick={() => setAddonsDrawerRequest((addonsDrawerRequest || 0) + 1)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setAddonsDrawerRequest((addonsDrawerRequest || 0) + 1);
+                  }
+                }}
+              >
+                {addonsCount > 0 ? "Modify" : "Add"}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Selected Property */}
