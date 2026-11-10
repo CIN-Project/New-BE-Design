@@ -674,7 +674,7 @@ function RateCard({
     <div className={`be-rate-card-col${isSelected ? " be-selected" : ""}`}>
       <div className="be-rate-card-header">
         <h4 className="be-rate-card-title">
-          {rate?.MappingDisplayName || rate?.RateName}
+          {rate?.MappingDisplayName}
         </h4>
         {/* {cancellation && (
           <span className={`be-cancellation-pill ${cancellation.cls}`}>
