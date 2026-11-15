@@ -21,6 +21,8 @@ export const defaultConfig = {
   // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
   // only (primary-styled) way to book.
   enablePayNow: true,
+  // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
+  enableDayUse: true,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
   // icon; the compact recap bar always keeps the icon.
   searchButtonLabel: "",

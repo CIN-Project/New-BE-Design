@@ -164,6 +164,17 @@ export function SearchBar({
   const searchButtonLabel = !isCompact ? (config.searchButtonLabel || "").trim() : "";
   // config.slimSearchBar: slimmer, rounded-rectangle full bar (see SearchBar.css, --slim).
   const isSlim = !isCompact && config.slimSearchBar === true;
+  // config.enableDayUse: false hides the Overnight / Day Use switch and keeps every search overnight.
+  const dayUseEnabled = config.enableDayUse !== false;
+
+  // With Day Use off, a stale isDayUse (e.g. an ?isDayUse=1 link) is reset so the search stays overnight.
+  useEffect(() => {
+    if (!dayUseEnabled && search.isDayUse) {
+      search.setIsDayUse(false);
+      search.setDayUseArrivalTime("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayUseEnabled, search.isDayUse]);
 
   // Keeps this field in sync with promo changes that didn't originate from
   // THIS instance's own typing — cleared via CouponComponent's "Remove"
@@ -485,7 +496,7 @@ export function SearchBar({
   // Shared between the full capsule (its own standalone field) and the
   // compact recap bar (grouped with the back button, see the render below)
   // so both stay in sync without duplicating the markup.
-  const stayModeToggle = (
+  const stayModeToggle = dayUseEnabled && (
     <div className="be-form-group be-stay-mode-group">
       <div className="be-form-field-inputs be-stay-mode-inputs">
         <span
@@ -619,7 +630,7 @@ export function SearchBar({
       )}
 
       <form
-        className={`be-booking-form ${search.isDayUse ? "be-booking-form--dayuse" : ""}`}
+        className={`be-booking-form ${search.isDayUse ? "be-booking-form--dayuse" : ""} ${!isCompact && !dayUseEnabled ? "be-booking-form--no-dayuse" : ""}`}
         onSubmit={handleSubmit}
       >
         {isCompact && mobileEditOpen && (

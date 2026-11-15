@@ -62,6 +62,11 @@
   grid-template-columns: auto minmax(200px, 1.1fr) minmax(140px, 1.3fr) minmax(240px, 0.9fr) max-content auto;
 }
 
+/* config.enableDayUse: false — no Day Use switch, so the leading `auto` track is dropped (full variant). */
+.be-booking-form--no-dayuse {
+  grid-template-columns: minmax(200px, 1.1fr) minmax(260px, 1.3fr) minmax(240px, 0.9fr) max-content auto;
+}
+
 /* Day Use switch — its own narrow field at the start of the row (not a
    full-width bar), styled like every other field here: a
    .be-form-field-inputs label above a control, `auto`-sized track so it
@@ -713,6 +718,9 @@
   }
   .be-booking-widget-wrap--slim .be-booking-form.be-booking-form--dayuse {
     grid-template-columns: auto minmax(150px, 1fr) minmax(120px, 1fr) minmax(max-content, 1fr) max-content auto;
+  }
+  .be-booking-widget-wrap--slim .be-booking-form.be-booking-form--no-dayuse {
+    grid-template-columns: minmax(150px, 1fr) minmax(200px, 1fr) minmax(max-content, 1fr) max-content auto;
   }
   .be-booking-widget-wrap--slim .be-form-group {
     gap: 10px;
