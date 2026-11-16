@@ -587,6 +587,58 @@ function LockOpenIcon() {
   );
 }
 
+/** Green price tag used by the rate's "Save INR …/-" line. */
+function SavingsTagIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 5v6.2a2 2 0 0 0 .6 1.4l7.8 7.8a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8L11.6 4.6A2 2 0 0 0 10.2 4H4a1 1 0 0 0-1 1z" />
+      <path d="M17 4l5.4 5.4a2 2 0 0 1 0 2.8L17 17.6" />
+      <circle cx="7.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Whole-number % off the struck-through (pre-savings) price, e.g. 533 off 5,332 → 10. */
+function savingsPercent(totals) {
+  const original = totals.totalCartValue + totals.totalSavings;
+  return original > 0 ? Math.round((totals.totalSavings / original) * 100) : 0;
+}
+
+/** Struck-through original price with its green "% OFF" badge (only when the rate has savings). */
+function RateStrike({ totals }) {
+  if (!(totals.totalSavings > 0)) return null;
+  const percent = savingsPercent(totals);
+  return (
+    <>
+      {percent > 0 && <span className="be-rate-option-discount">{percent}% OFF</span>}
+      <span className="be-rate-option-price-strike">
+        &#8377;{formatMoney(totals.totalCartValue + totals.totalSavings)}
+      </span>
+    </>
+  );
+}
+
+/** Green "Save INR 1,350/-" line under the rate label. */
+function RateSavingsLine({ amount }) {
+  if (!(amount > 0)) return null;
+  return (
+    <span className="be-rate-option-save">
+      <SavingsTagIcon />
+      Save INR {formatMoney(amount)}/-
+    </span>
+  );
+}
+
 /** One rate-plan card inside the horizontal carousel: title/cancellation
  * pill header, scrollable inclusions, Standard-vs-Member toggle + select
  * button footer. */
@@ -726,17 +778,11 @@ function RateCard({
               </span>
               <span className="be-rate-option-meta">
                 <span className="be-rate-option-label">Standard Rate</span>
+                <RateSavingsLine amount={standardTotals.totalSavings} />
               </span>
             </div>
             <span className="be-rate-option-price">
-              {standardTotals.totalSavings > 0 && (
-                <span className="be-rate-option-price-strike">
-                  &#8377;
-                  {formatMoney(
-                    standardTotals.totalCartValue + standardTotals.totalSavings,
-                  )}
-                </span>
-              )}
+              <RateStrike totals={standardTotals} />
               &#8377;{formatMoney(standardTotals.totalCartValue)}
               {!isDayUse && (
                 <div className="be-rate-unit">
@@ -787,14 +833,7 @@ function RateCard({
               <span
                 className={`be-rate-option-price be-member-price${animating ? " be-unlocking-flash" : ""}`}
               >
-                {memberTotals.totalSavings > 0 && (
-                  <span className="be-rate-option-price-strike">
-                    &#8377;
-                    {formatMoney(
-                      memberTotals.totalCartValue + memberTotals.totalSavings,
-                    )}
-                  </span>
-                )}
+                <RateStrike totals={memberTotals} />
                 &#8377;{formatMoney(memberTotals.totalCartValue)}
                 {!isDayUse && (
                   <div className="be-rate-unit">

@@ -803,6 +803,33 @@
   margin-right: 0.35rem;
 }
 
+/* "10% OFF" next to the struck-through price. */
+.be-rate-option-discount {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #1e9e4a;
+  background: rgba(30, 158, 74, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+/* Green "Save INR 1,350/-" with a tag icon, under the rate label. */
+.be-rate-option-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1e9e4a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .be-rate-option-price.be-member-price {
   color: var(--be-color-primary, #846836);
 }
