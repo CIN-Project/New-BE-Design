@@ -1405,7 +1405,7 @@ export function GuestDetailsForm({ onComplete }) {
             disabled={stay.isRatesRefreshing}
             title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
           >
-            Pay Later
+            Book Now &amp; Pay Later
           </button>
         </div>
 
