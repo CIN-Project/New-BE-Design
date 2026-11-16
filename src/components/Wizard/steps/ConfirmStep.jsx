@@ -247,6 +247,16 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       const parsedResponseJsonResp = parsePaymentResponse(rawResponse);
       const resultEntry = parsedResponseJsonResp?.[0] || null;
       const parsedResponseJson = resultEntry?.responseJson || null;
+      // config.payLaterViaGateway: same clean-up as Amritara's ConfirmStep.js before
+      // /api/payment/confirm — partner_id as a string, ipn_flag "0" for pay_later
+      // (STAAH sends no IPN for it), otherwise ipn_flag as a string.
+      if (config.payLaterViaGateway && parsedResponseJson) {
+        parsedResponseJson.partner_id = String(parsedResponseJson.partner_id);
+        parsedResponseJson.ipn_flag =
+          resultEntry?.form_of_payment === "pay_later"
+            ? "0"
+            : String(parsedResponseJson.ipn_flag);
+      }
       setFormOfPayment(resultEntry?.form_of_payment);
       setCompleteResponseObject(resultEntry);
 
