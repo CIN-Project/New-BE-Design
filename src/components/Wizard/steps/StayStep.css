@@ -195,6 +195,16 @@
   color: #888;
 }
 
+/* "% OFF" after "/ night" in the room header: beats the generic
+   ".be-room-row-price span" (grey, regular) so it keeps the badge look. */
+.be-room-row-price .be-rate-option-discount {
+  margin-left: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1e9e4a;
+  vertical-align: middle;
+}
+
 .be-member-rate-badge {
   display: inline-block;
   margin-left: 0.5rem;

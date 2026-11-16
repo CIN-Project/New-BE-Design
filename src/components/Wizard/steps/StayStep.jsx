@@ -1008,6 +1008,12 @@ function RoomRow({
                 )}
                 {fromPrice != null ? `₹${formatMoney(fromPrice)}` : "—"}
                 {!isDayUse && <span> / night</span>}
+                {/* Same green "% OFF" badge as the rate cards, off the struck-through price. */}
+                {fromPrice != null && fromPriceStrike > fromPrice && (
+                  <span className="be-rate-option-discount">
+                    {Math.round(((fromPriceStrike - fromPrice) / fromPriceStrike) * 100)}% OFF
+                  </span>
+                )}
                 {fromPrice != null && fromPriceIsMemberRate && (
                   <span className="be-member-rate-badge">Member Rate</span>
                 )}
