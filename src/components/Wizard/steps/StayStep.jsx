@@ -587,54 +587,33 @@ function LockOpenIcon() {
   );
 }
 
-/** Green price tag used by the rate's "Save INR …/-" line. */
-function SavingsTagIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 5v6.2a2 2 0 0 0 .6 1.4l7.8 7.8a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8L11.6 4.6A2 2 0 0 0 10.2 4H4a1 1 0 0 0-1 1z" />
-      <path d="M17 4l5.4 5.4a2 2 0 0 1 0 2.8L17 17.6" />
-      <circle cx="7.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 /** Whole-number % off the struck-through (pre-savings) price, e.g. 533 off 5,332 → 10. */
 function savingsPercent(totals) {
   const original = totals.totalCartValue + totals.totalSavings;
   return original > 0 ? Math.round((totals.totalSavings / original) * 100) : 0;
 }
 
-/** Struck-through original price with its green "% OFF" badge (only when the rate has savings). */
-function RateStrike({ totals }) {
-  if (!(totals.totalSavings > 0)) return null;
-  const percent = savingsPercent(totals);
+/** A rate's price block, as a 2×2 grid:
+ *    ₹7,167 (struck)   ₹6,307
+ *    12% OFF           for 1 night
+ *  The strike and "% OFF" column only appear when the rate has savings. */
+function RatePrice({ totals, nights, isDayUse }) {
+  const hasSavings = totals.totalSavings > 0;
+  const percent = hasSavings ? savingsPercent(totals) : 0;
   return (
-    <>
+    <span className="be-rate-price-grid">
+      {hasSavings && (
+        <span className="be-rate-option-price-strike">
+          &#8377;{formatMoney(totals.totalCartValue + totals.totalSavings)}
+        </span>
+      )}
+      <span className="be-rate-price-now">&#8377;{formatMoney(totals.totalCartValue)}</span>
       {percent > 0 && <span className="be-rate-option-discount">{percent}% OFF</span>}
-      <span className="be-rate-option-price-strike">
-        &#8377;{formatMoney(totals.totalCartValue + totals.totalSavings)}
-      </span>
-    </>
-  );
-}
-
-/** Green "Save INR 1,350/-" line under the rate label. */
-function RateSavingsLine({ amount }) {
-  if (!(amount > 0)) return null;
-  return (
-    <span className="be-rate-option-save">
-      <SavingsTagIcon />
-      Save INR {formatMoney(amount)}/-
+      {!isDayUse && (
+        <span className="be-rate-unit">
+          for {nights} night{nights > 1 ? "s" : ""}
+        </span>
+      )}
     </span>
   );
 }
@@ -778,17 +757,10 @@ function RateCard({
               </span>
               <span className="be-rate-option-meta">
                 <span className="be-rate-option-label">Standard Rate</span>
-                <RateSavingsLine amount={standardTotals.totalSavings} />
               </span>
             </div>
             <span className="be-rate-option-price">
-              <RateStrike totals={standardTotals} />
-              &#8377;{formatMoney(standardTotals.totalCartValue)}
-              {!isDayUse && (
-                <div className="be-rate-unit">
-                  for {nights} night{nights > 1 ? "s" : ""}
-                </div>
-              )}
+              <RatePrice totals={standardTotals} nights={nights} isDayUse={isDayUse} />
               {/* Ported from Amritara's Filterbar.js/StayStep.js (commit
                   "extra child price added in package rate", 2026-10-27) —
                   a visible breakout of how much of the price above is the
@@ -833,13 +805,7 @@ function RateCard({
               <span
                 className={`be-rate-option-price be-member-price${animating ? " be-unlocking-flash" : ""}`}
               >
-                <RateStrike totals={memberTotals} />
-                &#8377;{formatMoney(memberTotals.totalCartValue)}
-                {!isDayUse && (
-                  <div className="be-rate-unit">
-                    for {nights} night{nights > 1 ? "s" : ""}
-                  </div>
-                )}
+                <RatePrice totals={memberTotals} nights={nights} isDayUse={isDayUse} />
                 {memberTotals.extraChildCartValue > 0 && (
                   <div className="be-rate-extra-child-price">
                     Child Price: &#8377;{formatMoney(memberTotals.extraChildCartValue)}

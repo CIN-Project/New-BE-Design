@@ -735,7 +735,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
           disabled={isRatesRefreshing}
           title={isRatesRefreshing ? "Updating rates…" : undefined}
         >
-          Pay Later
+          Book Now &amp; Pay Later
         </button>
       </div>
 
