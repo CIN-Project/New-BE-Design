@@ -21,6 +21,10 @@ export const defaultConfig = {
   // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
   // only (primary-styled) way to book.
   enablePayNow: true,
+  // When true, Pay Later goes through STAAH's hosted page like Pay Now (th-payment-request2 →
+  // th-payment-redirect2 → back with a tokenKey → verify-token), as Amritara does. When false
+  // (default), Pay Later skips the redirect and verify-token and shows the confirmation directly.
+  payLaterViaGateway: false,
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
