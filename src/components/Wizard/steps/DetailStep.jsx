@@ -806,11 +806,6 @@ export function GuestDetailsForm({ onComplete }) {
         };
       });
 
-      // Default Pay Later stages a "Hotel Collect" reservation; with
-      // config.payLaterViaGateway it's staged like Pay Now (see deposit below).
-      const payLaterHotelCollect =
-        formOfPayment === "pay_later" && !config.payLaterViaGateway;
-
       const payload = {
         PropertyId: selectedPropertyId?.toString(),
         reservations: {
@@ -826,16 +821,12 @@ export function GuestDetailsForm({ onComplete }) {
               // back to Google Hotel Ads for that reservation.
               utm_source: utmSource || "",
               commissionamount: "0.00",
-              // Hotel Collect (nothing paid now) only for the default Pay Later. With
-              // config.payLaterViaGateway, Pay Later sends what Pay Now sends — "Channel
-              // Collect", full deposit — as Amritara's openPayLater does; STAAH's
-              // hosted page handles the pay-later part (form_of_payment "pay_later").
-              deposit: payLaterHotelCollect ? "0" : grandTotal.toString(),
+              deposit: formOfPayment === "pay_later"? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),
               totaltax: Math.round(totalTaxAmount).toString(),
               promocode,
-              payment_required: payLaterHotelCollect ? grandTotal.toString() : "0" ,
-              payment_type: payLaterHotelCollect ? "Hotel Collect":"Channel Collect",
+              payment_required: formOfPayment === "pay_later"? grandTotal.toString() : "0" ,
+              payment_type: formOfPayment === "pay_later"? "Hotel Collect":"Channel Collect",
               currencycode: "INR",
               status: "Confirm",
               is_subscribed: false,
@@ -1405,7 +1396,7 @@ export function GuestDetailsForm({ onComplete }) {
             disabled={stay.isRatesRefreshing}
             title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
           >
-            Book Now &amp; Pay Later
+            Pay Later
           </button>
         </div>
 

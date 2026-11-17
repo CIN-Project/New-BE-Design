@@ -1,34 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { defaultConfig } from "./defaultConfig.js";
 import { ConfigContext } from "./configContext.js";
 
 export function BookingEngineProvider({ config = {}, children }) {
   const value = useMemo(() => ({ ...defaultConfig, ...config }), [config]);
-
-  // STAAH payment return (Pay Now, and Pay Later with payLaterViaGateway): the guest comes back
-  // with ?tokenKey=…, often on a page that only shows the search bar (e.g. "/"). Forward it to the
-  // booking page so the Wizard opens its confirmation step and calls verify-token + payment/confirm
-  // — without this nothing is called after the payment page. Hard navigation (replace), so Back
-  // doesn't return to the token URL.
-  const paymentReturnPath = value.paymentReturnPath;
-  useEffect(() => {
-    if (!paymentReturnPath || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const tokenKey = params.get("tokenKey");
-    if (!tokenKey) return;
-    const { pathname } = window.location;
-    if (pathname === paymentReturnPath || pathname.startsWith(`${paymentReturnPath}/`)) return;
-    const next = new URLSearchParams({ tokenKey });
-    const status = params.get("status");
-    if (status) next.set("status", status);
-    console.log("[PAYMENT-FLOW] ConfigProvider.jsx: tokenKey on a non-booking page -> forwarding", {
-      from: pathname,
-      to: paymentReturnPath,
-    });
-    window.location.replace(`${paymentReturnPath}?${next.toString()}`);
-  }, [paymentReturnPath]);
 
   // Font override via config, as an alternative to BookingEngineThemeProvider's
   // `theme.fonts` (that path still works — this is additive, not a
