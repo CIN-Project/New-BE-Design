@@ -22,15 +22,9 @@ export const defaultConfig = {
   // only (primary-styled) way to book.
   enablePayNow: true,
   // When true, Pay Later goes through STAAH's hosted page like Pay Now (th-payment-request2 →
-  // th-payment-redirect2 → back with a tokenKey → verify-token → payment/confirm), as Amritara
-  // does. When false (default), Pay Later skips the redirect and verify-token and shows the
-  // confirmation directly.
+  // th-payment-redirect2 → back with a tokenKey → verify-token), as Amritara does. When false
+  // (default), Pay Later skips the redirect and verify-token and shows the confirmation directly.
   payLaterViaGateway: false,
-  // The page that runs the booking wizard. With payLaterViaGateway, STAAH sends the guest back
-  // from its hosted page with ?tokenKey=… to the site's return URL (usually "/"); any page with
-  // the engine mounted forwards that here, where the confirmation step calls /api/verify-token and
-  // /api/payment/confirm — Amritara's home page catches tokenKey the same way.
-  bookingPagePath: "/be-booking",
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
