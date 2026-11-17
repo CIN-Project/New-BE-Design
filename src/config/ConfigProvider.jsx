@@ -1,11 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { defaultConfig } from "./defaultConfig.js";
 import { ConfigContext } from "./configContext.js";
 
 export function BookingEngineProvider({ config = {}, children }) {
   const value = useMemo(() => ({ ...defaultConfig, ...config }), [config]);
+
+  // payLaterViaGateway: STAAH returns the guest with ?tokenKey=… to the site's return URL (e.g.
+  // the home page), where only the search bar is mounted. Like Amritara's home page (ClientWrapper
+  // → Filterbar verifyGuidToken), hand it to the booking page so the Wizard opens its confirmation
+  // step and calls verify-token + payment/confirm. replace(), so Back skips the token URL.
+  const { payLaterViaGateway, bookingPagePath } = value;
+  useEffect(() => {
+    if (!payLaterViaGateway || !bookingPagePath || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenKey = params.get("tokenKey");
+    if (!tokenKey) return;
+    const { pathname } = window.location;
+    if (pathname === bookingPagePath || pathname.startsWith(`${bookingPagePath}/`)) return;
+    const next = new URLSearchParams({ tokenKey });
+    const status = params.get("status");
+    if (status) next.set("status", status);
+    console.log("[PAYMENT-FLOW] ConfigProvider.jsx: tokenKey on a non-booking page -> forwarding", {
+      from: pathname,
+      to: bookingPagePath,
+    });
+    window.location.replace(`${bookingPagePath}?${next.toString()}`);
+  }, [payLaterViaGateway, bookingPagePath]);
 
   // Font override via config, as an alternative to BookingEngineThemeProvider's
   // `theme.fonts` (that path still works — this is additive, not a

@@ -806,6 +806,13 @@ export function GuestDetailsForm({ onComplete }) {
         };
       });
 
+      // Default Pay Later stages a "Hotel Collect" reservation (nothing paid now). With
+      // config.payLaterViaGateway it's staged like Pay Now — "Channel Collect", full deposit —
+      // exactly as Amritara's openPayLater (Ajay_Paylater_hotel, DetailStep.js) does; STAAH's
+      // hosted page handles the pay-later part via form_of_payment "pay_later".
+      const payLaterHotelCollect =
+        formOfPayment === "pay_later" && !config.payLaterViaGateway;
+
       const payload = {
         PropertyId: selectedPropertyId?.toString(),
         reservations: {
@@ -821,12 +828,12 @@ export function GuestDetailsForm({ onComplete }) {
               // back to Google Hotel Ads for that reservation.
               utm_source: utmSource || "",
               commissionamount: "0.00",
-              deposit: formOfPayment === "pay_later"? "0" : grandTotal.toString(),
+              deposit: payLaterHotelCollect ? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),
               totaltax: Math.round(totalTaxAmount).toString(),
               promocode,
-              payment_required: formOfPayment === "pay_later"? grandTotal.toString() : "0" ,
-              payment_type: formOfPayment === "pay_later"? "Hotel Collect":"Channel Collect",
+              payment_required: payLaterHotelCollect ? grandTotal.toString() : "0" ,
+              payment_type: payLaterHotelCollect ? "Hotel Collect":"Channel Collect",
               currencycode: "INR",
               status: "Confirm",
               is_subscribed: false,
