@@ -43,6 +43,18 @@ export function CouponComponent({ isOpen, onClose }) {
     const trimmed = code.trim();
     if (!trimmed || isSubmitting) return;
 
+    // config.verifyCartPromoCode: false applies the code the same way the search bar's promo field
+    // does — no VerifyPromoCode call, the typed code goes straight into the rate search.
+    if (config.verifyCartPromoCode === false) {
+      setError("");
+      setPromoCodeCustomerContext(null);
+      setPromoCodeContext(encodeBase64(trimmed));
+      setAppliedCode(trimmed);
+      onClose?.();
+      setCode("");
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
     try {

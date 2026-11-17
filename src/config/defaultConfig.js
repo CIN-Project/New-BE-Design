@@ -23,6 +23,9 @@ export const defaultConfig = {
   enablePayNow: true,
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
+  // When false, the cart's promo "Apply" skips the VerifyPromoCode call and applies the code straight
+  // to the rate search, the same as the search bar's promo field.
+  verifyCartPromoCode: true,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
   // icon; the compact recap bar always keeps the icon.
   searchButtonLabel: "",
