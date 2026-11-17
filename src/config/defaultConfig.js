@@ -25,6 +25,11 @@ export const defaultConfig = {
   // th-payment-redirect2 → back with a tokenKey → verify-token), as Amritara does. When false
   // (default), Pay Later skips the redirect and verify-token and shows the confirmation directly.
   payLaterViaGateway: false,
+  // Page that runs the booking wizard. STAAH sends the guest back from its payment page with
+  // ?tokenKey=… (usually to "/"); any page with the engine mounted forwards that to this path, whose
+  // confirmation step calls /api/verify-token and /api/payment/confirm (Amritara does the same on
+  // its home page). Empty turns the forwarding off.
+  paymentReturnPath: "/be-booking",
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
