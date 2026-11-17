@@ -1096,9 +1096,8 @@ export function GuestDetailsForm({ onComplete }) {
       });
 
       // For pay_later, skip STAAH gateway entirely — create properly formatted payment response
-      // from th-payment-request2 data, then jump to confirmation step. With
-      // config.payLaterViaGateway, Pay Later takes the redirect below like Pay Now instead.
-      if (formOfPayment === "pay_later" && !config.payLaterViaGateway) {
+      // from th-payment-request2 data, then jump to confirmation step
+      if (formOfPayment === "pay_later") {
         console.log("[PAYMENT-FLOW] DetailStep.jsx: pay_later detected — skipping STAAH redirect, formatting th-payment-request2 response for confirmation");
         try {
           // th-payment-request2 already staged the reservation with payment_type="Hotel Collect"

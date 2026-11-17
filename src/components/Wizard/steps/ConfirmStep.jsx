@@ -191,12 +191,8 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         tokenKey,
       });
 
-      // For pay_later, SKIP verify-token entirely — use stored response from th-payment-request2.
-      // With config.payLaterViaGateway, Pay Later came back from STAAH with a tokenKey like Pay Now,
-      // so it's verified too.
-      const isPayLater =
-        !config.payLaterViaGateway &&
-        rawResponse && JSON.parse(rawResponse)?.result?.[0]?.form_of_payment === "pay_later";
+      // For pay_later, SKIP verify-token entirely — use stored response from th-payment-request2
+      const isPayLater = rawResponse && JSON.parse(rawResponse)?.result?.[0]?.form_of_payment === "pay_later";
 
       if (tokenKey && !isPayLater) {
         // Only call verify-token for pay_now flow
