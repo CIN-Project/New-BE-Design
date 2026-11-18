@@ -20,6 +20,7 @@ import { getOrCreateSessionId, setCtaCustomerId } from "../../../utils/session.j
 import { formatIsoDate } from "../../../utils/date.js";
 import { postBookingWidged } from "../../../api/tracking.js";
 import { getCachedPublicIp } from "../../../utils/clientInfo.js";
+import { resolvePaymentOptions } from "../../../utils/paymentOptions.js";
 import "./DetailStep.css";
 
 const TITLE_OPTIONS = ["Mr", "Mrs", "Ms", "Dr"];
@@ -100,6 +101,11 @@ export function GuestDetailsForm({ onComplete }) {
   const stay = useStayContext();
   const { selectedRoom } = stay;
   const search = useSearchContext();
+  // Pay Now / Pay Later for the selected hotel (config.enablePayNow / enablePayLater).
+  const paymentOptions = resolvePaymentOptions(config, {
+    propertyId: search.selectedPropertyId,
+    propertyName: search.selectedPropertyName,
+  });
   const {
     selectedPropertyId,
     selectedCityId,
@@ -484,11 +490,15 @@ export function GuestDetailsForm({ onComplete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // With Pay Now turned off (config.enablePayNow) every submit is Pay Later, e.g. Enter in a field.
-    const formOfPayment =
-      config.enablePayNow === false || e.nativeEvent?.submitter?.value === "pay_later"
-        ? "pay_later"
-        : "pay_now";
+    // With only one way to book for this hotel (config.enablePayNow / enablePayLater) every submit
+    // uses it, e.g. Enter in a field; with both, the clicked button decides.
+    const formOfPayment = !paymentOptions.payNow
+      ? "pay_later"
+      : !paymentOptions.payLater
+        ? "pay_now"
+        : e.nativeEvent?.submitter?.value === "pay_later"
+          ? "pay_later"
+          : "pay_now";
     console.log(
       `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
       { selectedPropertyId },
@@ -1369,8 +1379,9 @@ export function GuestDetailsForm({ onComplete }) {
             form/name/value wiring as CartOverview's buttons: handleSubmit
             tells them apart via e.submitter either way. */}
         <div className="be-mobile-pay-actions">
-          {/* config.enablePayNow false → Pay Later alone, in the primary button's style. */}
-          {config.enablePayNow !== false ? (
+          {/* config.enablePayNow / enablePayLater (utils/paymentOptions.js): either button alone takes
+              the primary button's style; with both, Pay Now is primary and Pay Later follows an "OR". */}
+          {paymentOptions.payNow ? (
             <>
               <button
                 type="submit"
@@ -1382,21 +1393,25 @@ export function GuestDetailsForm({ onComplete }) {
               >
                 Confirm &amp; Pay
               </button>
-              <div className="be-mobile-pay-divider" role="separator">
-                <span>OR</span>
-              </div>
+              {paymentOptions.payLater ? (
+                <div className="be-mobile-pay-divider" role="separator">
+                  <span>OR</span>
+                </div>
+              ) : null}
             </>
           ) : null}
-          <button
-            type="submit"
-            name="formOfPayment"
-            value="pay_later"
-            className={config.enablePayNow !== false ? "be-mobile-pay-later-btn" : "be-mobile-pay-btn"}
-            disabled={stay.isRatesRefreshing}
-            title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
-          >
-            Pay Later
-          </button>
+          {paymentOptions.payLater ? (
+            <button
+              type="submit"
+              name="formOfPayment"
+              value="pay_later"
+              className={paymentOptions.payNow ? "be-mobile-pay-later-btn" : "be-mobile-pay-btn"}
+              disabled={stay.isRatesRefreshing}
+              title={stay.isRatesRefreshing ? "Updating rates…" : undefined}
+            >
+              {config.mobilePayLaterLabel || "Pay Later"}
+            </button>
+          ) : null}
         </div>
 
         <div className="be-trust-badges-row">

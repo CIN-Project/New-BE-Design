@@ -8,6 +8,7 @@ import { useConfig } from "../../config/configContext.js";
 import { formatDisplayDate } from "../../utils/date.js";
 import { computeStayTotals } from "../../utils/ratePricing.js";
 import { addonStayCharge } from "../../utils/addonPricing.js";
+import { resolvePaymentOptions } from "../../utils/paymentOptions.js";
 import { CouponComponent } from "./CouponComponent.js";
 import { DateRangeModal } from "../SearchBar/DateRangeModal.js";
 import { GuestsModal } from "../SearchBar/GuestsModal.js";
@@ -78,6 +79,7 @@ function ChevronIcon({ open }) {
  */
 export function CartOverview({ onModifyRooms, onModifyProperty }) {
   const {
+    selectedPropertyId,
     selectedPropertyName,
     selectedStartDate,
     selectedEndDate,
@@ -86,7 +88,10 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
   } = useSearchContext();
   const { selectedRoom, cancellationPolicyState, isRatesRefreshing } = useStayContext();
   const config = useConfig();
-  const payNowEnabled = config.enablePayNow !== false;
+  const { payNow: payNowEnabled, payLater: payLaterEnabled } = resolvePaymentOptions(config, {
+    propertyId: selectedPropertyId,
+    propertyName: selectedPropertyName,
+  });
   const {
     addonAmountTotal,
     addonTaxTotal,
@@ -703,7 +708,8 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
             e.submitter (the actual button clicked), keyed off name/value —
             same reservation-creation call either way, only the
             form_of_payment sent to the payment redirect differs. */}
-        {/* config.enablePayNow false → Pay Later alone, in the primary button's style. */}
+        {/* config.enablePayNow / enablePayLater (utils/paymentOptions.js): either button alone takes
+            the primary button's style; with both, Pay Now is primary and Pay Later follows an "OR". */}
         {payNowEnabled ? (
           <>
             <button
@@ -721,22 +727,26 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
             >
               Pay &amp; Confirm Booking <span aria-hidden="true">&rarr;</span>
             </button>
-            <div className="cart-pay-divider" role="separator">
-              <span>OR</span>
-            </div>
+            {payLaterEnabled ? (
+              <div className="cart-pay-divider" role="separator">
+                <span>OR</span>
+              </div>
+            ) : null}
           </>
         ) : null}
-        <button
-          type="submit"
-          form="be-guest-details-form"
-          name="formOfPayment"
-          value="pay_later"
-          className={payNowEnabled ? "cart-pay-later-btn" : "cart-pay-btn"}
-          disabled={isRatesRefreshing}
-          title={isRatesRefreshing ? "Updating rates…" : undefined}
-        >
-          Book Now &amp; Pay Later
-        </button>
+        {payLaterEnabled ? (
+          <button
+            type="submit"
+            form="be-guest-details-form"
+            name="formOfPayment"
+            value="pay_later"
+            className={payNowEnabled ? "cart-pay-later-btn" : "cart-pay-btn"}
+            disabled={isRatesRefreshing}
+            title={isRatesRefreshing ? "Updating rates…" : undefined}
+          >
+            Book Now &amp; Pay Later
+          </button>
+        ) : null}
       </div>
 
       {/* Both modals read/write SearchContext directly (no local copy of

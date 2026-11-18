@@ -19,8 +19,15 @@ export const defaultConfig = {
   // the form; the cart's summary gets an "Add-ons … Modify" row that opens the drawer again.
   mobileAddOnsDrawer: false,
   // When false, the "Pay & Confirm Booking" / "Confirm & Pay" buttons are hidden and Pay Later is the
-  // only (primary-styled) way to book.
+  // only (primary-styled) way to book. Also a function ({ propertyId, propertyName }) => boolean to
+  // decide per hotel (see utils/paymentOptions.js).
   enablePayNow: true,
+  // When false, the "Book Now & Pay Later" / "Pay Later" buttons are hidden and Pay Now is the only
+  // way to book. Also a function, as enablePayNow. If both come out false, Pay Later stays on.
+  enablePayLater: true,
+  // Text of the guest details step's Pay Later button on phones (e.g. "Book Now & Pay Later", as the
+  // desktop cart's button reads). Empty keeps "Pay Later".
+  mobilePayLaterLabel: "",
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
   // When false, the cart's promo "Apply" skips the VerifyPromoCode call and applies the code straight
