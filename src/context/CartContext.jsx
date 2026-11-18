@@ -19,6 +19,14 @@ const initialState = {
   promoCodeContext: null,
   promoCodeCustomerContext: null,
   promoCodeDiscountMultiplier: 1.0,
+  // config.rejectCartPromoNotValidForRooms: true while a promo applied from the cart waits for its
+  // reprice, and the message shown when that promo didn't cover the cart's packages.
+  cartPromoPending: false,
+  promoCodeError: "",
+  // config.rejectCartPromoNotValidForRooms: true while a promo applied from the cart waits for its
+  // reprice, and the message shown when that promo didn't cover the cart's packages.
+  cartPromoPending: false,
+  promoCodeError: "",
   termsAndConditions: null,
   currentStep: null,
   userDetails: {

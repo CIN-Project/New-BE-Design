@@ -36,6 +36,11 @@ export const defaultConfig = {
   // When false, the cart's promo "Apply" skips the VerifyPromoCode call and applies the code straight
   // to the rate search, the same as the search bar's promo field.
   verifyCartPromoCode: true,
+  // When true, a promo code applied from the cart that doesn't cover a package already in the cart
+  // (the package comes back missing or priced 0 under the code) is not applied: the cart keeps its
+  // prices and says "Promo code … is not valid for …". False keeps the old behaviour (the cart
+  // reprices anyway, which can show ₹0).
+  rejectCartPromoNotValidForRooms: false,
   // Text for the search bar's submit button (e.g. "Find Hotels"). Empty keeps the round magnifier
   // icon; the compact recap bar always keeps the icon.
   searchButtonLabel: "",

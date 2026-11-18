@@ -28,7 +28,20 @@ import "./CartOverview.css";
  */
 export function CouponComponent({ isOpen, onClose }) {
   const config = useConfig();
-  const { promoCodeContext, setPromoCodeContext, setPromoCodeCustomerContext } = useCartContext();
+  const {
+    promoCodeContext,
+    setPromoCodeContext,
+    setPromoCodeCustomerContext,
+    cartPromoPending,
+    setCartPromoPending,
+    setPromoCodeError,
+  } = useCartContext();
+  // config.rejectCartPromoNotValidForRooms: the cart's reprice checks this promo against the
+  // packages already in the cart (see useRepriceSelectedRooms).
+  const markCartPromo = () => {
+    setPromoCodeError("");
+    if (config.rejectCartPromoNotValidForRooms === true) setCartPromoPending(true);
+  };
   const { selectedPropertyId } = useSearchContext();
 
   const [code, setCode] = useState("");
@@ -48,6 +61,7 @@ export function CouponComponent({ isOpen, onClose }) {
     if (config.verifyCartPromoCode === false) {
       setError("");
       setPromoCodeCustomerContext(null);
+      markCartPromo();
       setPromoCodeContext(encodeBase64(trimmed));
       setAppliedCode(trimmed);
       onClose?.();
@@ -83,6 +97,7 @@ export function CouponComponent({ isOpen, onClose }) {
       if (response?.errorCode === "0") {
         const masterPromo = response?.data?.masterPromo;
         setPromoCodeCustomerContext(response?.data ?? response);
+        markCartPromo();
         // No client-side discount multiplier here on purpose: real Amritara
         // never applies one either (its own promoCodeDiscountMultiplier
         // field is dead — set to a default and never consumed by any price
@@ -119,6 +134,16 @@ export function CouponComponent({ isOpen, onClose }) {
     setPromoCodeCustomerContext(null);
     setAppliedCode("");
   };
+
+  // config.rejectCartPromoNotValidForRooms: the code is still being checked against the cart's
+  // packages, so it isn't shown as applied yet.
+  if (promoCodeContext && cartPromoPending) {
+    return (
+      <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#6b6b6b", fontWeight: 600 }}>
+        Checking promo code{appliedCode ? ` "${appliedCode}"` : ""}…
+      </div>
+    );
+  }
 
   if (promoCodeContext) {
     return (

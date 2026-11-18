@@ -97,6 +97,8 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
     addonTaxTotal,
     selectedAddOns,
     promoCodeContext,
+    promoCodeError,
+    setPromoCodeError,
     addonList,
     addonsDrawerRequest,
     setAddonsDrawerRequest,
@@ -352,7 +354,10 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                 <span className="cart-stay-links-divider">|</span>
                 <span
                   style={modifyLinkStyle}
-                  onClick={() => setShowPromoInput((v) => !v)}
+                  onClick={() => {
+                    setPromoCodeError("");
+                    setShowPromoInput((v) => !v);
+                  }}
                 >
                   {showPromoInput ? "Cancel Promo" : "Add Promocode"}
                 </span>
@@ -366,6 +371,10 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
               onClose={() => setShowPromoInput(false)}
             />
           )}
+          {/* config.rejectCartPromoNotValidForRooms: a cart promo that didn't cover the cart's packages. */}
+          {promoCodeError && !promoCodeContext ? (
+            <div style={{ fontSize: "0.7rem", color: "#c0392b", marginTop: "6px" }}>{promoCodeError}</div>
+          ) : null}
         </div>
 
         {/* Accommodation & Rate — one line per room slot. Mirrors Filterbar.js's

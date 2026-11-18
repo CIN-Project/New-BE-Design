@@ -8,6 +8,7 @@ import { useCartContext } from "../context/CartContext.js";
 import { getRoomsRates, getInventory } from "../api/rates.js";
 import { mergeRoomContentWithRates, buildRoomSelection } from "../utils/ratePricing.js";
 import { formatIsoDate } from "../utils/date.js";
+import { decodeBase64 } from "../utils/base64.js";
 
 /**
  * Re-prices every already-selected room slot whenever the guest changes
@@ -43,7 +44,14 @@ export function useRepriceSelectedRooms() {
     useSearchContext();
   const { selectedRoom, setSelectedRoom, setIsRatesRefreshing, propertyInfantAge } =
     useStayContext();
-  const { promoCodeContext } = useCartContext();
+  const {
+    promoCodeContext,
+    setPromoCodeContext,
+    setPromoCodeCustomerContext,
+    cartPromoPending,
+    setCartPromoPending,
+    setPromoCodeError,
+  } = useCartContext();
 
   const checkInParam = selectedStartDate ? formatIsoDate(selectedStartDate) : "";
   const checkOutParam = selectedEndDate ? formatIsoDate(selectedEndDate) : "";
@@ -77,8 +85,18 @@ export function useRepriceSelectedRooms() {
     if (repriceKey === lastKeyRef.current) return;
     lastKeyRef.current = repriceKey;
 
+    // config.rejectCartPromoNotValidForRooms: this reprice is for a promo just applied from the cart.
+    // cartPromoPending stays true until the check below is done, so the cart shows "Checking promo
+    // code…" instead of "Promo: … Remove" for a code that may still be rejected.
+    const checkCartPromo =
+      config?.rejectCartPromoNotValidForRooms === true && cartPromoPending && !!promoCodeContext;
+
     const hasAnySelection = (selectedRoom || []).some((r) => r?.roomId);
-    if (!hasAnySelection || !selectedPropertyId || !checkInParam || !checkOutParam) return;
+    if (!hasAnySelection || !selectedPropertyId || !checkInParam || !checkOutParam) {
+      if (cartPromoPending) setCartPromoPending(false);
+      return;
+    }
+    if (cartPromoPending && !checkCartPromo) setCartPromoPending(false);
 
     let cancelled = false;
 
@@ -150,6 +168,41 @@ export function useRepriceSelectedRooms() {
         );
         if (cancelled || !merged) return;
 
+        // A cart promo that doesn't cover every package already in the cart (the package is missing
+        // under the code, or comes back priced 0) is not applied: the promo is taken off again, the
+        // cart keeps its current prices, and the cart says why.
+        if (checkCartPromo) {
+          const uncovered = (selectedRoom || []).filter((slot) => {
+            if (!slot?.roomId) return false;
+            const room = (merged.RoomData || []).find((r) => r.RoomId === slot.roomId);
+            const rate = (merged.RateData || []).find((r) => r.RateId === slot.rateId);
+            const mapping = (merged.Mapping || []).find(
+              (m) => m.RoomId === slot.roomId && m.RateId === slot.rateId,
+            );
+            if (!room || !rate || !mapping) return true;
+            const repriced = buildRoomSelection(room, mapping, rate, freshGuests(slot).adults ?? 1);
+            return !(Number(repriced.roomRateWithTax) > 0);
+          });
+          if (uncovered.length > 0) {
+            let code = "";
+            try {
+              code = decodeBase64(promoCodeContext);
+            } catch {
+              // keep the generic wording
+            }
+            const packages = [...new Set(uncovered.map((s) => s.roomPackage).filter(Boolean))].join(", ");
+            setPromoCodeError(
+              `Promo code${code ? ` "${code}"` : ""} is not valid for the selected package${packages ? ` (${packages})` : ""}.`,
+            );
+            // Back to the prices the cart had before this promo (they are still in selectedRoom).
+            lastKeyRef.current = repriceKey.replace(`|${promoCodeContext}|`, "||");
+            setPromoCodeContext(null);
+            setPromoCodeCustomerContext(null);
+            return;
+          }
+          setPromoCodeError("");
+        }
+
         // Drop any slot that's no longer part of the current search-room
         // set before repricing, and use React's functional setState form
         // (not the `selectedRoom` closed over when this async effect
@@ -208,7 +261,11 @@ export function useRepriceSelectedRooms() {
         // own `setIsRatesRefreshing(true)` (and eventual `false`) owns the
         // flag now; this stale run finishing shouldn't clear it out from
         // under it.
-        if (!cancelled) setIsRatesRefreshing(false);
+        if (!cancelled) {
+          setIsRatesRefreshing(false);
+          // Cart promo check done (accepted, rejected, or the rate fetch failed).
+          if (checkCartPromo) setCartPromoPending(false);
+        }
       }
     })();
 
