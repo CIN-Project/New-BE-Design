@@ -535,7 +535,7 @@ export function mergeRoomContentWithRates(contentProperty, inventoryRooms, selec
     const matched = dayRateMapping?.find((r) => r.RateId == rate?.RateId);
     return {
       ...rate,
-      MappingDisplayName: matched?.MappingDisplayName,
+      MappingDisplayName: matched?.MappingDisplayName || matched?.MappingName,
     };
   });
 
