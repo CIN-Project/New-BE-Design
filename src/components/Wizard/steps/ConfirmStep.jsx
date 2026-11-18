@@ -192,7 +192,10 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       });
 
       // For pay_later, SKIP verify-token entirely — use stored response from th-payment-request2
-      const isPayLater = rawResponse && JSON.parse(rawResponse)?.result?.[0]?.form_of_payment === "pay_later";
+      // Pay Later never goes through the gateway, so a tokenKey always means a pay-now return: a
+      // pay_later response still in sessionStorage from an earlier booking in this tab must not
+      // make it skip verify-token.
+      const isPayLater = !tokenKey && rawResponse && JSON.parse(rawResponse)?.result?.[0]?.form_of_payment === "pay_later";
 
       if (tokenKey && !isPayLater) {
         // Only call verify-token for pay_now flow
