@@ -1738,9 +1738,20 @@ export function StayStep({ onRoomsSelected }) {
         ]);
         if (cancelled) return;
 
-        contentPropertyRef.current = Array.isArray(contentData?.PropertyList)
+        const contentProperty = Array.isArray(contentData?.PropertyList)
           ? contentData.PropertyList[0]
           : null;
+        // config.enableMemberRates false: drop the "Member …" rate plans, so no member row,
+        // "Unlock Member Rate" button or member "from" price is ever shown.
+        contentPropertyRef.current =
+          contentProperty && config.enableMemberRates === false
+            ? {
+                ...contentProperty,
+                RateData: (contentProperty.RateData || []).filter(
+                  (rate) => !normalizeRateName(rate?.RateName).startsWith("member "),
+                ),
+              }
+            : contentProperty;
         inventoryRoomsRef.current = Array.isArray(inventoryData?.Product)
           ? inventoryData.Product[0]?.Rooms || []
           : [];

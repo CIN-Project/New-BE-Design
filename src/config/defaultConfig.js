@@ -22,6 +22,9 @@ export const defaultConfig = {
   // only (primary-styled) way to book. Also a function ({ propertyId, propertyName }) => boolean to
   // decide per hotel (see utils/paymentOptions.js).
   enablePayNow: true,
+  // When false, member rates ("Member …" rate plans) are hidden: no member rate row, no "Unlock
+  // Member Rate" button, and room "from" prices use the standard rates only.
+  enableMemberRates: true,
   // When false, the "Book Now & Pay Later" / "Pay Later" buttons are hidden and Pay Now is the only
   // way to book. Also a function, as enablePayNow. If both come out false, Pay Later stays on.
   enablePayLater: true,
