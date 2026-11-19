@@ -151,28 +151,42 @@ export function RangeCalendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calStartMonth, calStartYear]);
 
-  const prevMonths = (e) => {
+  // const prevMonths = (e) => {
+  //   e.stopPropagation();
+  //   setCalStartMonth((prev) => {
+  //     let next = prev - 1;
+  //     if (next < 0) {
+  //       next = 11;
+  //       setCalStartYear((y) => y - 1);
+  //     }
+  //     return next;
+  //   });
+  // };
+
+  // const nextMonths = (e) => {
+  //   e.stopPropagation();
+  //   setCalStartMonth((prev) => {
+  //     let next = prev + 1;
+  //     if (next > 11) {
+  //       next = 0;
+  //       setCalStartYear((y) => y + 1);
+  //     }
+  //     return next;
+  //   });
+  // };
+
+    const prevMonths = (e) => {
     e.stopPropagation();
-    setCalStartMonth((prev) => {
-      let next = prev - 1;
-      if (next < 0) {
-        next = 11;
-        setCalStartYear((y) => y - 1);
-      }
-      return next;
-    });
+    const d = new Date(calStartYear, calStartMonth - 1, 1);
+    setCalStartMonth(d.getMonth());
+    setCalStartYear(d.getFullYear());
   };
 
   const nextMonths = (e) => {
     e.stopPropagation();
-    setCalStartMonth((prev) => {
-      let next = prev + 1;
-      if (next > 11) {
-        next = 0;
-        setCalStartYear((y) => y + 1);
-      }
-      return next;
-    });
+    const d = new Date(calStartYear, calStartMonth + 1, 1);
+    setCalStartMonth(d.getMonth());
+    setCalStartYear(d.getFullYear());
   };
 
   const handleDayClick = (date) => {
