@@ -341,7 +341,15 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         { parsedResponseJson, hasBookingData: Boolean(parsedBookingData) },
       );
 
-      // setFormOfPayment
+      // config.payLaterViaGateway: a Pay Later booking back from STAAH's hosted page is confirmed with
+      // ipn_flag "0" (no IPN for pay at hotel), as Amritara's ConfirmStep does before payment/confirm.
+      if (
+        config?.payLaterViaGateway === true &&
+        resultEntry?.form_of_payment === "pay_later" &&
+        parsedResponseJson
+      ) {
+        parsedResponseJson.ipn_flag = "0";
+      }
 
       setResponseJson(parsedResponseJson);
       setBookingData(parsedBookingData);

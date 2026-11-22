@@ -28,6 +28,11 @@ export const defaultConfig = {
   // When false, the "Book Now & Pay Later" / "Pay Later" buttons are hidden and Pay Now is the only
   // way to book. Also a function, as enablePayNow. If both come out false, Pay Later stays on.
   enablePayLater: true,
+  // When true, Pay Later goes through STAAH's hosted page like Amritara's pay-at-hotel flow:
+  // th-payment-request2 (Channel Collect, full deposit) → th-payment-redirect2 (card guarantee) →
+  // back with a tokenKey → verify-token → payment/confirm (ipn_flag "0"). When false (default), the
+  // current flow: Hotel Collect, no gateway, straight to the confirmation step.
+  payLaterViaGateway: false,
   // Text of the guest details step's Pay Later button on phones (e.g. "Book Now & Pay Later", as the
   // desktop cart's button reads). Empty keeps "Pay Later".
   mobilePayLaterLabel: "",
