@@ -343,12 +343,19 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
 
       // config.payLaterViaGateway: a Pay Later booking back from STAAH's hosted page is confirmed with
       // ipn_flag "0" (no IPN for pay at hotel), as Amritara's ConfirmStep does before payment/confirm.
+      // Same clean-up as Amritara's ConfirmStep.js (~159-175) before payment/confirm: partner_id as a
+      // string, ipn_flag "0", and a failed payment sent as INR 0.0.
       if (
         config?.payLaterViaGateway === true &&
         resultEntry?.form_of_payment === "pay_later" &&
         parsedResponseJson
       ) {
+        parsedResponseJson.partner_id = String(parsedResponseJson.partner_id);
         parsedResponseJson.ipn_flag = "0";
+        if (parsedResponseJson.status === "error") {
+          parsedResponseJson.currency = "INR";
+          parsedResponseJson.amount = "0.0";
+        }
       }
 
       setResponseJson(parsedResponseJson);
