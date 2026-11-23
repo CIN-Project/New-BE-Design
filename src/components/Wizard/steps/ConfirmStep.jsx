@@ -277,19 +277,21 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       // Decrypted Pay Later card (card_name/card_type/card_exp), also written onto whichever
       // reservationJson BookingResponse ends up sending (see resolvedReservationJson below).
       let payLaterCard = null;
-      if (
-        resultEntry?.form_of_payment === "pay_later" &&
-        parsedResponseJson?.partner_id &&
-        parsedResponseJson?.hash_key
-      ) {
+      // A Pay Later return is recognised from any of: the verify-token entry, its responseJson, or
+      // the booking DetailStep saved before the redirect (verify-token doesn't always echo
+      // form_of_payment). The decrypt itself only needs hash_key + partnerKey, not partner_id.
+      const isPayLaterReturn =
+        resultEntry?.form_of_payment === "pay_later" ||
+        parsedResponseJson?.form_of_payment === "pay_later" ||
+        parsedBookingData?.formOfPayment === "pay_later";
+      if (isPayLaterReturn && resultEntry && !resultEntry.form_of_payment) {
+        resultEntry.form_of_payment = "pay_later";
+      }
+      if (isPayLaterReturn && parsedResponseJson?.hash_key) {
         if (config?.partnerKey) {
           console.log(
             "[PAYMENT-FLOW] ConfirmStep.jsx: attempting pay_later card detail decrypt",
-            {
-              partner_id: parsedResponseJson.partner_id,
-              hash_key: parsedResponseJson.hash_key,
-              partnerKeyBeingUsed: config.partnerKey,
-            },
+            { partner_id: parsedResponseJson.partner_id },
           );
           try {
             const decryptedData = decryptHashFunction(
@@ -307,6 +309,36 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
               parsedResponseJson.card_type = decryptedData?.card_type;
               parsedResponseJson.card_exp = decryptedData?.card_exp;
 
+              // The card goes into the reservation's own paymentcarddetail: the reservation DetailStep
+              // built for th-payment-request2 (saved in be_bookingData before the redirect) is updated
+              // and saved back, and it stands in for verify-token's reservationJson when that's empty.
+              const savedReservation =
+                parsedBookingData?.reservationPayload?.reservations?.reservation?.[0];
+              if (savedReservation) {
+                savedReservation.paymentcarddetail = {
+                  ...(savedReservation.paymentcarddetail || {}),
+                  CardHolderName: decryptedData?.card_name || "",
+                  CardType: decryptedData?.card_type || "",
+                  ExpireDate: decryptedData?.card_exp || "",
+                };
+                try {
+                  window.sessionStorage.setItem(
+                    BOOKING_DATA_KEY,
+                    JSON.stringify(parsedBookingData),
+                  );
+                } catch {
+                  // sessionStorage unavailable — the in-memory copy below still carries the card.
+                }
+              }
+              if (
+                resultEntry &&
+                !resultEntry?.reservationJson?.reservations?.reservation?.[0] &&
+                parsedBookingData?.reservationPayload?.reservations?.reservation?.[0]
+              ) {
+                resultEntry.reservationJson = JSON.parse(
+                  JSON.stringify(parsedBookingData.reservationPayload),
+                );
+              }
               const reservation =
                 resultEntry?.reservationJson?.reservations?.reservation?.[0];
               if (reservation) {
