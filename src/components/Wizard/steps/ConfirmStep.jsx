@@ -367,8 +367,15 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           "[PAYMENT-FLOW] ConfirmStep.jsx: calling confirmPayment (/api/payment/confirm)...",
           { rawStatus: parsedResponseJson?.status },
         );
+        // /api/payment/confirm expects ipn_flag as a string, but STAAH's verify-token response
+        // (normal Pay Now flow) carries it as a number (ipn_flag: 0). Send whatever arrived as a
+        // string; confirmPayment signs this same object, so the signature still matches.
+        const confirmResponseObject =
+          parsedResponseJson.ipn_flag != null
+            ? { ...parsedResponseJson, ipn_flag: String(parsedResponseJson.ipn_flag) }
+            : parsedResponseJson;
         const confirmResp = await confirmPayment(config, {
-          responseObject: parsedResponseJson,
+          responseObject: confirmResponseObject,
           keyData,
         });
         console.log("[PAYMENT-FLOW] ConfirmStep.jsx: confirmPayment result", {
