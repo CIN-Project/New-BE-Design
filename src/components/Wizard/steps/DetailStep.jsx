@@ -837,14 +837,12 @@ export function GuestDetailsForm({ onComplete }) {
               // back to Google Hotel Ads for that reservation.
               utm_source: utmSource || "",
               commissionamount: "0.00",
-              // Pay Later through the gateway (payLaterViaGateway) is staged like Amritara's: full
-              // deposit, nothing left to pay, Channel Collect.
-              deposit: formOfPayment === "pay_later" && !payLaterViaGateway ? "0" : grandTotal.toString(),
+              deposit: formOfPayment === "pay_later"? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),
               totaltax: Math.round(totalTaxAmount).toString(),
               promocode,
-              payment_required: formOfPayment === "pay_later" && !payLaterViaGateway ? grandTotal.toString() : "0",
-              payment_type: formOfPayment === "pay_later" && !payLaterViaGateway ? "Hotel Collect" : "Channel Collect",
+              payment_required: formOfPayment === "pay_later"? grandTotal.toString() : "0" ,
+              payment_type: formOfPayment === "pay_later"? "Hotel Collect":"Channel Collect",
               currencycode: "INR",
               status: "Confirm",
               is_subscribed: false,
