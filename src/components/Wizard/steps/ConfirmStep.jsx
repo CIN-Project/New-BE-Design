@@ -247,6 +247,13 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       console.log("parsedResponseJsonResp",parsedResponseJsonResp);
       const resultEntry = parsedResponseJsonResp?.[0] || null;
       const parsedResponseJson = resultEntry?.responseJson || null;
+      // A failed payment comes back from STAAH with masked placeholders ("XXXXX") for these fields;
+      // /api/payment/confirm needs real values, so send fixed ones for an error.
+      if (parsedResponseJson?.status === "error") {
+        parsedResponseJson.currency = "INR";
+        parsedResponseJson.amount = "0.0";
+        parsedResponseJson.pg_transaction_id = "00";
+      }
       setFormOfPayment(resultEntry?.form_of_payment);
       setCompleteResponseObject(resultEntry);
 
