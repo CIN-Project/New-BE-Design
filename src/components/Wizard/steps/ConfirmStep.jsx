@@ -1034,23 +1034,14 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
       <div className="be-voucher-divider" />
 
       <div className="be-voucher-payment-row">
-
-        {/* <div className="be-voucher-field">
-          <span className="be-voucher-label labeltext">Payment Method</span>
-          <p className="be-voucher-value">
-            {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
-          </p>
-        </div> */}
-
-        <div className="be-voucher-payment-row">
-          {!hidePaymentMethod && (
-            
-    <div className="be-voucher-field">
-      <span className="be-voucher-label labeltext">Payment Method</span>
-      <p className="be-voucher-value">
-        {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
-      </p>
-    </div>
+        {!hidePaymentMethod && (
+          <div className="be-voucher-field">
+            <span className="be-voucher-label labeltext">Payment Method</span>
+            <p className="be-voucher-value">
+              {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
+            </p>
+          </div>
+        )}
 
         <div className="be-voucher-field be-voucher-field--right">
           <span className="be-voucher-label">Total Amount (GST Inc.)</span>
@@ -1060,26 +1051,22 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
         </div>
       </div>
 
-        {/* {transactionRef && (
-        <div className="be-voucher-barcode">
-          <Barcode seed={transactionRef} />
-          <p className="be-voucher-barcode-ref">
-            Transaction Ref: {transactionRef}
-          </p>
-        </div>
-      )} */}
-
-        <div className="be-voucher-actions">
-          <button onClick={handlePrint} className="be-voucher-btn-print">
-            <PrintIcon /> Print Voucher
-          </button>
-          <a href={homeUrl} className="be-voucher-btn-done">
-            Done &amp; Return Home
-          </a>
-        </div>
+      <div className="be-voucher-actions">
+        <button onClick={handlePrint} className="be-voucher-btn-print">
+          <PrintIcon /> Print Voucher
+        </button>
+        <a href={homeUrl} className="be-voucher-btn-done">
+          Done &amp; Return Home
+        </a>
       </div>
-      );
+    </div>
+  );
 }
+
+
+
+
+      
 
       /** Purely decorative — not a real scannable barcode, just a visual echo of
        * one on the voucher. Bar widths are derived from `seed` (the transaction
