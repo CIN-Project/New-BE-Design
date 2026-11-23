@@ -363,6 +363,7 @@
 
 .be-voucher-field--right {
   text-align: right;
+  margin-left: auto;
 }
 
 .be-voucher-dates-box {
@@ -517,6 +518,7 @@
 
   .be-voucher-field--right {
     text-align: left;
+    margin-left: 0;
   }
 
   .be-voucher-status-banner {

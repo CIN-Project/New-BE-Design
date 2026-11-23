@@ -690,7 +690,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         if (paymentResp?.errorMessage !== "success") {
           throw new Error(
             paymentResp?.errorMessage ||
-              "Payment request failed. Please try again.",
+            "Payment request failed. Please try again.",
           );
         }
 
@@ -768,7 +768,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       if (paymentResp?.errorMessage !== "success") {
         throw new Error(
           paymentResp?.errorMessage ||
-            "Payment request failed. Please try again.",
+          "Payment request failed. Please try again.",
         );
       }
 
@@ -834,6 +834,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         bookingData={effectiveBookingData}
         homeUrl={homeUrl}
         siteName={config?.siteName}
+        hidePaymentMethod={config?.hidePaymentMethod}
       />
     ) : (
       <FailureState
@@ -866,13 +867,13 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
 
   // Desktop: no popup — the same status/retry card renders inline as part
   // of the normal booking page (see the effect above for why).
-    return createPortal(
+  return createPortal(
     <div className="be-voucher-overlay">{content}</div>,
     document.body,
   );
 }
 
-function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPayment }) {
+function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPayment, hidePaymentMethod }) {
   const reservationId = responseJson?.reservation_id || "N/A";
   const amount = responseJson?.amount ?? bookingData?.totalPrice;
   const currency = responseJson?.currency || "INR";
@@ -1033,12 +1034,24 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
       <div className="be-voucher-divider" />
 
       <div className="be-voucher-payment-row">
-        <div className="be-voucher-field">
+
+        {/* <div className="be-voucher-field">
           <span className="be-voucher-label labeltext">Payment Method</span>
           <p className="be-voucher-value">
             {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
           </p>
-        </div>
+        </div> */}
+
+        <div className="be-voucher-payment-row">
+          {!hidePaymentMethod && (
+            
+    <div className="be-voucher-field">
+      <span className="be-voucher-label labeltext">Payment Method</span>
+      <p className="be-voucher-value">
+        {isPayAtHotel ? "Guaranteed at Hotel" : "Paid Online"}
+      </p>
+    </div>
+
         <div className="be-voucher-field be-voucher-field--right">
           <span className="be-voucher-label">Total Amount (GST Inc.)</span>
           <p className="be-voucher-total-amount">
@@ -1047,7 +1060,7 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
         </div>
       </div>
 
-      {/* {transactionRef && (
+        {/* {transactionRef && (
         <div className="be-voucher-barcode">
           <Barcode seed={transactionRef} />
           <p className="be-voucher-barcode-ref">
@@ -1056,88 +1069,88 @@ function SuccessReceipt({ responseJson, bookingData, homeUrl, siteName, formOfPa
         </div>
       )} */}
 
-      <div className="be-voucher-actions">
-        <button onClick={handlePrint} className="be-voucher-btn-print">
-          <PrintIcon /> Print Voucher
-        </button>
-        <a href={homeUrl} className="be-voucher-btn-done">
-          Done &amp; Return Home
-        </a>
+        <div className="be-voucher-actions">
+          <button onClick={handlePrint} className="be-voucher-btn-print">
+            <PrintIcon /> Print Voucher
+          </button>
+          <a href={homeUrl} className="be-voucher-btn-done">
+            Done &amp; Return Home
+          </a>
+        </div>
       </div>
-    </div>
-  );
+      );
 }
 
-/** Purely decorative — not a real scannable barcode, just a visual echo of
- * one on the voucher. Bar widths are derived from `seed` (the transaction
- * ref) via a small deterministic hash so it looks stable/consistent for a
- * given booking rather than reshuffling on every re-render. */
-function Barcode({ seed }) {
+      /** Purely decorative — not a real scannable barcode, just a visual echo of
+       * one on the voucher. Bar widths are derived from `seed` (the transaction
+       * ref) via a small deterministic hash so it looks stable/consistent for a
+       * given booking rather than reshuffling on every re-render. */
+      function Barcode({seed}) {
   const bars = [];
-  let hash = 0;
-  const str = String(seed);
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+      let hash = 0;
+      const str = String(seed);
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
   }
-  for (let i = 0; i < 48; i++) {
-    hash = (hash * 1103515245 + 12345) >>> 0;
-    bars.push((hash % 3) + 1);
+      for (let i = 0; i < 48; i++) {
+        hash = (hash * 1103515245 + 12345) >>> 0;
+      bars.push((hash % 3) + 1);
   }
-  return (
-    <div className="be-voucher-barcode-bars" aria-hidden="true">
-      {bars.map((w, i) => (
-        <span key={i} style={{ width: `${w}px` }} />
-      ))}
-    </div>
-  );
+      return (
+      <div className="be-voucher-barcode-bars" aria-hidden="true">
+        {bars.map((w, i) => (
+          <span key={i} style={{ width: `${w}px` }} />
+        ))}
+      </div>
+      );
 }
 
-function PrintIcon() {
+      function PrintIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="6 9 6 2 18 2 18 9" />
-      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-      <rect x="6" y="14" width="12" height="8" />
-    </svg>
-  );
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <polyline points="6 9 6 2 18 2 18 9" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <rect x="6" y="14" width="12" height="8" />
+      </svg>
+      );
 }
 
-function calcNights(start, end) {
+      function calcNights(start, end) {
   if (!start || !end) return 0;
-  const s = new Date(start);
-  const e = new Date(end);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
-  const diff = Math.round((e.getTime() - s.getTime()) / 86400000);
+      const s = new Date(start);
+      const e = new Date(end);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+      const diff = Math.round((e.getTime() - s.getTime()) / 86400000);
   return diff > 0 ? diff : 0;
 }
 
-function formatIsoDateOnly(value) {
+      function formatIsoDateOnly(value) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().split("T")[0];
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toISOString().split("T")[0];
 }
 
-/** Same .be-voucher-card shell as SuccessReceipt (a red status banner
- * instead of green, and a short status message instead of the full
- * reservation grid, since there's no confirmed booking to itemize) — a
- * failed/pending payment reads as a status update on the same voucher,
- * not a completely different page. */
-function FailureState({
-  responseJson,
-  hadStoredData,
-  homeUrl,
-  onRetry,
-  onBackToCart,
-  siteName,
-  bookingData,
+      /** Same .be-voucher-card shell as SuccessReceipt (a red status banner
+       * instead of green, and a short status message instead of the full
+       * reservation grid, since there's no confirmed booking to itemize) — a
+       * failed/pending payment reads as a status update on the same voucher,
+       * not a completely different page. */
+      function FailureState({
+        responseJson,
+        hadStoredData,
+        homeUrl,
+        onRetry,
+        onBackToCart,
+        siteName,
+        bookingData,
 }) {
   // Real conditional render, not a CSS show/hide pair — a plain matchMedia
   // check here means "Return Home" never sits in the DOM at all on mobile
@@ -1151,123 +1164,123 @@ function FailureState({
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(max-width: 1024px)");
-    setIsMobile(mql.matches);
+      const mql = window.matchMedia("(max-width: 1024px)");
+      setIsMobile(mql.matches);
     const onChange = (e) => setIsMobile(e.matches);
-    mql.addEventListener("change", onChange);
+      mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  const hasErrorMessage = Boolean(responseJson?.error_msg);
-  const isPending = !hasErrorMessage && !hadStoredData;
+      const hasErrorMessage = Boolean(responseJson?.error_msg);
+      const isPending = !hasErrorMessage && !hadStoredData;
 
-  const statusLabel = isPending ? "Booking Pending" : "Payment Unsuccessful";
-  const title = isPending
-    ? "Booking Pending"
-    : "We Couldn't Confirm Your Booking";
+      const statusLabel = isPending ? "Booking Pending" : "Payment Unsuccessful";
+      const title = isPending
+      ? "Booking Pending"
+      : "We Couldn't Confirm Your Booking";
 
-  const description = hasErrorMessage
-    ? `${responseJson.error_msg} If the amount was deducted, please check your email or contact us and we'll sort it out.`
-    : isPending
+      const description = hasErrorMessage
+      ? `${responseJson.error_msg} If the amount was deducted, please check your email or contact us and we'll sort it out.`
+      : isPending
       ? "We haven't received a confirmation for this booking yet. Please check your email for a confirmation, or contact us if you don't hear back soon."
       : "We couldn't confirm your booking. Please try again or contact support.";
 
-  return (
-    <div className="be-voucher-card">
-      <div className="be-voucher-header">
-        <h1 className="be-voucher-brand">
-          {siteName || bookingData?.property?.PropertyName || "Hotel Booking"}
-        </h1>
-        <p className="be-voucher-subtitle">Reservation Status</p>
-      </div>
-
-      <div className="be-voucher-status-banner be-voucher-status-banner--error">
-        <div>
-          <span className="be-voucher-label">Booking Status</span>
-          <p className="be-voucher-status-value be-voucher-status-value--error">
-            {statusLabel}
-          </p>
+      return (
+      <div className="be-voucher-card">
+        <div className="be-voucher-header">
+          <h1 className="be-voucher-brand">
+            {siteName || bookingData?.property?.PropertyName || "Hotel Booking"}
+          </h1>
+          <p className="be-voucher-subtitle">Reservation Status</p>
         </div>
-        {responseJson?.reservation_id && (
-          <div className="be-voucher-status-right">
-            <span className="be-voucher-label">Reference ID</span>
-            <p className="be-voucher-confirmation-id">
-              {responseJson.reservation_id}
+
+        <div className="be-voucher-status-banner be-voucher-status-banner--error">
+          <div>
+            <span className="be-voucher-label">Booking Status</span>
+            <p className="be-voucher-status-value be-voucher-status-value--error">
+              {statusLabel}
             </p>
           </div>
-        )}
-      </div>
+          {responseJson?.reservation_id && (
+            <div className="be-voucher-status-right">
+              <span className="be-voucher-label">Reference ID</span>
+              <p className="be-voucher-confirmation-id">
+                {responseJson.reservation_id}
+              </p>
+            </div>
+          )}
+        </div>
 
-      <div className="be-voucher-divider" />
+        <div className="be-voucher-divider" />
 
-      <h2 className="be-voucher-failure-title">{title}</h2>
-      <p className="be-voucher-failure-desc">{description}</p>
+        <h2 className="be-voucher-failure-title">{title}</h2>
+        <p className="be-voucher-failure-desc">{description}</p>
 
-      <div className="be-voucher-actions">
-        <button
-          type="button"
-          onClick={
-            onRetry ||
-            (() => {
-              window.location.href = homeUrl;
-            })
-          }
-          className="be-voucher-btn-print"
-        >
-          Try Again
-        </button>
-        {/* Desktop keeps this exact "Return Home" link, unchanged. Mobile
+        <div className="be-voucher-actions">
+          <button
+            type="button"
+            onClick={
+              onRetry ||
+              (() => {
+                window.location.href = homeUrl;
+              })
+            }
+            className="be-voucher-btn-print"
+          >
+            Try Again
+          </button>
+          {/* Desktop keeps this exact "Return Home" link, unchanged. Mobile
             shows "Back to Cart" instead — not merely hidden via CSS, not
             rendered at all — which returns the guest to step 2 with their
             room selection and guest-details form restored/still editable
             rather than sending them all the way back to the homepage
             after a failed/declined payment. */}
-        {isMobile ? (
-          <button
-            type="button"
-            onClick={
-              onBackToCart ||
-              (() => {
-                window.location.href = homeUrl;
-              })
-            }
-            className="be-voucher-btn-done"
-          >
-            Back to Cart
-          </button>
-        ) : (
-          <a href={homeUrl} className="be-voucher-btn-done">
-            Return Home
-          </a>
-        )}
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={
+                onBackToCart ||
+                (() => {
+                  window.location.href = homeUrl;
+                })
+              }
+              className="be-voucher-btn-done"
+            >
+              Back to Cart
+            </button>
+          ) : (
+            <a href={homeUrl} className="be-voucher-btn-done">
+              Return Home
+            </a>
+          )}
+        </div>
       </div>
-    </div>
-  );
+      );
 }
 
-function stripHtml(value) {
+      function stripHtml(value) {
   if (!value) return "";
-  return String(value).replace(/<[^>]*>?/gm, "");
+      return String(value).replace(/<[^>]*>?/gm, "");
 }
 
-function SpinnerIcon() {
+      function SpinnerIcon() {
   return (
-    <svg
-      width="40"
-      height="40"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className="be-spinner-icon"
-    >
-      <circle cx="12" cy="12" r="9" strokeOpacity="0.25" />
-      <path d="M21 12a9 9 0 0 0-9-9" />
-    </svg>
-  );
+      <svg
+        width="40"
+        height="40"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="be-spinner-icon"
+      >
+        <circle cx="12" cy="12" r="9" strokeOpacity="0.25" />
+        <path d="M21 12a9 9 0 0 0-9-9" />
+      </svg>
+      );
 }
 
-function safeSessionStorageGet(key) {
+      function safeSessionStorageGet(key) {
   try {
     return window.sessionStorage.getItem(key);
   } catch {
@@ -1275,38 +1288,38 @@ function safeSessionStorageGet(key) {
   }
 }
 
-function parsePaymentResponse(raw) {
+      function parsePaymentResponse(raw) {
   if (!raw) return null;
-  try {
+      try {
     const parsed = JSON.parse(raw);
-    return parsed?.result;
+      return parsed?.result;
   } catch (err) {
-    console.error("[booking-engine-new] Malformed be_paymentResponse:", err);
-    return null;
+        console.error("[booking-engine-new] Malformed be_paymentResponse:", err);
+      return null;
   }
 }
 
-function parseBookingData(raw) {
+      function parseBookingData(raw) {
   if (!raw) return null;
-  try {
+      try {
     return JSON.parse(raw);
   } catch (err) {
-    console.error("[booking-engine-new] Malformed be_bookingData:", err);
-    return null;
+        console.error("[booking-engine-new] Malformed be_bookingData:", err);
+      return null;
   }
 }
 
-function formatList(list, getLabel) {
+      function formatList(list, getLabel) {
   if (!Array.isArray(list) || list.length === 0) return "";
-  return list.map(getLabel).filter(Boolean).join(", ");
+      return list.map(getLabel).filter(Boolean).join(", ");
 }
 
-function formatCurrency(amount, currency) {
+      function formatCurrency(amount, currency) {
   const numeric = Number(amount);
-  if (Number.isNaN(numeric)) return "—";
-  try {
+      if (Number.isNaN(numeric)) return "—";
+      try {
     return new Intl.NumberFormat(undefined, {
-      style: "currency",
+        style: "currency",
       currency: currency || "INR",
     }).format(numeric);
   } catch {
@@ -1314,32 +1327,32 @@ function formatCurrency(amount, currency) {
   }
 }
 
-/**
- * Persists the confirmed booking to the CMS as a durable record independent
- * of STAAH — matches real ConfirmStep.js's fetchBookingResponse (~204-238),
- * which fires only once reservationStatus is genuinely "success" from the
- * confirm call above (not from the raw gateway echo). Fire-and-forget: a
- * failure here shouldn't block the already-rendered receipt.
- */
-function postBookingResponse(
-  config,
-  { reservationNo, reservationJson, bookingDetailsJson },
-) {
+      /**
+       * Persists the confirmed booking to the CMS as a durable record independent
+       * of STAAH — matches real ConfirmStep.js's fetchBookingResponse (~204-238),
+       * which fires only once reservationStatus is genuinely "success" from the
+       * confirm call above (not from the raw gateway echo). Fire-and-forget: a
+       * failure here shouldn't block the already-rendered receipt.
+       */
+      function postBookingResponse(
+      config,
+      {reservationNo, reservationJson, bookingDetailsJson},
+      ) {
   const base = config?.cmsBaseUrl;
-  if (!base) return;
+      if (!base) return;
 
-  fetch(`${base}/api/booking/BookingResponse`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      reservationNo,
-      reservationJson: JSON.stringify(reservationJson || {}),
-      bookingDetailsJson: JSON.stringify(bookingDetailsJson || {}),
+      fetch(`${base}/api/booking/BookingResponse`, {
+        method: "POST",
+      headers: {"Content-Type": "application/json" },
+      body: JSON.stringify({
+        reservationNo,
+        reservationJson: JSON.stringify(reservationJson || { }),
+      bookingDetailsJson: JSON.stringify(bookingDetailsJson || { }),
     }),
   }).catch((err) => {
-    console.error(
-      "[booking-engine-new] BookingResponse persist failed (non-fatal):",
-      err,
-    );
+        console.error(
+          "[booking-engine-new] BookingResponse persist failed (non-fatal):",
+          err,
+        );
   });
 }

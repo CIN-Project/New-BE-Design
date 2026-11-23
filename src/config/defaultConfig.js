@@ -17,5 +17,6 @@ export const defaultConfig = {
   paymentGateway: "staah",
   // Consuming app's server route that returns the signed PayU form fields.
   payuInitiateUrl: "/api/payu/initiate",
+  hidePaymentMethod: false,
   debug: false,
 };
