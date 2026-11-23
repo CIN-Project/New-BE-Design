@@ -274,24 +274,19 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       // .paymentcarddetail (kept defensive/optional since this package's
       // verify-token response hasn't been confirmed to carry that nested
       // shape the way Amritara's does).
-      // Decrypted Pay Later card (card_name/card_type/card_exp), also written onto whichever
-      // reservationJson BookingResponse ends up sending (see resolvedReservationJson below).
-      let payLaterCard = null;
-      // A Pay Later return is recognised from any of: the verify-token entry, its responseJson, or
-      // the booking DetailStep saved before the redirect (verify-token doesn't always echo
-      // form_of_payment). The decrypt itself only needs hash_key + partnerKey, not partner_id.
-      const isPayLaterReturn =
-        resultEntry?.form_of_payment === "pay_later" ||
-        parsedResponseJson?.form_of_payment === "pay_later" ||
-        parsedBookingData?.formOfPayment === "pay_later";
-      if (isPayLaterReturn && resultEntry && !resultEntry.form_of_payment) {
-        resultEntry.form_of_payment = "pay_later";
-      }
-      if (isPayLaterReturn && parsedResponseJson?.hash_key) {
+      if (
+        resultEntry?.form_of_payment === "pay_later" &&
+        parsedResponseJson?.partner_id &&
+        parsedResponseJson?.hash_key
+      ) {
         if (config?.partnerKey) {
           console.log(
             "[PAYMENT-FLOW] ConfirmStep.jsx: attempting pay_later card detail decrypt",
-            { partner_id: parsedResponseJson.partner_id },
+            {
+              partner_id: parsedResponseJson.partner_id,
+              hash_key: parsedResponseJson.hash_key,
+              partnerKeyBeingUsed: config.partnerKey,
+            },
           );
           try {
             const decryptedData = decryptHashFunction(
@@ -304,41 +299,10 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
               { decryptedData },
             );
             if (decryptedData) {
-              payLaterCard = decryptedData;
               parsedResponseJson.card_name = decryptedData?.card_name;
               parsedResponseJson.card_type = decryptedData?.card_type;
               parsedResponseJson.card_exp = decryptedData?.card_exp;
 
-              // The card goes into the reservation's own paymentcarddetail: the reservation DetailStep
-              // built for th-payment-request2 (saved in be_bookingData before the redirect) is updated
-              // and saved back, and it stands in for verify-token's reservationJson when that's empty.
-              const savedReservation =
-                parsedBookingData?.reservationPayload?.reservations?.reservation?.[0];
-              if (savedReservation) {
-                savedReservation.paymentcarddetail = {
-                  ...(savedReservation.paymentcarddetail || {}),
-                  CardHolderName: decryptedData?.card_name || "",
-                  CardType: decryptedData?.card_type || "",
-                  ExpireDate: decryptedData?.card_exp || "",
-                };
-                try {
-                  window.sessionStorage.setItem(
-                    BOOKING_DATA_KEY,
-                    JSON.stringify(parsedBookingData),
-                  );
-                } catch {
-                  // sessionStorage unavailable — the in-memory copy below still carries the card.
-                }
-              }
-              if (
-                resultEntry &&
-                !resultEntry?.reservationJson?.reservations?.reservation?.[0] &&
-                parsedBookingData?.reservationPayload?.reservations?.reservation?.[0]
-              ) {
-                resultEntry.reservationJson = JSON.parse(
-                  JSON.stringify(parsedBookingData.reservationPayload),
-                );
-              }
               const reservation =
                 resultEntry?.reservationJson?.reservations?.reservation?.[0];
               if (reservation) {
@@ -377,22 +341,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
         { parsedResponseJson, hasBookingData: Boolean(parsedBookingData) },
       );
 
-      // config.payLaterViaGateway: a Pay Later booking back from STAAH's hosted page is confirmed with
-      // ipn_flag "0" (no IPN for pay at hotel), as Amritara's ConfirmStep does before payment/confirm.
-      // Same clean-up as Amritara's ConfirmStep.js (~159-175) before payment/confirm: partner_id as a
-      // string, ipn_flag "0", and a failed payment sent as INR 0.0.
-      if (
-        config?.payLaterViaGateway === true &&
-        resultEntry?.form_of_payment === "pay_later" &&
-        parsedResponseJson
-      ) {
-        parsedResponseJson.partner_id = String(parsedResponseJson.partner_id);
-        parsedResponseJson.ipn_flag = "0";
-        if (parsedResponseJson.status === "error") {
-          parsedResponseJson.currency = "INR";
-          parsedResponseJson.amount = "0.0";
-        }
-      }
+      // setFormOfPayment
 
       setResponseJson(parsedResponseJson);
       setBookingData(parsedBookingData);
@@ -502,30 +451,13 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
           const confirmReservationJson =
             confirmResp?.result?.[0]?.confirmData?.result?.[0]
               ?.reservationJson;
-          let resolvedReservationJson = hasOwnKeys(
+          const resolvedReservationJson = hasOwnKeys(
             completeResponseObject?.reservationJson,
           )
             ? completeResponseObject.reservationJson
             : hasOwnKeys(confirmReservationJson)
               ? confirmReservationJson
               : parsedBookingData?.reservationPayload;
-
-          // Pay Later: the card the guest entered on STAAH's page (decrypted from hash_key above)
-          // goes into paymentcarddetail whichever of the three sources was used — before, only the
-          // first (empty for Pay Later) got it, so BookingResponse went out with blank card fields.
-          // CardNumber/cvv/PaymentRefenceId are kept as they are.
-          const cardReservation =
-            resolvedReservationJson?.reservations?.reservation?.[0];
-          if (payLaterCard && cardReservation) {
-            resolvedReservationJson = JSON.parse(JSON.stringify(resolvedReservationJson));
-            const target = resolvedReservationJson.reservations.reservation[0];
-            target.paymentcarddetail = {
-              ...(target.paymentcarddetail || {}),
-              CardHolderName: payLaterCard.card_name || "",
-              CardType: payLaterCard.card_type || "",
-              ExpireDate: payLaterCard.card_exp || "",
-            };
-          }
 
           if (!hasOwnKeys(resolvedReservationJson)) {
             console.warn(
