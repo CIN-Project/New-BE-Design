@@ -244,6 +244,7 @@ export function ConfirmStep({ homeUrl = "/", onRetry, onBackToCart }) {
       if (cancelled) return;
 
       const parsedResponseJsonResp = parsePaymentResponse(rawResponse);
+      console.log("parsedResponseJsonResp",parsedResponseJsonResp);
       const resultEntry = parsedResponseJsonResp?.[0] || null;
       const parsedResponseJson = resultEntry?.responseJson || null;
       setFormOfPayment(resultEntry?.form_of_payment);
