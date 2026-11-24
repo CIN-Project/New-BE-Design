@@ -499,9 +499,15 @@ export function GuestDetailsForm({ onComplete }) {
         : e.nativeEvent?.submitter?.value === "pay_later"
           ? "pay_later"
           : "pay_now";
+    // config.payLaterViaGateway (off by default): Pay Later goes through STAAH's hosted page like
+    // Amritara's Ajay_Paylater_hotel branch — reservation-id → th-payment-request2 (Channel Collect,
+    // full deposit) → th-payment-redirect2 (card guarantee) → back with a tokenKey → verify-token →
+    // payment/confirm. Off: the current flow (Hotel Collect, no redirect, straight to confirmation).
+    const payLaterViaGateway =
+      formOfPayment === "pay_later" && config?.payLaterViaGateway === true;
     console.log(
       `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
-      { selectedPropertyId },
+      { selectedPropertyId, payLaterViaGateway },
     );
     const proceedResult = proceedToPay(selectedRoom);
     if (proceedResult !== "success") {
@@ -1107,7 +1113,20 @@ export function GuestDetailsForm({ onComplete }) {
 
       // For pay_later, skip STAAH gateway entirely — create properly formatted payment response
       // from th-payment-request2 data, then jump to confirmation step
-      if (formOfPayment === "pay_later") {
+      if (payLaterViaGateway) {
+        // Pay Later through STAAH's hosted page (th-payment-redirect2), like Pay Now; paramvalues
+        // carries form_of_payment "pay_later". A stored response from an earlier booking in this tab
+        // is cleared so the return can't pick it up instead of the verify-token result.
+        try {
+          window.sessionStorage.removeItem("be_paymentResponse");
+          window.sessionStorage.removeItem("payLaterMode");
+        } catch {
+          // sessionStorage unavailable - non-fatal.
+        }
+        onComplete?.();
+        console.log("[PAYMENT-FLOW] DetailStep.jsx: pay_later via gateway — redirecting to STAAH hosted page (th-payment-redirect2)", { reservationId, paramvalues });
+        redirectToPayment(config, paramvalues, resolvedKeyData);
+      } else if (formOfPayment === "pay_later") {
         console.log("[PAYMENT-FLOW] DetailStep.jsx: pay_later detected — skipping STAAH redirect, formatting th-payment-request2 response for confirmation");
         try {
           // th-payment-request2 already staged the reservation with payment_type="Hotel Collect"
