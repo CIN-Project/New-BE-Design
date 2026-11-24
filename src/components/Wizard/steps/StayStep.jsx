@@ -557,7 +557,6 @@ function LockOpenIcon() {
 /** One rate-plan card inside the horizontal carousel: title/cancellation
  * pill header, scrollable inclusions, Standard-vs-Member toggle + select
  * button footer. */
-const hideStrikeRates = !!useConfig()?.hideStrikeRates;
 function RateCard({
   room,
   property,
@@ -577,6 +576,7 @@ function RateCard({
   animating,
   user,
 }) {
+  const hideStrikeRates = !!useConfig()?.hideStrikeRates;
   const { memberMapping, memberRate, memberRatePlan } = findMemberRatePlan(
     property,
     room,
