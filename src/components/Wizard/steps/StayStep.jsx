@@ -265,50 +265,50 @@ function RoomDetailsModal({ room, onClose }) {
 
         {/* Only this scrolls, so the close button above stays in the corner. */}
         <div className="be-room-modal-scroll">
-        {room.Images?.length > 0 && (
-          <ImageSlider images={room.Images} className="be-room-modal-img" />
-        )}
-
-        <div className="be-room-modal-body">
-          <h3 className="be-room-modal-title">{room.RoomName}</h3>
-
-          <div className="be-room-row-meta">
-            {sizeLabel && (
-              <span>
-                <SizeIcon /> {sizeLabel}
-              </span>
-            )}
-            {beddingLabel && (
-              <span>
-                <BedIcon /> {beddingLabel}
-              </span>
-            )}
-            {room.MaxGuest ? (
-              <span>
-                <GuestsIcon /> Max Occupancy: {room.MaxGuest} Guests
-              </span>
-            ) : null}
-          </div>
-
-          <h4 className="be-room-modal-desc-header">Room Overview</h4>
-
-          {fullDescription && (
-            <p className="be-room-modal-desc">{fullDescription}</p>
+          {room.Images?.length > 0 && (
+            <ImageSlider images={room.Images} className="be-room-modal-img" />
           )}
 
-          {amenityGroups.map(([category, items]) => (
-            <div className="be-room-modal-amenity-group" key={category}>
-              <h4>{category}</h4>
-              <div className="be-room-modal-amenity-list">
-                {items.map((item, i) => (
-                  <span className="be-room-modal-amenity-item" key={i}>
-                    <CheckIcon /> {item}
-                  </span>
-                ))}
-              </div>
+          <div className="be-room-modal-body">
+            <h3 className="be-room-modal-title">{room.RoomName}</h3>
+
+            <div className="be-room-row-meta">
+              {sizeLabel && (
+                <span>
+                  <SizeIcon /> {sizeLabel}
+                </span>
+              )}
+              {beddingLabel && (
+                <span>
+                  <BedIcon /> {beddingLabel}
+                </span>
+              )}
+              {room.MaxGuest ? (
+                <span>
+                  <GuestsIcon /> Max Occupancy: {room.MaxGuest} Guests
+                </span>
+              ) : null}
             </div>
-          ))}
-        </div>
+
+            <h4 className="be-room-modal-desc-header">Room Overview</h4>
+
+            {fullDescription && (
+              <p className="be-room-modal-desc">{fullDescription}</p>
+            )}
+
+            {amenityGroups.map(([category, items]) => (
+              <div className="be-room-modal-amenity-group" key={category}>
+                <h4>{category}</h4>
+                <div className="be-room-modal-amenity-list">
+                  {items.map((item, i) => (
+                    <span className="be-room-modal-amenity-item" key={i}>
+                      <CheckIcon /> {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -338,8 +338,8 @@ function classifyCancellation(text = "") {
 /** Standard (non-member) rate plans mapped to a room, mirroring the
  * RateData.filter(...).map(...) block in Filterbar.js (~5400-5456). */
 function getStandardRateEntries(property, room) {
-  console.log("Prem property",property)
-  console.log("Prem room",room)
+  console.log("Prem property", property)
+  console.log("Prem room", room)
   const rateData = property?.RateData || [];
   const mapping = property?.Mapping || [];
 
@@ -405,13 +405,13 @@ function getRoomMinRate(room, adults = 1) {
       minRate = rate;
     }
   });
-  console.log("Prem minRate",minRate)
+  console.log("Prem minRate", minRate)
   return minRate;
 }
 
 function getRoomFromPrice(property, room, adults = 1) {
   const entries = getStandardRateEntries(property, room);
-  console.log('Prem getStandardRateEntries',entries)
+  console.log('Prem getStandardRateEntries', entries)
   let min = Infinity;
   let minIsMemberRate = false;
   let minSavings = 0;
@@ -443,14 +443,14 @@ function getRoomFromPrice(property, room, adults = 1) {
 
   return isFinite(min)
     ? {
-        price: Math.round(min),
-        isMemberRate: minIsMemberRate,
-        // Struck-through "from" reference price — same
-        // RateBeforeTax + Savings pairing as Amritara's Filterbar.js
-        // increasedPricePerRoom (~4841), just for the single cheapest entry
-        // this "Rates Starting From" summary already picked.
-        strikePrice: minSavings > 0 ? Math.round(min + minSavings) : null,
-      }
+      price: Math.round(min),
+      isMemberRate: minIsMemberRate,
+      // Struck-through "from" reference price — same
+      // RateBeforeTax + Savings pairing as Amritara's Filterbar.js
+      // increasedPricePerRoom (~4841), just for the single cheapest entry
+      // this "Rates Starting From" summary already picked.
+      strikePrice: minSavings > 0 ? Math.round(min + minSavings) : null,
+    }
     : null;
 }
 
@@ -557,6 +557,7 @@ function LockOpenIcon() {
 /** One rate-plan card inside the horizontal carousel: title/cancellation
  * pill header, scrollable inclusions, Standard-vs-Member toggle + select
  * button footer. */
+const hideStrikeRates = !!useConfig()?.hideStrikeRates;
 function RateCard({
   room,
   property,
@@ -589,9 +590,9 @@ function RateCard({
 
   const memberSavings = memberTotals
     ? Math.max(
-        0,
-        Math.round(standardTotals.totalCartValue - memberTotals.totalCartValue),
-      )
+      0,
+      Math.round(standardTotals.totalCartValue - memberTotals.totalCartValue),
+    )
     : 0;
 
   const cancellationText =
@@ -679,7 +680,8 @@ function RateCard({
               </span>
             </div>
             <span className="be-rate-option-price">
-              {standardTotals.totalSavings > 0 && (
+              {/* {standardTotals.totalSavings > 0 && ( */}
+              {!hideStrikeRates && standardTotals.totalSavings > 0 && (
                 <span className="be-rate-option-price-strike">
                   &#8377;
                   {formatMoney(
@@ -698,9 +700,8 @@ function RateCard({
 
           {memberRatePlan && memberMapping && (
             <div
-              className={`be-rate-option-row be-member-row${effectiveTab === "member" ? " be-active" : ""}${
-                animating ? " be-unlock-sweep" : ""
-              }`}
+              className={`be-rate-option-row be-member-row${effectiveTab === "member" ? " be-active" : ""}${animating ? " be-unlock-sweep" : ""
+                }`}
               onClick={() => onSetActiveTab("member")}
               role="button"
               tabIndex={0}
@@ -726,7 +727,8 @@ function RateCard({
               <span
                 className={`be-rate-option-price be-member-price${animating ? " be-unlocking-flash" : ""}`}
               >
-                {memberTotals.totalSavings > 0 && (
+                {/* {memberTotals.totalSavings > 0 && ( */}
+                {!hideStrikeRates && memberTotals.totalSavings > 0 && (
                   <span className="be-rate-option-price-strike">
                     &#8377;
                     {formatMoney(
@@ -751,12 +753,12 @@ function RateCard({
           onClick={() =>
             effectiveTab === "member"
               ? onSelectMember({
-                  memberMapping,
-                  memberRate,
-                  savings: memberSavings,
-                  standardMapping: mapping,
-                  standardRate: rate,
-                })
+                memberMapping,
+                memberRate,
+                savings: memberSavings,
+                standardMapping: mapping,
+                standardRate: rate,
+              })
               : onSelectStandard(standardTotals.totalSavings)
           }
         >
@@ -800,6 +802,7 @@ function RoomRow({
   onOpenDetails,
   isDayUse,
 }) {
+    const hideStrikeRates = !!useConfig()?.hideStrikeRates;
   const gridRef = useRef(null);
   const expandWrapperRef = useRef(null);
   const fullDescription = stripHtmlTags(room?.RoomDescription || "");
@@ -927,7 +930,8 @@ function RoomRow({
                 Rates Starting From
               </span>
               <span className="be-room-row-price">
-                {fromPrice != null && fromPriceStrike != null && (
+                {/* {fromPrice != null && fromPriceStrike != null && ( */}
+                {!hideStrikeRates && fromPrice != null && fromPriceStrike != null && (
                   <span className="be-rate-option-price-strike">
                     ₹{formatMoney(fromPriceStrike)}
                   </span>
@@ -961,149 +965,149 @@ function RoomRow({
           description, "Sold Out" badge in place of "View Rates"), it just
           never gets a rate-plan/package section to expand into. */}
       {room?.MinInventory > 0 && (
-      <div
-        ref={expandWrapperRef}
-        className={`be-rate-plans-expand-wrapper${isExpanded ? " be-expanded" : ""}`}
-      >
-        <div className="be-rate-plans-container">
-          {/* be-rate-plans-container is the grid item of the 0fr/1fr collapse
+        <div
+          ref={expandWrapperRef}
+          className={`be-rate-plans-expand-wrapper${isExpanded ? " be-expanded" : ""}`}
+        >
+          <div className="be-rate-plans-container">
+            {/* be-rate-plans-container is the grid item of the 0fr/1fr collapse
               trick above and must stay padding-free (see StayStep.css) — all
               the actual visual padding lives on this inner div instead, so
               it can go to true 0 height when collapsed instead of leaving a
               fixed-size gap between room cards. */}
-          <div className="be-rate-plans-container-inner">
-            {standardEntries.length === 0 ? (
-              <p className="be-rate-plans-empty">
-                No rate plans available for this room.
-              </p>
-            ) : (
-              <>
-              <div className="be-rate-plans-carousel-wrapper">
-                {showNav && (
-                  <button
-                    type="button"
-                    className="be-carousel-nav-btn be-prev"
-                    onClick={() => scrollByCard(-1)}
-                    aria-label="Previous rate plans"
-                  >
-                    &#8249;
-                  </button>
-                )}
+            <div className="be-rate-plans-container-inner">
+              {standardEntries.length === 0 ? (
+                <p className="be-rate-plans-empty">
+                  No rate plans available for this room.
+                </p>
+              ) : (
+                <>
+                  <div className="be-rate-plans-carousel-wrapper">
+                    {showNav && (
+                      <button
+                        type="button"
+                        className="be-carousel-nav-btn be-prev"
+                        onClick={() => scrollByCard(-1)}
+                        aria-label="Previous rate plans"
+                      >
+                        &#8249;
+                      </button>
+                    )}
 
-                <div
-                  className="be-rate-plans-grid"
-                  ref={gridRef}
-                  onScroll={handleRateCardsScroll}
-                >
-                  {standardEntries.map(({ rate, mapping, ratePlan }) => {
-                    // Scoped by activeRoomIndex, not just room+rate — two
-                    // room slots booking the identical room type and rate
-                    // plan (a common case: 2x "Standard Room, Best
-                    // Available Rate") used to share the same cardKey, so
-                    // activeTabMap's "which tab is being previewed" (member
-                    // vs standard) and the unlock-sweep animation leaked
-                    // from whichever slot was edited last into every other
-                    // slot showing that same room+rate — e.g. switching to
-                    // an empty Room 2 that happens to show the same room
-                    // Room 1 was just booked under would render the member
-                    // rate's radio as visually "active" even though nothing
-                    // has actually been picked for Room 2 yet. The true
-                    // selected/confirmed state (isStandardSelected/
-                    // isMemberSelected below) was never affected by this —
-                    // it already compares against activeSlotEntry, which is
-                    // correctly per-slot — only the tab-preview UI state
-                    // was leaking.
-                    const cardKey = `${activeRoomIndex}_${room.RoomId}_${rate.RateId}`;
-                    const { memberRate } = findMemberRatePlan(
-                      property,
-                      room,
-                      rate,
-                    );
+                    <div
+                      className="be-rate-plans-grid"
+                      ref={gridRef}
+                      onScroll={handleRateCardsScroll}
+                    >
+                      {standardEntries.map(({ rate, mapping, ratePlan }) => {
+                        // Scoped by activeRoomIndex, not just room+rate — two
+                        // room slots booking the identical room type and rate
+                        // plan (a common case: 2x "Standard Room, Best
+                        // Available Rate") used to share the same cardKey, so
+                        // activeTabMap's "which tab is being previewed" (member
+                        // vs standard) and the unlock-sweep animation leaked
+                        // from whichever slot was edited last into every other
+                        // slot showing that same room+rate — e.g. switching to
+                        // an empty Room 2 that happens to show the same room
+                        // Room 1 was just booked under would render the member
+                        // rate's radio as visually "active" even though nothing
+                        // has actually been picked for Room 2 yet. The true
+                        // selected/confirmed state (isStandardSelected/
+                        // isMemberSelected below) was never affected by this —
+                        // it already compares against activeSlotEntry, which is
+                        // correctly per-slot — only the tab-preview UI state
+                        // was leaking.
+                        const cardKey = `${activeRoomIndex}_${room.RoomId}_${rate.RateId}`;
+                        const { memberRate } = findMemberRatePlan(
+                          property,
+                          room,
+                          rate,
+                        );
 
-                    const isStandardSelected =
-                      activeSlotEntry?.roomId === room.RoomId &&
-                      activeSlotEntry?.rateId === rate.RateId &&
-                      !activeSlotEntry?.isMemberRate;
+                        const isStandardSelected =
+                          activeSlotEntry?.roomId === room.RoomId &&
+                          activeSlotEntry?.rateId === rate.RateId &&
+                          !activeSlotEntry?.isMemberRate;
 
-                    const isMemberSelected = Boolean(
-                      memberRate &&
-                      activeSlotEntry?.roomId === room.RoomId &&
-                      activeSlotEntry?.rateId === memberRate.RateId &&
-                      activeSlotEntry?.isMemberRate,
-                    );
+                        const isMemberSelected = Boolean(
+                          memberRate &&
+                          activeSlotEntry?.roomId === room.RoomId &&
+                          activeSlotEntry?.rateId === memberRate.RateId &&
+                          activeSlotEntry?.isMemberRate,
+                        );
 
-                    return (
-                      <RateCard
-                        key={cardKey}
-                        room={room}
-                        property={property}
-                        rate={rate}
-                        mapping={mapping}
-                        ratePlan={ratePlan}
-                        adults={adults}
-                        nights={nights}
-                        isDayUse={isDayUse}
-                        cancellationPolicyPackage={cancellationPolicyPackage}
-                        activeTab={activeTabMap[cardKey]}
-                        onSetActiveTab={(tab) => onSetActiveTab(cardKey, tab)}
-                        onSelectStandard={(savings) =>
-                          onSelectStandard(room, mapping, rate, savings)
-                        }
-                        onSelectMember={({
-                          memberMapping,
-                          memberRate,
-                          savings,
-                          standardMapping,
-                          standardRate,
-                        }) =>
-                          onSelectMember(
-                            room,
-                            memberMapping,
-                            memberRate,
-                            savings,
-                            cardKey,
-                            standardMapping,
-                            standardRate,
-                          )
-                        }
-                        isStandardSelected={isStandardSelected}
-                        isMemberSelected={isMemberSelected}
-                        animating={animatingUnlockKey === cardKey}
-                        user={user}
-                      />
-                    );
-                  })}
-                </div>
+                        return (
+                          <RateCard
+                            key={cardKey}
+                            room={room}
+                            property={property}
+                            rate={rate}
+                            mapping={mapping}
+                            ratePlan={ratePlan}
+                            adults={adults}
+                            nights={nights}
+                            isDayUse={isDayUse}
+                            cancellationPolicyPackage={cancellationPolicyPackage}
+                            activeTab={activeTabMap[cardKey]}
+                            onSetActiveTab={(tab) => onSetActiveTab(cardKey, tab)}
+                            onSelectStandard={(savings) =>
+                              onSelectStandard(room, mapping, rate, savings)
+                            }
+                            onSelectMember={({
+                              memberMapping,
+                              memberRate,
+                              savings,
+                              standardMapping,
+                              standardRate,
+                            }) =>
+                              onSelectMember(
+                                room,
+                                memberMapping,
+                                memberRate,
+                                savings,
+                                cardKey,
+                                standardMapping,
+                                standardRate,
+                              )
+                            }
+                            isStandardSelected={isStandardSelected}
+                            isMemberSelected={isMemberSelected}
+                            animating={animatingUnlockKey === cardKey}
+                            user={user}
+                          />
+                        );
+                      })}
+                    </div>
 
-                {showNav && (
-                  <button
-                    type="button"
-                    className="be-carousel-nav-btn be-next"
-                    onClick={() => scrollByCard(1)}
-                    aria-label="Next rate plans"
-                  >
-                    &#8250;
-                  </button>
-                )}
-              </div>
-              {standardEntries.length > 1 && (
-                <div className="be-rate-plans-dots">
-                  {standardEntries.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={`be-rate-plans-dot${i === activeCardIndex ? " be-active" : ""}`}
-                      onClick={() => scrollToCard(i)}
-                      aria-label={`Go to package ${i + 1}`}
-                    />
-                  ))}
-                </div>
+                    {showNav && (
+                      <button
+                        type="button"
+                        className="be-carousel-nav-btn be-next"
+                        onClick={() => scrollByCard(1)}
+                        aria-label="Next rate plans"
+                      >
+                        &#8250;
+                      </button>
+                    )}
+                  </div>
+                  {standardEntries.length > 1 && (
+                    <div className="be-rate-plans-dots">
+                      {standardEntries.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className={`be-rate-plans-dot${i === activeCardIndex ? " be-active" : ""}`}
+                          onClick={() => scrollToCard(i)}
+                          aria-label={`Go to package ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
-              </>
-            )}
+            </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );
@@ -1408,7 +1412,7 @@ export function StayStep({ onRoomsSelected }) {
           selectedRoom[i]?.children === sr.children &&
           selectedRoom[i]?.infantAge === propertyInfantAge &&
           JSON.stringify(selectedRoom[i]?.childAges || []) ===
-            JSON.stringify(sr.childAges || []),
+          JSON.stringify(sr.childAges || []),
       );
 
     if (!inSync) {
@@ -1418,22 +1422,22 @@ export function StayStep({ onRoomsSelected }) {
           const existing = existingById.get(sr.id);
           return existing
             ? {
-                ...existing,
-                adults: sr.adults,
-                children: sr.children,
-                childAges: sr.childAges,
-                infantAge: propertyInfantAge,
-              }
+              ...existing,
+              adults: sr.adults,
+              children: sr.children,
+              childAges: sr.childAges,
+              infantAge: propertyInfantAge,
+            }
             : {
-                id: sr.id,
-                adults: sr.adults,
-                children: sr.children,
-                childAges: sr.childAges,
-                infantAge: propertyInfantAge,
-                roomId: "",
-                roomName: "",
-                roomImage: null,
-              };
+              id: sr.id,
+              adults: sr.adults,
+              children: sr.children,
+              childAges: sr.childAges,
+              infantAge: propertyInfantAge,
+              roomId: "",
+              roomName: "",
+              roomImage: null,
+            };
         }),
       );
       // Only reset the active slot if it's now out of bounds (a room was
@@ -1749,7 +1753,7 @@ export function StayStep({ onRoomsSelected }) {
       inventoryRoomsRef.current,
       guestSlotsOnly,
     );
-    console.log("Prem property",mergedProperty)
+    console.log("Prem property", mergedProperty)
     const dayUseExcludedRoomIds = new Set();
     let property = mergedProperty;
     if (mergedProperty) {
@@ -1778,7 +1782,7 @@ export function StayStep({ onRoomsSelected }) {
 
     const EXCLUDED_ROOM_NAMES_EXACT = ["B2B", "b2b", "B2b", "b2B"];
     const activeSlotAdults = searchRooms?.[currentRoomIndex]?.adults ?? 1;
-    console.log("Prem property?.RoomData",property?.RoomData)
+    console.log("Prem property?.RoomData", property?.RoomData)
     const availableRooms = (property?.RoomData || [])
       .filter((room) => !dayUseExcludedRoomIds.has(String(room?.RoomId)))
       .filter(
@@ -2227,16 +2231,16 @@ export function StayStep({ onRoomsSelected }) {
   const maxAdultsInRoom = emptyRoom
     ? (emptyRoom.adults || 0) + (emptyRoom.children || 0)
     : (selectedRoom || []).reduce(
-        (max, r) =>
-          r.adults > max ? (r.adults || 0) + (r.children || 0) : max,
-        0,
-      );
+      (max, r) =>
+        r.adults > max ? (r.adults || 0) + (r.children || 0) : max,
+      0,
+    );
   const maxAdultsOnly = emptyRoom
     ? emptyRoom.adults || 0
     : (selectedRoom || []).reduce(
-        (max, r) => (r.adults > max ? r.adults : max),
-        0,
-      );
+      (max, r) => (r.adults > max ? r.adults : max),
+      0,
+    );
 
   // Copied via [...] before filtering/sorting since `filteredRooms` here may
   // otherwise be the exact same array reference as component state —
@@ -2367,7 +2371,7 @@ export function StayStep({ onRoomsSelected }) {
               : "Select a destination and dates above to see available rooms."}
           </div>
         )}
-        {console.log("Prem rooms",rooms)}
+      {console.log("Prem rooms", rooms)}
 
       {!loading &&
         advancingToIndex === null &&

@@ -18,5 +18,6 @@ export const defaultConfig = {
   // Consuming app's server route that returns the signed PayU form fields.
   payuInitiateUrl: "/api/payu/initiate",
   hidePaymentMethod: false,
+  hideStrikeRates: false,   // NEW
   debug: false,
 };

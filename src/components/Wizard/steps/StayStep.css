@@ -801,6 +801,7 @@
   color: #999;
   text-decoration: line-through;
   margin-right: 0.35rem;
+  display: none !important;
 }
 
 .be-rate-option-price.be-member-price {
