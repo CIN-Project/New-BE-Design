@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useConfig } from "../config/configContext.js";
 import { createAuthApi } from "../api/auth.js";
 import {
@@ -28,6 +28,8 @@ export function BookingEngineAuthProvider({ children }) {
 
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  // Last verified OTP (in memory only): the v2 members API's sign-up needs it.
+  const lastOtpRef = useRef("");
 
   useEffect(() => {
     const u = sessionStorage.getItem(SESSION_KEYS.user);
@@ -140,6 +142,7 @@ export function BookingEngineAuthProvider({ children }) {
     }
     if (v?.success !== true)
       throw new Error(v?.error || "OTP verification failed");
+    lastOtpRef.current = String(otp);
 
     const code = Number(v?.errorCode);
     const row =
@@ -209,6 +212,7 @@ export function BookingEngineAuthProvider({ children }) {
         Gender: form.Gender || "",
         Address: form.Address || "",
         PrivacyPolicyAcceptance: "Y",
+        ...(config.membersApiFormat === "v2" ? { Otp: lastOtpRef.current } : {}),
       });
       if (!(raw?.success === true && Number(raw?.errorCode) === 0)) {
         throw new Error(raw?.result || raw?.error || "Sign up failed");

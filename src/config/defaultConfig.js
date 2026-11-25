@@ -4,6 +4,10 @@
 // (see ConfigProvider.jsx for how they map onto --be-font-serif/--be-font-sans).
 export const defaultConfig = {
   otpLength: 6,
+  // Members (loyalty login) API format. "v1" (default): /GenerateToken, /GetOtp, /VerifyOtp, … with
+  // PascalCase bodies. "v2": MemberLoyaltyApis — /generate-token, /get-otp, /verify-otp, /sign-up
+  // with camelCase bodies and { success, code, message, data } replies.
+  membersApiFormat: "v1",
   // Adults pre-filled for the first search room and every room the guest adds (1–4).
   defaultAdults: 1,
   // When true, the search starts on tonight → tomorrow instead of empty dates.
