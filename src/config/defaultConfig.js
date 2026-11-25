@@ -38,6 +38,10 @@ export const defaultConfig = {
   mobilePayLaterLabel: "",
   // When false, the search bar's Overnight / Day Use switch is hidden and every search is overnight.
   enableDayUse: true,
+  // Hour of the day (0–23, guest's local time) from which a Day Use search for TODAY shows every
+  // room as Sold Out (no View Rates, nothing to select). E.g. 12 = no same-day Day Use after noon.
+  // null (default) = off.
+  dayUseSameDayCutoffHour: null,
   // When false, the cart's promo "Apply" skips the VerifyPromoCode call and applies the code straight
   // to the rate search, the same as the search bar's promo field.
   verifyCartPromoCode: true,

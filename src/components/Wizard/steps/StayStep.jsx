@@ -873,7 +873,10 @@ function RoomRow({
   user,
   onOpenDetails,
   isDayUse,
+  forceSoldOut = false,
 }) {
+  // Bookable: has inventory and isn't forced sold out (config.dayUseSameDayCutoffHour).
+  const isBookable = room?.MinInventory > 0 && !forceSoldOut;
   const gridRef = useRef(null);
   const expandWrapperRef = useRef(null);
   const fullDescription = stripHtmlTags(room?.RoomDescription || "");
@@ -1019,7 +1022,7 @@ function RoomRow({
                 )}
               </span>
             </div>
-            {room?.MinInventory > 0 ? (
+            {isBookable ? (
               <button
                 type="button"
                 className={`be-btn-select-room${isExpanded ? " be-expanded" : ""}`}
@@ -1040,7 +1043,7 @@ function RoomRow({
           sold-out room still shows the card above (image, name, meta,
           description, "Sold Out" badge in place of "View Rates"), it just
           never gets a rate-plan/package section to expand into. */}
-      {room?.MinInventory > 0 && (
+      {isBookable && (
       <div
         ref={expandWrapperRef}
         className={`be-rate-plans-expand-wrapper${isExpanded ? " be-expanded" : ""}`}
@@ -1456,6 +1459,19 @@ export function StayStep({ onRoomsSelected }) {
     )
     .join(",");
   const nights = calcNights(selectedStartDate, selectedEndDate);
+  // config.dayUseSameDayCutoffHour: a Day Use search for today, at/after that hour, shows every room
+  // as Sold Out (checked each render, so changing the date or switching to Overnight clears it).
+  const dayUseCutoffHour = config?.dayUseSameDayCutoffHour;
+  const dayUseCutoffPassed = (() => {
+    if (!isDayUse || dayUseCutoffHour == null || !selectedStartDate) return false;
+    const now = new Date();
+    const start = new Date(selectedStartDate);
+    const isToday =
+      start.getFullYear() === now.getFullYear() &&
+      start.getMonth() === now.getMonth() &&
+      start.getDate() === now.getDate();
+    return isToday && now.getHours() >= Number(dayUseCutoffHour);
+  })();
 
   // Keep StayContext's `selectedRoom` array (one entry per booked room slot)
   // in sync with SearchContext's `searchRooms` by id — adding a fresh empty
@@ -2540,6 +2556,7 @@ export function StayStep({ onRoomsSelected }) {
               animatingUnlockKey={animatingUnlockKey}
               user={user}
               isDayUse={isDayUse}
+              forceSoldOut={dayUseCutoffPassed}
               onOpenDetails={setDetailsRoom}
             />
           );
