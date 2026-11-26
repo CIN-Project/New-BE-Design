@@ -204,7 +204,26 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       try {
         const pending = window.sessionStorage.getItem("be_payuPending");
         if (payuStatus === "success" && pending) {
-          window.sessionStorage.setItem("be_paymentResponse", pending);
+
+          // window.sessionStorage.setItem("be_paymentResponse", pending);
+
+          let toStore = pending;
+          try {
+            const parsedPending = JSON.parse(pending);
+            const entry = parsedPending?.result?.[0];
+            if (entry?.form_of_payment === "pay_now" && entry.responseJson) {
+              entry.responseJson = {
+                ...entry.responseJson,
+                status: "success",
+                status_code: "0000",
+                pg_transaction_id:
+                  params.get("payuId") || params.get("txnid") || entry.responseJson.pg_transaction_id,
+              };
+              toStore = JSON.stringify(parsedPending);
+            }
+          } catch { }
+          window.sessionStorage.setItem("be_paymentResponse", toStore);
+
           window.sessionStorage.setItem("payLaterMode", "true");
           window.sessionStorage.setItem(
             "be_paidViaPayU",
@@ -429,7 +448,7 @@ export function Wizard({ onComplete, syncStepToUrl = true, onSearch, onBack }) {
       if (payLaterMode) {
         try {
           window.sessionStorage.removeItem("payLaterMode");
-        } catch {}
+        } catch { }
       }
 
       // Consume the pay-now marker now that it's done its job — otherwise

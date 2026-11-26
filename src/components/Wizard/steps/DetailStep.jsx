@@ -468,7 +468,7 @@ export function GuestDetailsForm({ onComplete }) {
       String(p.staahPropertyId) === String(selectedPropertyId) ||
       String(p.propertyId) === String(selectedPropertyId),
   );
-  console.log("resolvedProperty",resolvedProperty)
+  console.log("resolvedProperty", resolvedProperty)
   const resolvedPropertyPhone =
     selectedPropertyPhone ?? resolvedProperty?.phone ?? null;
   const resolvedPropertyEmail =
@@ -507,7 +507,15 @@ export function GuestDetailsForm({ onComplete }) {
     // once PayU reports success. `stagingMode` is what STAAH is told;
     // `formOfPayment` stays what the guest actually clicked (tracking etc.).
     const isPayU = config?.paymentGateway === "payu" && formOfPayment === "pay_now";
-    const stagingMode = isPayU ? "pay_later" : formOfPayment;
+
+    // const stagingMode = isPayU ? "pay_later" : formOfPayment;
+
+    const stagingMode = formOfPayment;
+    try {
+      window.sessionStorage.removeItem("be_paidViaPayU");
+    } catch { }
+
+
     console.log(
       `[PAYMENT-FLOW] DetailStep.jsx: handleSubmit (${formOfPayment === "pay_later" ? "Pay Later" : "Pay Now"} clicked)`,
       { selectedPropertyId },
@@ -675,48 +683,48 @@ export function GuestDetailsForm({ onComplete }) {
           roomTaxAmount +
           roomAddonAmount;
 
-            const {
-                  // adults,
-                  // children,
-                  applicableAdult,
-                  applicableChild,
-                  applicableGuest
-                } = room;
-          // Same chargeable-children rule as ratePricing.js's
-          // computeRoomSurcharge (ported from Trevon's Filterbar.js
-          // ~507-511) — a child at or under the property's InfantAge is
-          // free and shouldn't count toward extraChild here either. Falls
-          // back to the raw `children` count when childAges isn't
-          // populated, same as computeRoomSurcharge's own fallback.
-          const childAges = searchRoom?.childAges;
-          const infantAge = room?.infantAge || 0;
-          const chargeableChildren = Array.isArray(childAges)
-            ? childAges.filter(
-                (age) => age !== "" && Number(age) > Number(infantAge),
-              ).length
-            : children;
-          // --- Step 1: Adjust children if adults are less than applicableAdult ---
-          // Same Trevon-ported order as ratePricing.js's computeRoomSurcharge:
-          // adjust using raw children first (infants can fill an adult
-          // slot too), clamp to chargeableChildren after.
-                let adjustedAdults = adults;
-                let adjustedChildren = children;
+        const {
+          // adults,
+          // children,
+          applicableAdult,
+          applicableChild,
+          applicableGuest
+        } = room;
+        // Same chargeable-children rule as ratePricing.js's
+        // computeRoomSurcharge (ported from Trevon's Filterbar.js
+        // ~507-511) — a child at or under the property's InfantAge is
+        // free and shouldn't count toward extraChild here either. Falls
+        // back to the raw `children` count when childAges isn't
+        // populated, same as computeRoomSurcharge's own fallback.
+        const childAges = searchRoom?.childAges;
+        const infantAge = room?.infantAge || 0;
+        const chargeableChildren = Array.isArray(childAges)
+          ? childAges.filter(
+            (age) => age !== "" && Number(age) > Number(infantAge),
+          ).length
+          : children;
+        // --- Step 1: Adjust children if adults are less than applicableAdult ---
+        // Same Trevon-ported order as ratePricing.js's computeRoomSurcharge:
+        // adjust using raw children first (infants can fill an adult
+        // slot too), clamp to chargeableChildren after.
+        let adjustedAdults = adults;
+        let adjustedChildren = children;
 
-                if (adults < applicableAdult && children > 0) {
-                  const neededAdults = applicableAdult - adults;
-                  const childrenToAdults = Math.min(neededAdults, children);
-                  adjustedAdults += childrenToAdults;
-                  adjustedChildren -= childrenToAdults;
-                }
-                const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
-                const extraChild =
-                  adjustedChargeableChildren > applicableChild
-                    ? Math.min(
-                        adjustedChargeableChildren - applicableChild,
-                        Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
-                      )
-                    : 0;
- let roomWiseTotal = 0;
+        if (adults < applicableAdult && children > 0) {
+          const neededAdults = applicableAdult - adults;
+          const childrenToAdults = Math.min(neededAdults, children);
+          adjustedAdults += childrenToAdults;
+          adjustedChildren -= childrenToAdults;
+        }
+        const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
+        const extraChild =
+          adjustedChargeableChildren > applicableChild
+            ? Math.min(
+              adjustedChargeableChildren - applicableChild,
+              Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
+            )
+            : 0;
+        let roomWiseTotal = 0;
         return {
           room_id: room?.roomId?.toString() ?? "",
           room_name: room?.roomName ?? "",
@@ -729,17 +737,17 @@ export function GuestDetailsForm({ onComplete }) {
           first_name: formData.firstName || "",
           last_name: formData.lastName || "",
           price: dateRange.map((date, dateIndex) => {
-            
-            console.log("Prem dateRange",date,nightByDateKey,nightlyBreakdown)
+
+            console.log("Prem dateRange", date, nightByDateKey, nightlyBreakdown)
             const nightEntry = nightByDateKey.get(date);
             const dateAmountAfterTax = nightEntry
               ? nightEntry.amount + nightEntry.totalTaxes
               : Number(room?.roomRateWithTax) || 0;
-              console.log("Prem dateAmountAfterTax",dateAmountAfterTax,nightEntry,room?.roomRateWithTax)
-            
-              roomWiseTotal += dateAmountAfterTax + (extraChild > 0
-                    ? extraChild * Math.round(room?.childRate || 0) : 0);
-              return {
+            console.log("Prem dateAmountAfterTax", dateAmountAfterTax, nightEntry, room?.roomRateWithTax)
+
+            roomWiseTotal += dateAmountAfterTax + (extraChild > 0
+              ? extraChild * Math.round(room?.childRate || 0) : 0);
+            return {
               date,
               rate_id: room?.rateId,
               rate_name: room?.roomPackage,
@@ -775,11 +783,11 @@ export function GuestDetailsForm({ onComplete }) {
           taxes:
             Object.keys(nightlyBreakdown.taxByName || {}).length > 0
               ? Object.entries(nightlyBreakdown.taxByName)
-                  .filter(([, amount]) => amount > 0)
-                  .map(([name, amount]) => ({
-                    name,
-                    value: String(Math.round(amount)),
-                  }))
+                .filter(([, amount]) => amount > 0)
+                .map(([name, amount]) => ({
+                  name,
+                  value: String(Math.round(amount)),
+                }))
               : roomTaxAmount > 0
                 ? [{ name: "GST", value: String(Math.round(roomTaxAmount)) }]
                 : [],
@@ -819,12 +827,12 @@ export function GuestDetailsForm({ onComplete }) {
               // back to Google Hotel Ads for that reservation.
               utm_source: utmSource || "",
               commissionamount: "0.00",
-              deposit: stagingMode === "pay_later"? "0" : grandTotal.toString(),
+              deposit: stagingMode === "pay_later" ? "0" : grandTotal.toString(),
               totalamountaftertax: grandTotal.toString(),
               totaltax: Math.round(totalTaxAmount).toString(),
               promocode,
-              payment_required: stagingMode === "pay_later"? grandTotal.toString() : "0" ,
-              payment_type: stagingMode === "pay_later"? "Hotel Collect":"Channel Collect",
+              payment_required: stagingMode === "pay_later" ? grandTotal.toString() : "0",
+              payment_type: stagingMode === "pay_later" ? "Hotel Collect" : "Channel Collect",
               currencycode: "INR",
               status: "Confirm",
               is_subscribed: false,
@@ -920,7 +928,7 @@ export function GuestDetailsForm({ onComplete }) {
           cancellationPolicyState: stay.cancellationPolicyState || "",
           termsAndConditions: "_",
         }),
-        
+
         ReservationJson: JSON.stringify(payload),
         SessionId: bookingSessionId,
         Ip: clientIp,
@@ -957,7 +965,7 @@ export function GuestDetailsForm({ onComplete }) {
       if (paymentResp?.errorMessage !== "success") {
         throw new Error(
           paymentResp?.errorMessage ||
-            "Payment request failed. Please try again.",
+          "Payment request failed. Please try again.",
         );
       }
 
@@ -1090,6 +1098,37 @@ export function GuestDetailsForm({ onComplete }) {
         keyData: resolvedKeyData,
         form_of_payment: formOfPayment,
       });
+
+      if (isPayU) {
+        const staged = paymentResp?.result?.[0] || paymentResp || {};
+        const stagedJson = staged?.responseJson || paymentResp?.responseJson || {};
+        console.log("[PAYMENT-FLOW] PayU pay_now — staged th-payment-request response", { paymentResp, stagedJson });
+        const pendingResponse = {
+          result: [{
+            form_of_payment: "pay_now",
+            responseJson: {
+              ...stagedJson,
+              reservation_id: stagedJson?.reservation_id || reservationId,
+              amount: stagedJson?.amount !== undefined ? String(stagedJson.amount) : grandTotal.toString(),
+              currency: stagedJson?.currency || "INR",
+              property_id: stagedJson?.property_id || selectedPropertyId?.toString(),
+            },
+            reservationJson: staged?.reservationJson || null,
+            bookingDetailsJson: staged?.bookingDetailsJson || null,
+          }],
+        };
+        window.sessionStorage.setItem("be_payuPending", JSON.stringify(pendingResponse));
+        onComplete?.();
+        await redirectToPayU(config, {
+          reservationId,
+          amount: grandTotal,
+          firstname: formData.firstName || "Guest",
+          email: formData.email || "",
+          phone: formData.phone || "",
+          productinfo: selectedPropertyName || "Hotel Booking",
+        });
+        return;
+      }
 
       // For pay_later, skip STAAH gateway entirely — create properly formatted payment response
       // from th-payment-request2 data, then jump to confirmation step
