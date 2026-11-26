@@ -100,8 +100,14 @@ export function BookingEngineAuthProvider({ children }) {
   };
 
   const requestOtp = async (mobile = "", email = "") => {
-    const authToken = await ensureToken();
-    const r = await api.getOtp(authToken, { MobileNo: mobile, EmailId: email });
+    let authToken = await ensureToken();
+    let r = await api.getOtp(authToken, { MobileNo: mobile, EmailId: email });
+    // Saved token expired/rejected (1008): get a fresh one and try once more.
+    if (Number(r?.errorCode) === 1008) {
+      sessionStorage.removeItem(SESSION_KEYS.token);
+      authToken = await ensureToken();
+      r = await api.getOtp(authToken, { MobileNo: mobile, EmailId: email });
+    }
     if (r?.success === true && Number(r?.errorCode) === 0) {
       return { ok: true, message: String(r?.result || "OTP sent.") };
     }

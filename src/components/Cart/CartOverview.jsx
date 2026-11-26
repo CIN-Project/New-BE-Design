@@ -6,7 +6,11 @@ import { useStayContext } from "../../context/StayContext.js";
 import { useCartContext } from "../../context/CartContext.js";
 import { useConfig } from "../../config/configContext.js";
 import { formatDisplayDate } from "../../utils/date.js";
-import { computeStayTotals } from "../../utils/ratePricing.js";
+import {
+  computeStayTotals,
+  computeRoomSurcharge,
+  getRoomNightlyBreakdown,
+} from "../../utils/ratePricing.js";
 import { addonStayCharge } from "../../utils/addonPricing.js";
 import { resolvePaymentOptions } from "../../utils/paymentOptions.js";
 import { CouponComponent } from "./CouponComponent.js";
@@ -181,6 +185,16 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
   });
 
   const addonCount = (selectedAddOns || []).length;
+
+  // A room's line price: its whole-stay rate plus its own extra-child charge — the same figure its
+  // rate card showed when it was picked (computeRatePlanTotals). Showing only packageRate (first
+  // night, no child price) made a room with a chargeable child look cheaper here than what was
+  // selected, while Base Stay Cost (which does add the child charge) was right.
+  const roomLinePrice = (room) => {
+    const { extraChildren, extraChildRoomCharge } = computeRoomSurcharge(room);
+    const { baseTotal } = getRoomNightlyBreakdown(room, nights, extraChildren);
+    return baseTotal + extraChildRoomCharge;
+  };
   const totalPayable = grandTotal;
 
   // Extra-child surcharge is shown folded into Base Stay Cost, room-wise,
@@ -418,9 +432,7 @@ export function CartOverview({ onModifyRooms, onModifyProperty }) {
                     </div>
                     <div className="cart-room-right">
                       <p className="cart-room-price">
-                        {formatCurrency(
-                          room?.packageRate ?? room?.roomRateWithTax,
-                        )}
+                        {formatCurrency(roomLinePrice(room))}
                       </p>
                       <span
                         style={modifyLinkStyle}

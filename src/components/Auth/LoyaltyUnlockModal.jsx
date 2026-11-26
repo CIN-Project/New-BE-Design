@@ -17,6 +17,10 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
   const config = useConfig();
   const { requestOtp, loginWithOtp } = useBookingEngineAuth();
   const otpLength = config.otpLength ?? 6;
+  // Field limits: mobile is digits only, exactly this many (default 10, Indian numbers); email up to
+  // this many characters (default 100).
+  const mobileLength = config.loyaltyMobileLength ?? 10;
+  const emailMaxLength = config.loyaltyEmailMaxLength ?? 100;
 
   const [otpMethod, setOtpMethod] = useState("email");
   const [identity, setIdentity] = useState("");
@@ -38,6 +42,29 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
     setError("");
   };
 
+  // Switching Email ↔ Mobile starts the field and any error afresh.
+  const switchMethod = (method) => {
+    if (method === otpMethod) return;
+    setOtpMethod(method);
+    setIdentity("");
+    setError("");
+  };
+
+  // Checked before any OTP request is sent; returns the error to show, or "".
+  const validateIdentity = (value) => {
+    const v = value.trim();
+    if (otpMethod === "mobile") {
+      if (!v) return "Please enter your mobile number.";
+      if (!/^[0-9]+$/.test(v)) return "Mobile number must contain digits only.";
+      if (v.length !== mobileLength) return `Mobile number must be ${mobileLength} digits.`;
+      return "";
+    }
+    if (!v) return "Please enter your email address.";
+    if (v.length > emailMaxLength) return `Email address must be at most ${emailMaxLength} characters.`;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return "Please enter a valid email address.";
+    return "";
+  };
+
   const handleClose = () => {
     reset();
     onClose?.();
@@ -45,11 +72,16 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
+    const invalid = validateIdentity(identity);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setError("");
     setIsSending(true);
     try {
-      const mobile = otpMethod === "mobile" ? identity : "";
-      const email = otpMethod === "email" ? identity : "";
+      const mobile = otpMethod === "mobile" ? identity.trim() : "";
+      const email = otpMethod === "email" ? identity.trim() : "";
       const result = await requestOtp(mobile, email);
       if (result.ok) {
         setOtpSent(true);
@@ -68,8 +100,8 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
     setError("");
     setIsVerifying(true);
     try {
-      const mobile = otpMethod === "mobile" ? identity : "";
-      const email = otpMethod === "email" ? identity : "";
+      const mobile = otpMethod === "mobile" ? identity.trim() : "";
+      const email = otpMethod === "email" ? identity.trim() : "";
       const { user } = await loginWithOtp(mobile, otpValue, email);
       onUnlocked?.(user);
       reset();
@@ -97,14 +129,14 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
           <div className="be-loyalty-tabs">
             <button
               type="button"
-              onClick={() => setOtpMethod("email")}
+              onClick={() => switchMethod("email")}
               className={`be-loyalty-tab ${otpMethod === "email" ? "be-loyalty-tab--active" : ""}`}
             >
               Email
             </button>
             <button
               type="button"
-              onClick={() => setOtpMethod("mobile")}
+              onClick={() => switchMethod("mobile")}
               className={`be-loyalty-tab ${otpMethod === "mobile" ? "be-loyalty-tab--active" : ""}`}
             >
               Mobile
@@ -126,15 +158,25 @@ export function LoyaltyUnlockModal({ isOpen, onClose, onUnlocked, onDeclineStand
         {error && <p className="be-loyalty-error">{error}</p>}
 
         {!otpSent ? (
-          <form className="be-loyalty-form" onSubmit={handleSendOtp}>
+          <form className="be-loyalty-form" onSubmit={handleSendOtp} noValidate>
             <div className="be-loyalty-form-group">
               <label htmlFor="be-loyalty-identity">{otpMethod === "email" ? "Email Address" : "Mobile Number"}</label>
               <input
                 id="be-loyalty-identity"
                 type={otpMethod === "email" ? "email" : "tel"}
+                inputMode={otpMethod === "email" ? "email" : "numeric"}
+                autoComplete={otpMethod === "email" ? "email" : "tel-national"}
+                maxLength={otpMethod === "email" ? emailMaxLength : mobileLength}
                 value={identity}
-                onChange={(e) => setIdentity(e.target.value)}
-                placeholder={otpMethod === "email" ? "you@example.com" : "+91 98765 43210"}
+                onChange={(e) => {
+                  setError("");
+                  setIdentity(
+                    otpMethod === "mobile"
+                      ? e.target.value.replace(/\D/g, "").slice(0, mobileLength)
+                      : e.target.value.slice(0, emailMaxLength),
+                  );
+                }}
+                placeholder={otpMethod === "email" ? "you@example.com" : "9876543210"}
                 required
                 className="be-loyalty-input"
               />
