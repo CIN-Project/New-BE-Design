@@ -1112,6 +1112,8 @@ export function GuestDetailsForm({ onComplete }) {
               amount: stagedJson?.amount !== undefined ? String(stagedJson.amount) : grandTotal.toString(),
               currency: stagedJson?.currency || "INR",
               property_id: stagedJson?.property_id || selectedPropertyId?.toString(),
+              partner_id: stagedJson?.partner_id || config?.partnerId || "7", // pay_later me bhi yahi fallback hai
+              ipn_flag: stagedJson?.ipn_flag ?? "0",                          // test ke liye, value developer se confirm karo
             },
             reservationJson: staged?.reservationJson || null,
             bookingDetailsJson: staged?.bookingDetailsJson || null,
