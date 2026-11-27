@@ -9,7 +9,7 @@ import { useCartContext } from "../../../context/CartContext.js";
 import { useBookingEngineAuth } from "../../../context/AuthContext.js";
 import { getRoomsRates, getInventory } from "../../../api/rates.js";
 import { postBookingWidged } from "../../../api/tracking.js";
-import { countExtraChildren,
+import {
   normalizeRateName,
   getGuestRateFromObp,
   findMemberRatePlan,
@@ -426,20 +426,16 @@ function getRoomMinRate(room, adults = 1) {
  * an older one for the same room).
  */
 function extraChildForDate(dateData, mapping, adults, children, childAges, infantAge) {
-  // Same count as the cart (countExtraChildren): every extra child is charged, not just one.
-  const extraChildren = countExtraChildren({
-    adults: Number(adults) || 0,
-    children: Number(children) || 0,
-    childAges,
-    infantAge: Number(infantAge) || 0,
-    applicableAdult: Number(mapping?.ApplicableAdult) || 0,
-    applicableChild: Number(mapping?.ApplicableChild) || 0,
-    applicableGuest: Number(mapping?.ApplicableGuest) || 0,
-  });
-  if (extraChildren < 1) return { amount: 0, savings: 0 };
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge || 0)).length
+    : children;
+  const needsExtraChild =
+    Number(adults || 0) + Number(chargeableChildren || 0) > Number(mapping?.ApplicableGuest || 0) &&
+    Number(chargeableChildren || 0) > 0;
+  if (!needsExtraChild) return { amount: 0, savings: 0 };
   return {
-    amount: parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0") * extraChildren,
-    savings: parseFloat(dateData?.ExtraChildRate?.Savings || "0") * extraChildren,
+    amount: parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0"),
+    savings: parseFloat(dateData?.ExtraChildRate?.Savings || "0"),
   };
 }
 

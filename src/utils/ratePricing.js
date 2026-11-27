@@ -78,41 +78,6 @@ export function findMemberRatePlan(property, room, standardRate) {
 }
 
 /**
- * How many children in a room are charged ExtraChildRate — the one rule shared by the rate cards
- * (computeRatePlanTotals, StayStep's "Rates Starting From") and the cart/payload
- * (computeRoomSurcharge), so the price a guest picks is the price the cart shows and charges.
- * Children at/under infantAge are free; children first fill any missing ApplicableAdult slots;
- * then only those beyond ApplicableChild AND beyond ApplicableGuest are extra.
- */
-export function countExtraChildren({
-  adults = 0,
-  children = 0,
-  childAges,
-  infantAge = 0,
-  applicableAdult = 0,
-  applicableChild = 0,
-  applicableGuest = 0,
-}) {
-  const chargeableChildren = Array.isArray(childAges)
-    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge)).length
-    : children;
-  let adjustedAdults = Number(adults) || 0;
-  let adjustedChildren = Number(children) || 0;
-  if (adjustedAdults < applicableAdult && adjustedChildren > 0) {
-    const childrenToAdults = Math.min(applicableAdult - adjustedAdults, adjustedChildren);
-    adjustedAdults += childrenToAdults;
-    adjustedChildren -= childrenToAdults;
-  }
-  const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
-  return adjustedChargeableChildren > applicableChild
-    ? Math.min(
-        adjustedChargeableChildren - applicableChild,
-        Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest),
-      )
-    : 0;
-}
-
-/**
  * Ported from Amritara's Filterbar.js (~5736-5820, commit "extra child
  * price added in package rate", 2026-10-27) — a package's LISTED price
  * (shown while still browsing rate cards, before a room is actually
@@ -160,20 +125,14 @@ export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0, c
     return { totalCartValue, cartValueWithTax, totalSavings, extraChildCartValue, extraChildSavings };
   }
 
-  // Same count as the cart (computeRoomSurcharge): every extra child is charged, not just one.
-  const extraChildren = countExtraChildren({
-    adults: Number(adults) || 0,
-    children: Number(children) || 0,
-    childAges,
-    infantAge,
-    applicableAdult: Number(mapping?.ApplicableAdult) || 0,
-    applicableChild: Number(mapping?.ApplicableChild) || 0,
-    applicableGuest: Number(mapping?.ApplicableGuest) || 0,
-  });
-  let extraChildRateSum = 0;
-  let extraChildSavingSum = 0;
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge)).length
+    : children;
 
   const adultKey = String(adults || 1);
+  const needsExtraChild =
+    Number(adults || 0) + Number(chargeableChildren || 0) > Number(mapping?.ApplicableGuest || 0) &&
+    Number(chargeableChildren || 0) > 0;
 
   Object.values(ratePlan.Rates).forEach((dateData) => {
     const obp = getRateObpEntry(dateData?.OBP, mapping?.RateId);
@@ -183,15 +142,12 @@ export function computeRatePlanTotals(ratePlan, mapping, adults, children = 0, c
       totalCartValue += parseFloat(guestRate?.RateBeforeTax || "0");
       totalSavings += parseFloat(guestRate?.Savings || "0");
       cartValueWithTax += parseFloat(obp?.TotalRate || "0");
-      extraChildRateSum += parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0");
-      extraChildSavingSum += parseFloat(dateData?.ExtraChildRate?.Savings || "0");
+      if (needsExtraChild) {
+        extraChildCartValue += parseFloat(dateData?.ExtraChildRate?.RateBeforeTax || "0");
+        extraChildSavings += parseFloat(dateData?.ExtraChildRate?.Savings || "0");
+      }
     }
   });
-  // Rounded the same way as computeRoomSurcharge (stay total rounded, then × extra children).
-  if (extraChildren >= 1) {
-    extraChildCartValue = Math.round(extraChildRateSum) * extraChildren;
-    extraChildSavings = Math.round(extraChildSavingSum) * extraChildren;
-  }
 
   return {
     totalCartValue: totalCartValue + extraChildCartValue,
@@ -280,6 +236,10 @@ export function computeRoomSurcharge(selectedRoomEntry) {
   // childAges isn't populated — e.g. a room selected before this feature
   // existed, or a consumer that never wires the age picker in — so
   // existing behavior is unchanged unless real age data is actually there.
+  const chargeableChildren = Array.isArray(childAges)
+    ? childAges.filter((age) => age !== "" && Number(age) > Number(infantAge))
+        .length
+    : children;
 
   // Ported exactly from Trevon's StayStep.js ~356-396 — the adults-shortfall
   // adjustment runs on the RAW children count (infants included: an infant
@@ -290,15 +250,23 @@ export function computeRoomSurcharge(selectedRoomEntry) {
   // older child are both present and an adult slot needs filling — the
   // infant should be "spent" filling that slot first, not the chargeable
   // child.
-  const extraChildren = countExtraChildren({
-    adults,
-    children,
-    childAges,
-    infantAge,
-    applicableAdult,
-    applicableChild,
-    applicableGuest,
-  });
+  let adjustedAdults = adults;
+  let adjustedChildren = children;
+  if (adults < applicableAdult && children > 0) {
+    const neededAdults = applicableAdult - adults;
+    const childrenToAdults = Math.min(neededAdults, children);
+    adjustedAdults += childrenToAdults;
+    adjustedChildren -= childrenToAdults;
+  }
+  const adjustedChargeableChildren = Math.min(adjustedChildren, chargeableChildren);
+
+  const extraChildren =
+    adjustedChargeableChildren > applicableChild
+      ? Math.min(
+          adjustedChargeableChildren - applicableChild,
+          Math.max(0, adjustedAdults + adjustedChargeableChildren - applicableGuest)
+        )
+      : 0;
 
   const dateEntries = packageRateList ? Object.values(packageRateList) : [];
 
